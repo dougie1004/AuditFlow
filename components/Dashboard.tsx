@@ -38,8 +38,8 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+      <div className="hidden lg:block">
         <h2 className="text-2xl font-bold text-slate-900">경영진 감사 대시보드 (Executive Dashboard)</h2>
         <p className="text-slate-500 mt-1">9개 핵심 영역에 대한 내부 통제 및 컴플라이언스 실시간 모니터링</p>
       </div>
@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
 
       {/* Main Chart Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-bold text-slate-900 mb-6">영역별 위반 현황 (Violations by Area)</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -97,9 +97,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Recent Activity Feed */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 mb-4">최근 위험 알림</h3>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-80 lg:max-h-none">
             {MOCK_SCENARIOS.filter(s => s.status === 'Fail').slice(0, 5).map(scenario => (
               <div key={scenario.id} className="p-3 bg-red-50 border border-red-100 rounded-lg">
                 <div className="flex justify-between items-start">

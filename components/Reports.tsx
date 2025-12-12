@@ -12,12 +12,12 @@ const Reports: React.FC = () => {
   return (
     <div className="h-full flex flex-col md:flex-row bg-slate-50">
       {/* Left List Pane */}
-      <div className="w-full md:w-1/3 border-r border-slate-200 bg-white h-full flex flex-col">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-900">주요 위반 사례 (Critical Violations)</h2>
-          <p className="text-sm text-slate-500 mt-1">즉각적인 조치가 필요한 고위험 이상징후 목록</p>
+      <div className="w-full md:w-1/3 md:h-full flex flex-col border-r border-slate-200 bg-white">
+        <div className="p-4 sm:p-6 border-b border-slate-100 hidden md:block">
+          <h2 className="text-xl font-bold text-slate-900">주요 위반 사례</h2>
+          <p className="text-sm text-slate-500 mt-1">고위험 이상징후 목록</p>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="md:flex-1 md:overflow-y-auto">
           {CRITICAL_VIOLATIONS.map(violation => (
             <button
               key={violation.id}
@@ -40,31 +40,31 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Right Detail Pane */}
-      <div className="w-full md:w-2/3 h-full overflow-y-auto p-8">
+      <div className="w-full md:w-2/3 h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center space-x-2 text-slate-500 text-sm mb-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6">
+            <div className="mb-4 sm:mb-0">
+              <div className="flex items-center flex-wrap space-x-2 text-slate-500 text-sm mb-1">
                 <span className="font-medium text-blue-600">{getAreaName(selectedViolation.areaCode)}</span>
                 <span>/</span>
                 <span>위반 사례</span>
                 <span>/</span>
                 <span className="font-semibold text-slate-900">{selectedViolation.id}</span>
               </div>
-              <h1 className="text-2xl font-bold text-slate-900">{selectedViolation.controlPoint}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{selectedViolation.controlPoint}</h1>
             </div>
-            <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 shadow-sm flex items-center gap-2">
+            <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center">
               <FileText className="w-4 h-4" />
               PDF 내보내기
             </button>
           </div>
 
           {/* AI Analysis Box */}
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 mb-8 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4 sm:p-6 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Eye className="w-24 h-24 text-indigo-600" />
+              <Eye className="w-16 h-16 sm:w-24 sm:h-24 text-indigo-600" />
             </div>
             <h3 className="text-indigo-900 font-bold flex items-center gap-2 mb-3">
               <AlertOctagon className="w-5 h-5 text-indigo-600" />
@@ -79,16 +79,16 @@ const Reports: React.FC = () => {
           </div>
 
           {/* Comparison Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             {/* Structured Data */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
                 시스템 데이터 (ERP Data)
               </h3>
               <div className="space-y-4">
                 <div>
                   <label className="text-xs text-slate-500 block mb-1">Transaction ID</label>
-                  <p className="text-lg font-mono font-medium text-slate-900">{selectedViolation.transactionInfo.id}</p>
+                  <p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{selectedViolation.transactionInfo.id}</p>
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 block mb-1">일자</label>
@@ -106,18 +106,18 @@ const Reports: React.FC = () => {
             </div>
 
             {/* Unstructured Evidence */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                 <span>비정형 증빙 자료 ({selectedViolation.evidenceType})</span>
                 <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Simulated View</span>
               </h3>
               
-              <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden">
+              <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[200px]">
                 {/* Simulated Document Preview */}
                 <img 
                   src={selectedViolation.evidenceDocumentUrl} 
                   alt="Evidence" 
-                  className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
                 />
                 
                 {/* Highlight Overlay - Simulated AI Finding */}
