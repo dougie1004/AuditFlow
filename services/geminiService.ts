@@ -1,17 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
-import { AUDIT_AREAS, CRITICAL_VIOLATIONS, MOCK_SCENARIOS } from "../data/mockData";
-
-let aiClient: GoogleGenAI | null = null;
-
-if (process.env.API_KEY) {
-  aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
-}
+import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from "../data/mockData";
 
 export const sendMessageToGemini = async (message: string): Promise<string> => {
-  if (!aiClient) {
-    return "AuditFlow AI가 연결되지 않았습니다. API_KEY를 확인해주세요.";
-  }
-
   try {
     const context = `
       당신은 내부 감사 및 컴플라이언스 전문가 AI 'AuditFlow'입니다.
@@ -29,20 +18,25 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
       답변은 한국어로, 전문적이고 명확하며 리스크 완화에 초점을 맞춰 작성하십시오.
     `;
 
-    const model = 'gemini-2.5-flash';
-    
-    const response = await aiClient.models.generateContent({
-      model: model,
-      contents: message,
-      config: {
-        systemInstruction: context,
-      }
+    // Call our own backend API route instead of Gemini API directly
+    const apiResponse = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, context }),
     });
 
-    return response.text || "데이터를 처리했으나 응답을 생성할 수 없습니다.";
+    if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({})); // Gracefully handle non-json responses
+        throw new Error(errorData.error || `서버 오류: ${apiResponse.status}`);
+    }
+
+    const data = await apiResponse.json();
+    return data.response;
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "감사 데이터를 분석하는 중 오류가 발생했습니다. 다시 시도해 주세요.";
+    console.error("API call error:", error);
+    return "AuditFlow AI에 연결하는 중 오류가 발생했습니다. Vercel 프로젝트에 `API_KEY` 환경 변수가 올바르게 설정되었는지 확인해주세요.";
   }
 };
