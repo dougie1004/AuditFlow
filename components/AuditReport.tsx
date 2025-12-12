@@ -1,6 +1,6 @@
 import React from 'react';
 import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from '../data/mockData';
-import { FileCheck2, Download, Printer, ShieldCheck } from 'lucide-react';
+import { Download, Printer, ShieldCheck } from 'lucide-react';
 
 const AuditReport: React.FC = () => {
   const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });

@@ -1,4 +1,4 @@
-import { AuditArea, Scenario, ViolationDetail, AuditAreaCode } from '../types';
+import { AuditArea, Scenario, ViolationDetail } from '../types';
 
 export const AUDIT_AREAS: AuditArea[] = [
   { code: 'FSC', name: '재무 마감', description: '분개 및 결산 마감 통제', totalScenarios: 10, violationCount: 2 },
@@ -15,7 +15,7 @@ export const AUDIT_AREAS: AuditArea[] = [
 // Helper to generate generic scenarios
 const generateScenarios = (): Scenario[] => {
   const scenarios: Scenario[] = [];
-  AUDIT_AREAS.forEach((area, areaIdx) => {
+  AUDIT_AREAS.forEach((area) => {
     for (let i = 1; i <= 10; i++) {
       const isFail = i <= area.violationCount;
       const isUnstructured = i % 2 === 0; 
