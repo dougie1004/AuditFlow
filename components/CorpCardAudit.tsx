@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { MOCK_CORP_CARD_TRANSACTIONS } from '../data/mockData';
 import { CorpCardTransaction, AnomalyType } from '../types';
-import { AlertTriangle, Users, User, Filter, MapPin, XCircle } from 'lucide-react';
+import { AlertTriangle, Users, User, Filter, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 type AuditMode = 'individual' | 'department';

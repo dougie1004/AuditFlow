@@ -1,9 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
-// FIX: Import 'Line' from 'recharts' to be used in the ComposedChart.
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Bar, ComposedChart, Line } from 'recharts';
 import { MOCK_FORECAST_DATA, INITIAL_INVENTORY } from '../data/mockData';
 import { TrendingUp, Archive, Target, ShieldAlert, Settings, PlayCircle } from 'lucide-react';
-import { ForecastDataPoint } from '../types';
+import type { ForecastDataPoint } from '../types';
 
 const StatsCard = ({ icon: Icon, title, value, unit, colorClass }: { icon: any, title: string, value: string, unit: string, colorClass: string }) => (
   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">

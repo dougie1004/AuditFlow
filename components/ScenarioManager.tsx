@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AUDIT_AREAS } from '../data/mockData';
 import { CheckCircle, XCircle, Search, Paperclip, Plus, X } from 'lucide-react';
-import { AuditAreaCode, Scenario } from '../types';
+import type { AuditAreaCode, Scenario } from '../types';
 
 // Modal component for adding a new scenario
 const AddScenarioModal: React.FC<{
