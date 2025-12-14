@@ -60,11 +60,14 @@ export interface CorpCardTransaction {
   anomaly: AnomalyType;
 }
 
-export interface ProductionDataPoint {
-  date: string;
-  actual?: number;
-  predicted?: number;
+export interface ForecastDataPoint {
+  week: string;
+  sales?: number;
+  demand?: number;
+  production?: number;
+  inventory?: number;
 }
+
 
 export interface MockDocument {
   id: string;

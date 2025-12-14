@@ -1,4 +1,4 @@
-import { AuditArea, Scenario, ViolationDetail, CorpCardTransaction, ProductionDataPoint } from '../types';
+import { AuditArea, Scenario, ViolationDetail, CorpCardTransaction, ForecastDataPoint } from '../types';
 
 export const AUDIT_AREAS: AuditArea[] = [
   { code: 'FSC', name: '재무 마감', description: '분개 및 결산 마감 통제', totalScenarios: 10, violationCount: 2 },
@@ -141,10 +141,20 @@ export const MOCK_CORP_CARD_TRANSACTIONS: CorpCardTransaction[] = [
     { id: 'TXN010', employee: { name: '김민준', id: 'E1023', homeAddress: '서울시 강남구 테헤란로 427', department: 'R&D' }, merchant: 'AWS-서비스이용료', location: { lat: 37.506, lng: 127.054, name: '온라인' }, amount: 350000, timestamp: '2023-11-22T15:30:00Z', category: 'IT', anomaly: null },
 ];
 
-export const MOCK_PRODUCTION_DATA: ProductionDataPoint[] = [
-    { date: '11/01', actual: 4000 }, { date: '11/02', actual: 3000 }, { date: '11/03', actual: 5000 },
-    { date: '11/04', actual: 4500 }, { date: '11/05', actual: 4800 }, { date: '11/06', actual: 6000 },
-    { date: '11/07', actual: 5800 }, { date: '11/08', predicted: 6200 }, { date: '11/09', predicted: 6100 },
-    { date: '11/10', predicted: 6500 }, { date: '11/11', predicted: 7000 }, { date: '11/12', predicted: 6800 },
-    { date: '11/13', predicted: 7200 }, { date: '11/14', predicted: 7500 },
+export const INITIAL_INVENTORY = 25000;
+export const MOCK_FORECAST_DATA: Omit<ForecastDataPoint, 'production' | 'inventory'>[] = [
+  // 4 weeks of historical data
+  { week: '10월 1주', sales: 7500 },
+  { week: '10월 2주', sales: 8200 },
+  { week: '10월 3주', sales: 7800 },
+  { week: '10월 4주', sales: 8500 },
+  // 8 weeks of forecast data
+  { week: '11월 1주', demand: 9200 },
+  { week: '11월 2주', demand: 9500 },
+  { week: '11월 3주', demand: 11000 }, // Peak
+  { week: '11월 4주', demand: 10500 },
+  { week: '12월 1주', demand: 9800 },
+  { week: '12월 2주', demand: 12500 }, // Holiday peak
+  { week: '12월 3주', demand: 11500 },
+  { week: '12월 4주', demand: 10200 },
 ];
