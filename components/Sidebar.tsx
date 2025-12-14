@@ -25,14 +25,21 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
+type MenuItem = {
+  id?: string;
+  label?: string;
+  icon?: React.ElementType;
+  type?: 'divider';
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen, onLogout }) => {
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
     { id: 'ai-reports', label: 'AI 분석 리포트', icon: FileSearch },
     { id: 'final-report', label: '감사 보고서', icon: FileText },
     { id: 'ai-chat', label: 'AI 어시스턴트', icon: Sparkles },
     { type: 'divider' },
-    { id: 'audit-management', label: '감사 업무 관리', icon: Briefcase }, // New Menu Item
+    { id: 'audit-management', label: '감사 업무 관리', icon: Briefcase },
     { id: 'data-upload', label: '데이터 업로드', icon: UploadCloud },
     { id: 'scenario-manager', label: '시나리오 관리', icon: ListChecks },
     { type: 'divider' },

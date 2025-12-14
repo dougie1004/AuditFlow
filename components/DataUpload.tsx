@@ -2,7 +2,8 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileText, FileSpreadsheet, File, Search, Filter, Trash2, Download, Eye, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Printer, Grid, Terminal } from 'lucide-react';
 import { MOCK_UPLOAD_FILES } from '../data/mockUploadData';
-import { MockUploadFile, AuditAreaCode } from '../types';
+import { MockUploadFile } from '../types';
+import type { AuditAreaCode } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- File Content Renderers ---

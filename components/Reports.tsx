@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { CRITICAL_VIOLATIONS, AUDIT_AREAS } from '../data/mockData';
 import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, FileSearch } from 'lucide-react';
@@ -38,7 +39,7 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
   </div>
 );
 
-const SimulatedContract: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
+const SimulatedContract: React.FC<{ violation: ViolationDetail }> = () => (
   <div className="w-full h-full bg-white p-6 text-sm font-serif flex flex-col">
     <div className="text-center border-b-2 border-black pb-2 mb-4">
       <h3 className="text-xl font-bold">공급 계약서</h3>
