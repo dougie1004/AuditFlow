@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MOCK_SCENARIOS, AUDIT_AREAS } from '../data/mockData';
-import { CheckCircle, XCircle, Search, Paperclip, AlertOctagon } from 'lucide-react';
+import { CheckCircle, XCircle, Search, Paperclip } from 'lucide-react';
 import { AuditAreaCode } from '../types';
 
 const ScenarioManager: React.FC = () => {

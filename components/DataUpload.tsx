@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, File, X, CheckCircle, Loader, Shield, BrainCircuit, Search, BookOpen, Database, Eye } from 'lucide-react';
 import { MOCK_DOCUMENTS } from '../data/documents';
 import { MOCK_UPLOAD_FILES } from '../data/mockUploadData';
-import { MockDocument, MockUploadFile, AuditAreaCode } from '../types';
+import { MockDocument, MockUploadFile } from '../types';
 
 const STEPS = [
   { text: '데이터 암호화 및 가명화 중...', icon: Shield },

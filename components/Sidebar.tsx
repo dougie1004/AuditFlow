@@ -61,12 +61,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
         </div>
 
         <nav className="flex-1 p-4 space-y-1 mt-4">
-          {menuItems.map((item, index) => (
-            item.type === 'divider' ? (
-              <div key={index} className="px-4 py-2">
-                <hr className="border-t border-slate-800" />
-              </div>
-            ) : (
+          {menuItems.map((item, index) => {
+            if (item.type === 'divider') {
+              return (
+                <div key={index} className="px-4 py-2">
+                  <hr className="border-t border-slate-800" />
+                </div>
+              );
+            }
+            
+            const Icon = item.icon;
+            return (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id!)}
@@ -76,11 +81,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
                     : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
               >
-                <item.icon className="w-5 h-5" />
+                {Icon && <Icon className="w-5 h-5" />}
                 <span className="font-medium">{item.label}</span>
               </button>
-            )
-          ))}
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-slate-800">

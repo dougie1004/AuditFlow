@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CRITICAL_VIOLATIONS, AUDIT_AREAS } from '../data/mockData';
-import { AlertOctagon, FileText, ArrowRight, Eye, Mail, Terminal } from 'lucide-react';
+import { AlertOctagon, FileText, ArrowRight, Eye, Terminal } from 'lucide-react';
 import { ViolationDetail } from '../types';
 
 // --- Simulated Evidence Components ---
