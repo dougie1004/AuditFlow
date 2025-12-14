@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, File, X, CheckCircle, Loader, Shield, BrainCircuit, Search, BookOpen, Database, Eye } from 'lucide-react';
 import { MOCK_DOCUMENTS } from '../data/documents';
 import { MOCK_UPLOAD_FILES } from '../data/mockUploadData';
-import { MockDocument, MockUploadFile } from '../types';
+import { MockDocument, MockUploadFile, AuditAreaCode } from '../types';
 
 const STEPS = [
   { text: '데이터 암호화 및 가명화 중...', icon: Shield },
@@ -120,6 +120,19 @@ const DataUpload: React.FC<{ setActiveView: (view: string) => void }> = ({ setAc
   const [currentStep, setCurrentStep] = useState(0);
   const [viewingDoc, setViewingDoc] = useState<MockDocument | null>(null);
   const [viewingFile, setViewingFile] = useState<MockUploadFile | null>(null);
+  const [docSearch, setDocSearch] = useState('');
+  const [docCategory, setDocCategory] = useState<string>('ALL');
+  
+  const docCategories = useMemo(() => ['ALL', ...Array.from(new Set(MOCK_DOCUMENTS.map(d => d.category)))], []);
+
+  const filteredDocuments = useMemo(() => {
+    return MOCK_DOCUMENTS.filter(doc => {
+        const matchesCategory = docCategory === 'ALL' || doc.category.includes(docCategory);
+        const matchesSearch = doc.title.toLowerCase().includes(docSearch.toLowerCase()) || doc.content.toLowerCase().includes(docSearch.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
+  }, [docSearch, docCategory]);
+
 
   useEffect(() => {
     let interval: ReturnType<typeof setTimeout>;
@@ -165,18 +178,18 @@ const DataUpload: React.FC<{ setActiveView: (view: string) => void }> = ({ setAc
       </AnimatePresence>
 
       {!isProcessing ? (
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-slate-900">데이터 업로드 및 감사 실행</h2>
             <p className="text-slate-500 mt-1">감사에 필요한 데이터를 업로드하고 AI 분석을 시작합니다.</p>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div>
-                 <h3 className="font-bold text-lg mb-4">1. 감사 데이터 업로드</h3>
-                 <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 min-h-[200px] flex flex-col justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-3">
+                 <h3 className="font-bold text-lg mb-4">1. 감사 대상 데이터</h3>
+                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     {files.length === 0 ? (
-                      <div>
+                      <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50 min-h-[300px] flex flex-col justify-center">
                         <UploadCloud className="mx-auto h-12 w-12 text-slate-400" />
                         <p className="mt-4 text-sm text-slate-600">아래 버튼을 눌러 데모 데이터를 불러오세요.</p>
                         <button onClick={loadDemoData} className="mt-4 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 mx-auto">
@@ -185,47 +198,70 @@ const DataUpload: React.FC<{ setActiveView: (view: string) => void }> = ({ setAc
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-2 max-h-64 overflow-y-auto text-left">
-                        {files.map((file, i) => (
-                           <div key={i} className="flex items-center justify-between p-2 bg-white border rounded-lg group">
-                            <button onClick={() => setViewingFile(file)} className="flex items-center gap-3 flex-1 min-w-0">
-                                <FileIcon type={file.type} />
-                                <div className="min-w-0">
-                                  <span className="text-sm font-medium truncate block group-hover:text-blue-600">{file.name}</span>
-                                  <p className="text-xs text-slate-500">{file.size} | {file.category}</p>
-                                </div>
-                            </button>
-                            <div className="flex items-center ml-2">
-                                <Eye className="w-4 h-4 text-slate-400 mr-2 group-hover:text-blue-600 hidden sm:block" />
-                                <button onClick={() => removeFile(i)} className="p-1 hover:bg-red-100 rounded-full">
-                                    <X className="w-4 h-4 text-red-500" />
-                                </button>
-                            </div>
-                           </div>
-                        ))}
+                      <div className="overflow-x-auto max-h-[400px]">
+                        <table className="min-w-full divide-y divide-slate-200">
+                          <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">파일명</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">카테고리</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">크기</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">작업</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-slate-100">
+                            {files.map((file, i) => (
+                              <tr key={i}>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="flex items-center gap-3">
+                                    <FileIcon type={file.type} />
+                                    <span className="text-sm font-medium text-slate-800 truncate">{file.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap"><span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-bold">{file.category}</span></td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{file.size}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                  <button onClick={() => setViewingFile(file)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 hover:text-blue-600"><Eye className="w-4 h-4" /></button>
+                                  <button onClick={() => removeFile(i)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 hover:text-red-600"><X className="w-4 h-4" /></button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                  </div>
             </div>
 
-            <div>
-              <h3 className="font-bold text-lg mb-4">2. 참고 자료 (규정집)</h3>
-              <div className="space-y-2">
-                {MOCK_DOCUMENTS.map(doc => (
-                  <button key={doc.id} onClick={() => setViewingDoc(doc)} className="w-full text-left flex items-center gap-3 p-3 bg-white border rounded-lg hover:bg-slate-50 transition-colors">
-                    <BookOpen className="w-5 h-5 text-indigo-500" />
-                    <div>
-                        <p className="text-sm font-medium">{doc.title}</p>
-                        <p className="text-xs text-slate-500">{doc.category}</p>
-                    </div>
-                  </button>
-                ))}
+            <div className="lg:col-span-2">
+              <h3 className="font-bold text-lg mb-4">2. AI 참고 자료 (규정집)</h3>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input type="text" placeholder="규정 검색..." value={docSearch} onChange={e => setDocSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"/>
+                </div>
+                <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                    {docCategories.map(cat => (
+                        <button key={cat} onClick={() => setDocCategory(cat)} className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${docCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                            {cat === 'ALL' ? '전체' : cat}
+                        </button>
+                    ))}
+                </div>
+                <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                    {filteredDocuments.map(doc => (
+                    <button key={doc.id} onClick={() => setViewingDoc(doc)} className="w-full text-left flex items-start gap-3 p-3 bg-white border rounded-lg hover:bg-slate-50 transition-colors">
+                        <div className="mt-1"><BookOpen className="w-5 h-5 text-indigo-500 shrink-0" /></div>
+                        <div>
+                            <p className="text-sm font-medium text-slate-800">{doc.title}</p>
+                            <p className="text-xs text-slate-500">{doc.category}</p>
+                        </div>
+                    </button>
+                    ))}
+                </div>
               </div>
             </div>
-
           </div>
 
-          <div className="mt-8 text-center">
+          <div className="mt-10 pt-6 border-t border-slate-200 text-center">
             <button
               onClick={handleRunAudit}
               disabled={files.length === 0}
