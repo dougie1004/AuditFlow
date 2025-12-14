@@ -4,14 +4,14 @@ import { Calendar, CheckSquare, FileText, UserCheck, Plus, Trash2, Clock, PlayCi
 import { AuditTask, AuditPhase } from '../types';
 
 const INITIAL_TASKS: AuditTask[] = [
-  { id: 't1', phase: 'Planning', date: '2023-11-01', content: '감사 계획 수립 및 범위 확정', completed: true, assignee: '김철수' },
-  { id: 't2', phase: 'Planning', date: '2023-11-03', content: '예비 조사 및 리스크 평가', completed: true, assignee: '이영희' },
-  { id: 't3', phase: 'Planning', date: '2023-11-05', content: '감사 통지서 발송', completed: true, assignee: '박지성' },
-  { id: 't4', phase: 'Fieldwork', date: '2023-11-10', content: '재무제표 데이터 추출 및 정합성 검증', completed: true, assignee: 'System' },
-  { id: 't5', phase: 'Fieldwork', date: '2023-11-12', content: '현업 부서 인터뷰 수행 (재무팀)', completed: false, assignee: '김철수' },
-  { id: 't6', phase: 'Fieldwork', date: '2023-11-15', content: '비정형 데이터(계약서) AI 분석 실행', completed: false, assignee: 'AuditFlow AI' },
-  { id: 't7', phase: 'Reporting', date: '2023-11-25', content: '초안 보고서 작성', completed: false, assignee: '이영희' },
-  { id: 't8', phase: 'Reporting', date: '2023-11-30', content: '경영진 보고 및 최종 승인', completed: false, assignee: '최임원' },
+  { id: 't1', phase: 'Planning', date: '2025-11-01', content: '감사 계획 수립 및 범위 확정', completed: true, assignee: '김철수' },
+  { id: 't2', phase: 'Planning', date: '2025-11-03', content: '예비 조사 및 리스크 평가', completed: true, assignee: '이영희' },
+  { id: 't3', phase: 'Planning', date: '2025-11-05', content: '감사 통지서 발송', completed: true, assignee: '박지성' },
+  { id: 't4', phase: 'Fieldwork', date: '2025-11-10', content: '재무제표 데이터 추출 및 정합성 검증', completed: true, assignee: 'System' },
+  { id: 't5', phase: 'Fieldwork', date: '2025-11-12', content: '현업 부서 인터뷰 수행 (재무팀)', completed: false, assignee: '김철수' },
+  { id: 't6', phase: 'Fieldwork', date: '2025-11-15', content: '비정형 데이터(계약서) AI 분석 실행', completed: false, assignee: 'AuditFlow AI' },
+  { id: 't7', phase: 'Reporting', date: '2025-11-25', content: '초안 보고서 작성', completed: false, assignee: '이영희' },
+  { id: 't8', phase: 'Reporting', date: '2025-11-30', content: '경영진 보고 및 최종 승인', completed: false, assignee: '최임원' },
 ];
 
 const AuditManagement: React.FC = () => {
@@ -62,7 +62,7 @@ const AuditManagement: React.FC = () => {
     setIsGeneratingRequests(true);
     setTimeout(() => {
       setGeneratedRequests([
-        '2023년도 3분기 결산 시산표 (Trial Balance)',
+        '2025년도 3분기 결산 시산표 (Trial Balance)',
         '주요 은행 계좌(신한, 국민) 잔액 증명서',
         '법인카드 사용 내역 원장 (상세 적요 포함)',
         '매출 채권 연령 분석 보고서 (Aging Report)',

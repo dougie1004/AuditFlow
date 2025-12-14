@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from '../data/mockData';
 import { Download, Printer, ShieldCheck, FileText, List, TrendingUp, Sparkles, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
@@ -192,7 +193,7 @@ const AuditReport: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-3 border-l-4 border-blue-600 pl-3">2. 감사 범위 및 방법 (Scope & Methodology)</h3>
               <div className="bg-slate-50 p-4 sm:p-6 rounded-lg border border-slate-100">
                 <ul className="list-disc list-inside space-y-2 text-slate-700">
-                  <li><strong>감사 기간:</strong> 2023.01.01 ~ 2023.12.31</li>
+                  <li><strong>감사 기간:</strong> 2025.01.01 ~ 2025.12.31</li>
                   <li><strong>대상 영역:</strong> {AUDIT_AREAS.map(a => a.name).join(', ')} 포함 9개 영역</li>
                   <li><strong>방법론:</strong> 
                     <ul className="list-circle list-inside ml-6 mt-1 text-slate-600">
@@ -336,7 +337,7 @@ const AuditReport: React.FC = () => {
                             <ShieldCheck className="w-6 h-6" />
                             <span className="font-bold text-lg">AuditFlow</span>
                         </div>
-                        <p className="text-sm text-slate-500">Document No: AF-2023-Q4-001</p>
+                        <p className="text-sm text-slate-500">Document No: AF-2025-Q4-001</p>
                         <p className="text-sm text-slate-500">Date: {currentDate}</p>
                         <p className="text-sm text-slate-500 font-medium mt-1 bg-slate-100 px-2 py-0.5 rounded inline-block">
                              Type: {TEMPLATES.find(t => t.id === selectedTemplate)?.label}
