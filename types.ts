@@ -19,6 +19,8 @@ export interface Scenario {
   timestamp: string;
   type: 'Structured' | 'Unstructured';
   evidenceUrl: string; // URL to the proof document
+  isNew: boolean;
+  risk: 'High' | 'Medium' | 'Low';
 }
 
 export interface ViolationDetail {
@@ -43,4 +45,38 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   timestamp: Date;
+}
+
+export type AnomalyType = '자택 근처 사용' | '주말/심야 사용' | '한도 초과' | '쪼개기 결제 의심' | '유흥업소 사용 의심' | null;
+
+export interface CorpCardTransaction {
+  id: string;
+  employee: { name: string; id: string; homeAddress: string; department: string; };
+  merchant: string;
+  location: { lat: number; lng: number, name: string };
+  amount: number;
+  timestamp: string;
+  category: string;
+  anomaly: AnomalyType;
+}
+
+export interface ProductionDataPoint {
+  date: string;
+  actual?: number;
+  predicted?: number;
+}
+
+export interface MockDocument {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+}
+
+export interface MockUploadFile {
+  name: string;
+  type: 'Excel' | 'CSV' | 'PDF' | 'LOG';
+  size: string;
+  category: AuditAreaCode;
+  content?: string;
 }

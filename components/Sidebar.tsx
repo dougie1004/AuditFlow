@@ -1,14 +1,17 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  FileText, 
-  AlertTriangle, 
+  UploadCloud,
+  ListChecks,
+  CreditCard,
+  LineChart,
   Settings, 
   LogOut, 
   ShieldCheck,
-  BrainCircuit,
-  FileCheck2,
-  X
+  X,
+  FileSearch,
+  FileText,
+  Sparkles
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,10 +24,15 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
   const menuItems = [
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
-    { id: 'scenarios', label: '테스트 시나리오', icon: FileText },
-    { id: 'reports', label: '상세 위반 분석', icon: AlertTriangle },
-    { id: 'final-report', label: '감사 보고서 발행', icon: FileCheck2 },
-    { id: 'ai-chat', label: 'AuditFlow AI', icon: BrainCircuit },
+    { id: 'ai-reports', label: 'AI 분석 리포트', icon: FileSearch },
+    { id: 'final-report', label: '감사 보고서', icon: FileText },
+    { id: 'ai-chat', label: 'AI 어시스턴트', icon: Sparkles },
+    { type: 'divider' },
+    { id: 'data-upload', label: '데이터 업로드', icon: UploadCloud },
+    { id: 'scenario-manager', label: '시나리오 관리', icon: ListChecks },
+    { type: 'divider' },
+    { id: 'corp-card-audit', label: '법인카드 감사', icon: CreditCard },
+    { id: 'production-forecast', label: '생산 관리 예측', icon: LineChart },
   ];
 
   return (
@@ -52,20 +60,26 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
           </button>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 mt-4">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                activeView === item.id 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-            </button>
+        <nav className="flex-1 p-4 space-y-1 mt-4">
+          {menuItems.map((item, index) => (
+            item.type === 'divider' ? (
+              <div key={index} className="px-4 py-2">
+                <hr className="border-t border-slate-800" />
+              </div>
+            ) : (
+              <button
+                key={item.id}
+                onClick={() => setActiveView(item.id!)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  activeView === item.id 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            )
           ))}
         </nav>
 
@@ -74,7 +88,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
             <Settings className="w-5 h-5" />
             <span>설정</span>
           </button>
-          <button className="w-full flex items-center space-x-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors mt-1">
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full flex items-center space-x-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors mt-1"
+          >
             <LogOut className="w-5 h-5" />
             <span>로그아웃</span>
           </button>

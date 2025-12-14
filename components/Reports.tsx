@@ -1,6 +1,128 @@
 import React, { useState } from 'react';
 import { CRITICAL_VIOLATIONS, AUDIT_AREAS } from '../data/mockData';
-import { AlertOctagon, FileText, ArrowRight, Eye } from 'lucide-react';
+import { AlertOctagon, FileText, ArrowRight, Eye, Mail, Terminal } from 'lucide-react';
+import { ViolationDetail } from '../types';
+
+// --- Simulated Evidence Components ---
+
+const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
+  <div className="w-full h-full bg-white p-4 text-sm font-sans flex flex-col">
+    <div className="border-b pb-2 mb-2">
+      <h4 className="font-bold text-slate-800 text-base">긴급 분개 요청: Q3 마케팅 캠페인 비용 조정</h4>
+      <div className="text-xs text-slate-500 mt-1">받은 편지함</div>
+    </div>
+    <div className="flex items-center gap-3 my-3">
+      <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-base shrink-0">
+        {violation.transactionInfo.entity.charAt(0)}
+      </div>
+      <div>
+        <p className="font-semibold text-slate-700">{violation.transactionInfo.entity} &lt;chulsoo.kim@nexuscorp.com&gt;</p>
+        <p className="text-xs text-slate-500">To: 재무승인팀</p>
+      </div>
+    </div>
+    <div className="text-slate-800 space-y-3 text-sm leading-relaxed flex-1">
+      <p>재무승인팀께,</p>
+      <p>
+        Q3 마케팅 캠페인 비용 정산 과정에서 누락된 에이전시 수수료가 발견되어, 긴급하게 아래와 같이 비표준 분개 처리를 요청드립니다.
+      </p>
+      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 my-2">
+        <p><strong>- 전표 ID:</strong> {violation.transactionInfo.id}</p>
+        <p><strong>- 금액:</strong> {violation.transactionInfo.amount}</p>
+        <p><strong>- 계정:</strong> 505001 - 광고선전비</p>
+      </div>
+      <p>월말 마감에 차질이 없도록 신속한 처리 부탁드립니다. 감사합니다.</p>
+    </div>
+    <div className="text-xs text-slate-400 mt-auto pt-2 border-t">
+      {violation.transactionInfo.date} {new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute:'2-digit'})}
+    </div>
+  </div>
+);
+
+const SimulatedContract: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
+  <div className="w-full h-full bg-white p-6 text-sm font-serif flex flex-col">
+    <div className="text-center border-b-2 border-black pb-2 mb-4">
+      <h3 className="text-xl font-bold">공급 계약서</h3>
+      <p className="text-xs">Supply Agreement</p>
+    </div>
+    <div className="text-xs space-y-2 mb-4">
+      <p><strong>갑 (Purchaser):</strong> Nexus Corp (넥서스 주식회사)</p>
+      <p><strong>을 (Supplier):</strong> Alpha Components</p>
+    </div>
+    <div className="text-slate-800 space-y-3 text-xs leading-relaxed flex-1">
+      <p>...</p>
+      <h4 className="font-bold pt-2 text-sm">제 5조 (가격 및 대금 지급)</h4>
+      <p>5.1 단가는 별첨 A에 따른다.</p>
+      <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 my-2 text-yellow-900 shadow-inner">
+        <p><strong>5.2 연간 총 구매액이 $1,000,000 (일백만 달러)를 초과하는 경우, 초과분에 대해 5%의 추가 할인을 적용한다.</strong></p>
+      </div>
+      <p>5.3 대금은 '을'의 청구일로부터 30일 이내에 '갑'이 지정한 계좌로 현금 지급한다.</p>
+      <p>...</p>
+    </div>
+    <div className="text-right text-xs text-slate-400 mt-auto pt-2">
+      Page 5 of 12
+    </div>
+  </div>
+);
+
+const SimulatedLog: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
+  <div className="w-full h-full bg-slate-900 text-slate-300 p-4 text-xs font-mono flex flex-col">
+    <div className="flex items-center gap-2 text-slate-500 border-b border-slate-700 pb-2 mb-2">
+      <Terminal className="w-4 h-4" />
+      <span>{violation.areaCode === 'SEC' ? 'DLP System Log' : 'Transaction Analysis Log'}</span>
+    </div>
+    <div className="flex-1 space-y-1 overflow-y-auto">
+      {violation.areaCode === 'SEC' ? (
+        <>
+          <p><span className="text-cyan-400">[{violation.transactionInfo.date} 15:29:58]</span> <span className="text-green-400">INFO</span>: User {violation.transactionInfo.entity} authenticated.</p>
+          <p className="bg-red-900/50 text-red-300 p-1 rounded my-1">
+            <span className="text-cyan-400">[{violation.transactionInfo.date} 15:30:01]</span> <span className="text-red-400">ALERT</span>: [DLP-RULE-03] Large data transfer to removable media detected.
+          </p>
+          <p className="pl-4"> <span className="text-yellow-400">User:</span> {violation.transactionInfo.entity}</p>
+          <p className="pl-4"> <span className="text-yellow-400">Action:</span> COPY</p>
+          <p className="pl-4"> <span className="text-yellow-400">Source:</span> /project_aurora/</p>
+          <p className="pl-4"> <span className="text-yellow-400">Destination:</span> /media/usb0</p>
+          <p className="pl-4"> <span className="text-yellow-400">Size:</span> {violation.transactionInfo.amount}</p>
+          <p className="pl-4"> <span className="text-yellow-400">ApprovalStatus:</span> <span className="font-bold text-red-400 animate-pulse">NOT_FOUND</span></p>
+        </>
+      ) : ( // For EXP-V01
+        <>
+          <p><span className="text-green-400">INFO</span>: Analyzing transactions for user {violation.transactionInfo.entity}</p>
+          <p><span className="text-green-400">INFO</span>: Transaction TXN006... OK</p>
+          <p className="bg-red-900/50 text-red-300 p-1 rounded my-1">
+            <span className="text-red-400">ALERT</span>: [EXP-RULE-07] Prohibited merchant category detected.
+          </p>
+          <p className="pl-4"> <span className="text-yellow-400">TransactionID:</span> TXN007</p>
+          <p className="pl-4"> <span className="text-yellow-400">Merchant:</span> 락휴 노래타운</p>
+          <p className="pl-4"> <span className="text-yellow-400">MerchantCode:</span> 7992 (유흥주점)</p>
+          <p className="bg-red-900/50 text-red-300 p-1 rounded mt-2">
+            <span className="text-red-400">ALERT</span>: [EXP-RULE-11] Potential split payment detected.
+          </p>
+          <p className="pl-4"> <span className="text-yellow-400">CorrelatedID:</span> TXN008</p>
+          <p className="pl-4"> <span className="text-yellow-400">TimeDelta:</span> 10 mins</p>
+        </>
+      )}
+    </div>
+  </div>
+);
+
+const SimulatedEvidenceViewer: React.FC<{violation: ViolationDetail}> = ({ violation }) => {
+    switch (violation.evidenceType) {
+        case 'Approval Email':
+            return <SimulatedEmail violation={violation} />;
+        case 'Contract':
+            return <SimulatedContract violation={violation} />;
+        case 'Log File':
+            return <SimulatedLog violation={violation} />;
+        default:
+            return (
+                <div className="w-full h-full object-cover flex items-center justify-center bg-slate-200">
+                    <p className="text-slate-500">미리보기를 지원하지 않는 증빙입니다.</p>
+                </div>
+            );
+    }
+};
+
+// --- Main Reports Component ---
 
 const Reports: React.FC = () => {
   const [selectedViolation, setSelectedViolation] = useState(CRITICAL_VIOLATIONS[0]);
@@ -112,32 +234,18 @@ const Reports: React.FC = () => {
                 <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Simulated View</span>
               </h3>
               
-              <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[200px]">
-                {/* Simulated Document Preview */}
-                <img 
-                  src={selectedViolation.evidenceDocumentUrl} 
-                  alt="Evidence" 
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
-                />
-                
-                {/* Highlight Overlay - Simulated AI Finding */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
-                  <div className="bg-red-500/90 text-white text-xs px-3 py-1.5 rounded shadow-lg backdrop-blur-sm flex items-center gap-2">
-                    <AlertOctagon className="w-3 h-3" />
-                    불일치(Mismatch) 감지
-                  </div>
-                </div>
+              <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[300px]">
+                <SimulatedEvidenceViewer violation={selectedViolation} />
               </div>
               
               <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
                 <span>Source: SharePoint / Legal_Repos</span>
                 <a 
-                  href={selectedViolation.evidenceDocumentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="#"
+                  onClick={(e) => e.preventDefault()}
                   className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                 >
-                  원본 보기 <ArrowRight className="w-3 h-3" />
+                  원본 문서 열기 <ArrowRight className="w-3 h-3" />
                 </a>
               </div>
             </div>
