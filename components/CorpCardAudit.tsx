@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { MOCK_CORP_CARD_TRANSACTIONS } from '../data/mockData';
 import { CorpCardTransaction, AnomalyType } from '../types';
-import { MapPin, Briefcase, Home, AlertTriangle, Users, User } from 'lucide-react';
+import { AlertTriangle, Users, User, Filter, MapPin, XCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 type AuditMode = 'individual' | 'department';
@@ -9,7 +10,6 @@ type Department = '영업' | 'R&D' | '마케팅';
 
 const DEPARTMENTS: Department[] = ['영업', 'R&D', '마케팅'];
 
-// FIX: The 'null' key is invalid in an object literal and the type has been adjusted to Exclude<AnomalyType, null>.
 const ANOMALY_COLORS: { [key in Exclude<AnomalyType, null>]: string } = {
   '자택 근처 사용': '#ef4444',
   '주말/심야 사용': '#f97316',
@@ -17,19 +17,16 @@ const ANOMALY_COLORS: { [key in Exclude<AnomalyType, null>]: string } = {
   '쪼개기 결제 의심': '#ec4899',
   '유흥업소 사용 의심': '#8b5cf6',
 };
+const ANOMALY_TYPES = Object.keys(ANOMALY_COLORS) as Exclude<AnomalyType, null>[];
 
 // --- Department View Component ---
-const DepartmentDashboard: React.FC<{ department: Department }> = ({ department }) => {
-  const deptTransactions = useMemo(() => 
-    MOCK_CORP_CARD_TRANSACTIONS.filter(t => t.employee.department === department), 
-    [department]
-  );
+const DepartmentDashboard: React.FC<{ department: Department, transactions: CorpCardTransaction[] }> = ({ department, transactions }) => {
 
-  const totalSpent = deptTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const anomalyCount = deptTransactions.filter(t => t.anomaly).length;
+  const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const anomalyCount = transactions.filter(t => t.anomaly).length;
 
   const anomalyData = useMemo(() => {
-    const counts = deptTransactions.reduce((acc, t) => {
+    const counts = transactions.reduce((acc, t) => {
       if (t.anomaly) {
         acc[t.anomaly] = (acc[t.anomaly] || 0) + 1;
       }
@@ -37,7 +34,7 @@ const DepartmentDashboard: React.FC<{ department: Department }> = ({ department 
     }, {} as { [key: string]: number });
     
     return Object.entries(counts).map(([name, value]) => ({ name, count: value }));
-  }, [deptTransactions]);
+  }, [transactions]);
   
   return (
     <div className="w-full h-full bg-slate-50 p-6 space-y-6">
@@ -50,7 +47,7 @@ const DepartmentDashboard: React.FC<{ department: Department }> = ({ department 
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border">
           <p className="text-sm text-slate-500">총 거래 건수</p>
-          <p className="text-2xl font-bold">{deptTransactions.length}건</p>
+          <p className="text-2xl font-bold">{transactions.length}건</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-red-200 bg-red-50">
           <p className="text-sm text-red-600">AI 탐지 이상건수</p>
@@ -62,7 +59,7 @@ const DepartmentDashboard: React.FC<{ department: Department }> = ({ department 
         <h3 className="font-bold mb-4 text-slate-800">이상 거래 유형 분석</h3>
         {anomalyData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={anomalyData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 50 }}>
+            <BarChart data={anomalyData} layout="vertical" margin={{ top: 0, right: 20, bottom: 20, left: 60 }}>
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
               <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: 'none' }} />
@@ -74,7 +71,7 @@ const DepartmentDashboard: React.FC<{ department: Department }> = ({ department 
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-500">이상 거래가 없습니다.</div>
+          <div className="flex items-center justify-center h-full text-slate-500">선택된 필터에 해당하는 이상 거래가 없습니다.</div>
         )}
       </div>
     </div>
@@ -87,18 +84,36 @@ const CorpCardAudit: React.FC = () => {
   const [selectedDept, setSelectedDept] = useState<Department>('영업');
   const [selectedTxn, setSelectedTxn] = useState<CorpCardTransaction>(MOCK_CORP_CARD_TRANSACTIONS[0]);
   const [homeAddress, setHomeAddress] = useState(selectedTxn.employee.homeAddress);
+  const [selectedAnomalies, setSelectedAnomalies] = useState<Exclude<AnomalyType, null>[]>([]);
+  const [transactions] = useState<CorpCardTransaction[]>(MOCK_CORP_CARD_TRANSACTIONS);
 
-  useEffect(() => {
-    setHomeAddress(selectedTxn.employee.homeAddress);
-  }, [selectedTxn]);
+  const handleAnomalyFilterToggle = (anomaly: Exclude<AnomalyType, null>) => {
+    setSelectedAnomalies(prev => {
+      if (prev.includes(anomaly)) {
+        return prev.filter(a => a !== anomaly); // Deselect
+      } else {
+        return [...prev, anomaly]; // Select
+      }
+    });
+  };
 
   const transactionsToList = useMemo(() => {
     if (auditMode === 'department') {
-      return MOCK_CORP_CARD_TRANSACTIONS.filter(t => t.employee.department === selectedDept);
+      let deptTransactions = transactions.filter(t => t.employee.department === selectedDept);
+      if (selectedAnomalies.length > 0) {
+        deptTransactions = deptTransactions.filter(t => t.anomaly && selectedAnomalies.includes(t.anomaly));
+      }
+      return deptTransactions;
     }
-    // In individual mode, show all transactions to allow selection
-    return MOCK_CORP_CARD_TRANSACTIONS;
-  }, [auditMode, selectedDept]);
+    // For individual mode, show all transactions in the list for the current employee
+    return transactions.filter(t => t.employee.id === selectedTxn.employee.id);
+  }, [auditMode, selectedDept, selectedAnomalies, transactions, selectedTxn.employee.id]);
+
+  // When selecting a new transaction, also update the home address input
+  const handleSelectTransaction = (txn: CorpCardTransaction) => {
+    setSelectedTxn(txn);
+    setHomeAddress(txn.employee.homeAddress);
+  }
   
   return (
     <div className="h-full flex flex-col md:flex-row">
@@ -106,8 +121,8 @@ const CorpCardAudit: React.FC = () => {
       <div className="w-full md:w-1/3 h-full flex flex-col border-r border-slate-200 bg-white">
         <div className="p-4 border-b">
           <div className="flex bg-slate-100 rounded-lg p-1">
-            <button onClick={() => setAuditMode('individual')} className={`flex-1 flex items-center justify-center gap-2 text-sm p-2 rounded-md ${auditMode === 'individual' ? 'bg-white shadow' : ''}`}><User className="w-4 h-4"/> 직원별</button>
-            <button onClick={() => setAuditMode('department')} className={`flex-1 flex items-center justify-center gap-2 text-sm p-2 rounded-md ${auditMode === 'department' ? 'bg-white shadow' : ''}`}><Users className="w-4 h-4"/> 부서별</button>
+            <button onClick={() => { setAuditMode('individual'); setSelectedAnomalies([]); }} className={`flex-1 flex items-center justify-center gap-2 text-sm p-2 rounded-md ${auditMode === 'individual' ? 'bg-white shadow' : ''}`}><User className="w-4 h-4"/> 직원별</button>
+            <button onClick={() => { setAuditMode('department'); }} className={`flex-1 flex items-center justify-center gap-2 text-sm p-2 rounded-md ${auditMode === 'department' ? 'bg-white shadow' : ''}`}><Users className="w-4 h-4"/> 부서별</button>
           </div>
         </div>
 
@@ -117,28 +132,48 @@ const CorpCardAudit: React.FC = () => {
             <div className="mt-2 space-y-2">
               <input type="text" placeholder="사원명" value={selectedTxn.employee.name} readOnly className="w-full p-2 border rounded bg-slate-100"/>
               <input type="text" placeholder="사번" value={selectedTxn.employee.id} readOnly className="w-full p-2 border rounded bg-slate-100"/>
-              <input type="text" placeholder="거주지 주소" value={homeAddress} onChange={(e) => setHomeAddress(e.target.value)} className="w-full p-2 border rounded bg-white"/>
+              <input type="text" placeholder="거주지 주소 (예: 강남구)" value={homeAddress} onChange={(e) => setHomeAddress(e.target.value)} className="w-full p-2 border rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"/>
             </div>
           </div>
         ) : (
-          <div className="p-4 border-b">
-            <h2 className="font-bold">감사 대상 부서 선택</h2>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {DEPARTMENTS.map(dept => (
-                 <button key={dept} onClick={() => setSelectedDept(dept)} className={`text-sm p-2 rounded-md border ${selectedDept === dept ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-slate-50'}`}>{dept}팀</button>
-              ))}
+          <>
+            <div className="p-4 border-b">
+              <h2 className="font-bold">감사 대상 부서 선택</h2>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {DEPARTMENTS.map(dept => (
+                   <button key={dept} onClick={() => setSelectedDept(dept)} className={`text-sm p-2 rounded-md border ${selectedDept === dept ? 'bg-blue-600 text-white border-blue-600' : 'bg-white hover:bg-slate-50'}`}>{dept}팀</button>
+                ))}
+              </div>
             </div>
-          </div>
+            <div className="p-4 border-b">
+              <h3 className="font-bold mb-3 flex items-center gap-2 text-slate-800"><Filter className="w-4 h-4 text-slate-500" />이상 거래 유형 필터</h3>
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setSelectedAnomalies([])}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full ${selectedAnomalies.length === 0 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  전체
+                </button>
+                {ANOMALY_TYPES.map(anomaly => (
+                  <button 
+                    key={anomaly} 
+                    onClick={() => handleAnomalyFilterToggle(anomaly)}
+                    className={`px-3 py-1 text-xs font-semibold rounded-full ${selectedAnomalies.includes(anomaly) ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                    {anomaly}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         <div className="flex-1 overflow-y-auto">
           <h3 className="font-bold p-4 sticky top-0 bg-white border-b">
-            {auditMode === 'individual' ? 'AI 탐지 이상 거래 내역' : `${selectedDept}팀 거래 내역`}
+            {auditMode === 'individual' ? `${selectedTxn.employee.name}님 거래 내역` : `${selectedDept}팀 거래 내역`}
           </h3>
           {transactionsToList.map(txn => (
-            <button key={txn.id} onClick={() => setSelectedTxn(txn)} className={`w-full text-left p-4 border-b hover:bg-slate-50 ${selectedTxn.id === txn.id && auditMode === 'individual' ? 'bg-blue-50' : ''}`}>
+            <button key={txn.id} onClick={() => handleSelectTransaction(txn)} className={`w-full text-left p-4 border-b hover:bg-slate-50 ${selectedTxn.id === txn.id ? 'bg-blue-50' : ''}`}>
               <div className="flex justify-between items-center">
-                <p className="font-semibold text-sm">{txn.employee.name} - {txn.merchant}</p>
+                <p className="font-semibold text-sm">{auditMode === 'individual' ? txn.merchant : `${txn.employee.name} - ${txn.merchant}`}</p>
                 <p className="font-bold text-sm">{(txn.amount).toLocaleString()}원</p>
               </div>
               <div className="flex justify-between items-center text-xs text-slate-500 mt-1">
@@ -150,37 +185,51 @@ const CorpCardAudit: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel - Map or Dashboard */}
-      <div className="w-full md:w-2/3 h-full">
+      {/* Right Panel - Map Placeholder */}
+      <div className="w-full md:w-2/3 h-full relative overflow-hidden bg-slate-200">
         {auditMode === 'individual' ? (
-          <div className="w-full h-full bg-slate-100 p-4 flex items-center justify-center">
-            <div className="w-full h-full max-w-4xl max-h-[80vh] bg-slate-300 rounded-lg relative overflow-hidden shadow-inner">
-              <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url(https://www.openstreetmap.org/assets/map-bg-61d2d79391cf8e7925000a29aa24100b.png)' }}></div>
-              <div className="absolute" style={{ top: '20%', left: '60%'}}>
-                  <div className="flex flex-col items-center"><div className="p-2 bg-blue-600 rounded-full shadow-lg"><Briefcase className="w-5 h-5 text-white" /></div><span className="mt-1 text-xs font-bold bg-white/80 px-2 py-0.5 rounded">회사</span></div>
-              </div>
-              <div className="absolute" style={{ top: '50%', left: '30%'}}>
-                  <div className="flex flex-col items-center"><div className="p-2 bg-green-600 rounded-full shadow-lg"><Home className="w-5 h-5 text-white" /></div><span className="mt-1 text-xs font-bold bg-white/80 px-2 py-0.5 rounded">자택</span></div>
-              </div>
-              <div className="absolute w-48 h-48 bg-red-500/10 border-2 border-dashed border-red-500/50 rounded-full animate-pulse" style={{ top: '50%', left: '30%', transform: 'translate(-50%, -50%)' }}></div>
-              <div className="absolute transition-all duration-500" style={{ top: selectedTxn.anomaly === '자택 근처 사용' ? '45%' : '70%', left: selectedTxn.anomaly === '자택 근처 사용' ? '35%' : '55%' }}>
-                  <div className="flex flex-col items-center"><div className={`p-2 rounded-full shadow-lg ${selectedTxn.anomaly ? 'bg-red-600' : 'bg-gray-600'}`}><MapPin className="w-5 h-5 text-white" /></div><span className="mt-1 text-xs text-center font-bold bg-white/80 px-2 py-0.5 rounded w-24 truncate">{selectedTxn.merchant}</span></div>
-              </div>
-              <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-xs">
-                  <h4 className="font-bold">{selectedTxn.merchant}</h4>
-                  <p className="text-sm text-slate-600">{new Date(selectedTxn.timestamp).toLocaleString('ko-KR')}</p>
-                  <p className="text-lg font-bold mt-2">{(selectedTxn.amount).toLocaleString()} 원</p>
-                  {selectedTxn.anomaly && (
-                      <div className="mt-2 p-2 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4" />
-                          <div><p className="font-bold">이상 거래 감지</p><p className="text-xs">{selectedTxn.anomaly}</p></div>
-                      </div>
-                  )}
+          <>
+            {/* Blurred Map Background */}
+            <div 
+              className="absolute inset-0 w-full h-full bg-cover bg-center"
+              style={{
+                backgroundImage: 'url("https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80")', // Generic city map-like image
+                filter: 'blur(8px)',
+                transform: 'scale(1.1)' // Slight scale to hide blurred edges
+              }}
+            />
+            
+            {/* Overlay Message */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white max-w-md text-center">
+                <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Google Map API 연동 필요</h3>
+                <p className="text-slate-600 mb-6">
+                  지도 서비스를 사용하기 위해서는 Google Map API 키 설정이 필요합니다.<br/>
+                  <span className="text-xs text-slate-500">(현재 라이선스 문제로 지도가 비활성화되었습니다)</span>
+                </p>
+                <div className="bg-slate-100 rounded-lg p-3 text-left">
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-slate-500">거래 정보 미리보기</span>
+                    <span className="text-xs text-blue-600 font-bold">{selectedTxn.merchant}</span>
+                  </div>
+                   <div className="space-y-1">
+                      <p className="text-xs text-slate-600"><span className="font-semibold">주소:</span> {selectedTxn.location.address}</p>
+                      <p className="text-xs text-slate-600"><span className="font-semibold">금액:</span> {(selectedTxn.amount).toLocaleString()}원</p>
+                      {selectedTxn.anomaly && (
+                         <p className="text-xs text-red-600 font-bold mt-1 flex items-center gap-1">
+                           <AlertTriangle className="w-3 h-3"/> {selectedTxn.anomaly}
+                         </p>
+                      )}
+                   </div>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         ) : (
-          <DepartmentDashboard department={selectedDept} />
+          <DepartmentDashboard department={selectedDept} transactions={transactionsToList}/>
         )}
       </div>
     </div>

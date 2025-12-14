@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -5,51 +6,67 @@ import ScenarioManager from './components/ScenarioManager';
 import DataUpload from './components/DataUpload';
 import CorpCardAudit from './components/CorpCardAudit';
 import ProductionForecast from './components/ProductionForecast';
+import ProcessMonitoring from './components/ProcessMonitoring';
+import AuditManagement from './components/AuditManagement'; // Imported
 import Login from './components/Login';
 import Reports from './components/Reports';
 import AuditReport from './components/AuditReport';
 import AIChat from './components/AIChat';
 import { Menu, Bell } from 'lucide-react';
 import { MOCK_SCENARIOS } from './data/mockData';
+import { Scenario } from './types';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Centralized State for Scenarios
+  const [scenarios, setScenarios] = useState<Scenario[]>(MOCK_SCENARIOS);
 
-  const newScenarioCount = useMemo(() => MOCK_SCENARIOS.filter(s => s.isNew).length, []);
+  const handleAddScenario = (newScenario: Scenario) => {
+    setScenarios(prev => [newScenario, ...prev]);
+  };
+
+  const newScenarioCount = useMemo(() => scenarios.filter(s => s.isNew).length, [scenarios]);
 
   const pageTitles: { [key: string]: string } = {
     dashboard: '대시보드',
     'ai-reports': 'AI 분석 리포트',
     'final-report': '감사 보고서',
     'ai-chat': 'AI 어시스턴트',
+    'audit-management': '감사 업무 관리', // Added title
     'data-upload': '데이터 업로드',
     'scenario-manager': '시나리오 관리',
     'corp-card-audit': '법인카드 감사',
     'production-forecast': '생산 관리 예측',
+    'process-monitoring': '기업 프로세스 모니터링',
   };
 
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard scenarios={scenarios} />;
       case 'ai-reports':
-        return <Reports />;
+        return <Reports scenarios={scenarios} />;
       case 'final-report':
         return <AuditReport />;
       case 'ai-chat':
         return <AIChat />;
+      case 'audit-management': // Added route
+        return <AuditManagement />;
       case 'data-upload':
         return <DataUpload setActiveView={setActiveView} />;
       case 'scenario-manager':
-        return <ScenarioManager />;
+        return <ScenarioManager scenarios={scenarios} onAddScenario={handleAddScenario} />;
       case 'corp-card-audit':
         return <CorpCardAudit />;
       case 'production-forecast':
         return <ProductionForecast />;
+      case 'process-monitoring':
+        return <ProcessMonitoring />;
       default:
-        return <Dashboard />;
+        return <Dashboard scenarios={scenarios} />;
     }
   };
 
@@ -67,6 +84,7 @@ const App: React.FC = () => {
         }}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
+        onLogout={() => setIsAuthenticated(false)}
       />
       <main className="flex-1 lg:ml-64 h-screen flex flex-col">
         {/* Header for both mobile and desktop */}

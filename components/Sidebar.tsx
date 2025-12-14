@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -11,7 +12,9 @@ import {
   X,
   FileSearch,
   FileText,
-  Sparkles
+  Sparkles,
+  Activity,
+  Briefcase
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,20 +22,23 @@ interface SidebarProps {
   setActiveView: (view: string) => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setIsOpen, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
     { id: 'ai-reports', label: 'AI 분석 리포트', icon: FileSearch },
     { id: 'final-report', label: '감사 보고서', icon: FileText },
     { id: 'ai-chat', label: 'AI 어시스턴트', icon: Sparkles },
     { type: 'divider' },
+    { id: 'audit-management', label: '감사 업무 관리', icon: Briefcase }, // New Menu Item
     { id: 'data-upload', label: '데이터 업로드', icon: UploadCloud },
     { id: 'scenario-manager', label: '시나리오 관리', icon: ListChecks },
     { type: 'divider' },
     { id: 'corp-card-audit', label: '법인카드 감사', icon: CreditCard },
     { id: 'production-forecast', label: '생산 관리 예측', icon: LineChart },
+    { id: 'process-monitoring', label: '프로세스 모니터링', icon: Activity },
   ];
 
   return (
@@ -60,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
           </button>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 mt-4">
+        <nav className="flex-1 p-4 space-y-1 mt-4 overflow-y-auto">
           {menuItems.map((item, index) => {
             if (item.type === 'divider') {
               return (
@@ -94,7 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
             <span>설정</span>
           </button>
           <button 
-            onClick={() => window.location.reload()}
+            onClick={onLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors mt-1"
           >
             <LogOut className="w-5 h-5" />

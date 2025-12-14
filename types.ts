@@ -1,3 +1,4 @@
+
 export type AuditAreaCode = 
   | 'FSC' | 'TRE' | 'EXP' | 'OTC' | 'STP' | 'FXA' | 'INV' | 'HRE' | 'SEC';
 
@@ -51,9 +52,15 @@ export type AnomalyType = '자택 근처 사용' | '주말/심야 사용' | '한
 
 export interface CorpCardTransaction {
   id: string;
-  employee: { name: string; id: string; homeAddress: string; department: string; };
+  employee: { 
+    name: string; 
+    id: string; 
+    homeAddress: string; 
+    department: string; 
+    homeLocation: { lat: number; lng: number; };
+  };
   merchant: string;
-  location: { lat: number; lng: number, name: string };
+  location: { lat: number; lng: number, name: string; address: string; };
   amount: number;
   timestamp: string;
   category: string;
@@ -82,4 +89,16 @@ export interface MockUploadFile {
   size: string;
   category: AuditAreaCode;
   content?: string;
+}
+
+// New Types for Audit Management
+export type AuditPhase = 'Planning' | 'Fieldwork' | 'Reporting' | 'FollowUp';
+
+export interface AuditTask {
+  id: string;
+  phase: AuditPhase;
+  date: string;
+  content: string;
+  completed: boolean;
+  assignee?: string;
 }

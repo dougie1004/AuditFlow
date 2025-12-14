@@ -9,18 +9,30 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { ShieldAlert, CheckCircle, FileSearch, Activity } from 'lucide-react';
-import { AUDIT_AREAS, MOCK_SCENARIOS } from '../data/mockData';
+import { AUDIT_AREAS } from '../data/mockData';
+import { Scenario } from '../types';
 
-const Dashboard: React.FC = () => {
-  const totalScenarios = 90;
-  const totalViolations = AUDIT_AREAS.reduce((acc, curr) => acc + curr.violationCount, 0);
-  const complianceRate = ((totalScenarios - totalViolations) / totalScenarios * 100).toFixed(1);
+interface DashboardProps {
+  scenarios: Scenario[];
+}
 
-  const chartData = AUDIT_AREAS.map(area => ({
-    name: area.code,
-    위반건수: area.violationCount,
-    준수: area.totalScenarios - area.violationCount
-  }));
+const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
+  // Dynamic Calculation based on passed scenarios
+  const totalScenarios = scenarios.length;
+  const totalViolations = scenarios.filter(s => s.status === 'Fail').length;
+  const complianceRate = totalScenarios > 0 
+    ? ((totalScenarios - totalViolations) / totalScenarios * 100).toFixed(1)
+    : '100.0';
+
+  const chartData = AUDIT_AREAS.map(area => {
+    const areaScenarios = scenarios.filter(s => s.areaCode === area.code);
+    const failCount = areaScenarios.filter(s => s.status === 'Fail').length;
+    return {
+      name: area.code,
+      위반건수: failCount,
+      준수: areaScenarios.length - failCount
+    };
+  });
 
   const StatsCard = ({ title, value, subtext, icon: Icon, color }: any) => (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between">
@@ -100,7 +112,7 @@ const Dashboard: React.FC = () => {
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 mb-4">최근 위험 알림</h3>
           <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-80 lg:max-h-none">
-            {MOCK_SCENARIOS.filter(s => s.status === 'Fail').slice(0, 5).map(scenario => (
+            {scenarios.filter(s => s.status === 'Fail').slice(0, 5).map(scenario => (
               <div key={scenario.id} className="p-3 bg-red-50 border border-red-100 rounded-lg">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold text-red-600 px-2 py-0.5 bg-white rounded border border-red-200">
