@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { CRITICAL_VIOLATIONS, AUDIT_AREAS } from '../data/mockData';
-import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, FileSearch } from 'lucide-react';
+import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table } from 'lucide-react';
 import type { ViolationDetail, Scenario } from '../types';
 
-// --- Simulated Evidence Components ---
+// --- Simulated Evidence Components (For Critical Violations) ---
 
 const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
   <div className="w-full h-full bg-white p-4 text-sm font-sans flex flex-col">
@@ -39,7 +39,6 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
   </div>
 );
 
-// Removed unused 'violation' prop from destruction to fix TS6133
 const SimulatedContract: React.FC<{ violation: ViolationDetail }> = () => (
   <div className="w-full h-full bg-white p-6 text-sm font-serif flex flex-col">
     <div className="text-center border-b-2 border-black pb-2 mb-4">
@@ -106,6 +105,153 @@ const SimulatedLog: React.FC<{ violation: ViolationDetail }> = ({ violation }) =
     </div>
   </div>
 );
+
+// --- New Generic Simulated Document Viewer ---
+// Handles scenarios that don't have a specific critical violation mapping but need realistic evidence.
+
+const GenericDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
+  const { areaCode, title } = scenario;
+  const isFail = scenario.status === 'Fail';
+  
+  // Helper to render content based on area
+  const renderContent = () => {
+    switch (areaCode) {
+      case 'FSC': // Financial Spreadsheet
+        return (
+          <div className="font-mono text-xs text-slate-700 w-full h-full flex flex-col">
+             <div className="flex border-b border-slate-300 font-bold bg-slate-100 p-2">
+                <div className="w-24">Account</div>
+                <div className="flex-1">Description</div>
+                <div className="w-24 text-right">Debit</div>
+                <div className="w-24 text-right">Credit</div>
+             </div>
+             {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="flex border-b border-slate-100 p-2 hover:bg-slate-50">
+                    <div className="w-24 text-slate-500">10-200-{10+i}</div>
+                    <div className="flex-1">Accrued Expenses - Q{i%4 + 1} Adjustment</div>
+                    <div className="w-24 text-right">{(Math.random() * 5000).toFixed(2)}</div>
+                    <div className="w-24 text-right">-</div>
+                </div>
+             ))}
+             <div className="flex border-t-2 border-slate-300 font-bold p-2 bg-yellow-50">
+                <div className="w-24">Total</div>
+                <div className="flex-1"></div>
+                <div className="w-24 text-right">$45,230.00</div>
+                <div className="w-24 text-right">$45,230.02</div>
+             </div>
+             {isFail ? (
+                <div className="mt-4 p-2 text-red-600 bg-red-50 border border-red-100 rounded flex items-center gap-2">
+                    <AlertOctagon className="w-4 h-4" />
+                    <strong>Anomaly:</strong> Reconciliation difference of $0.02 detected in sub-ledger.
+                </div>
+             ) : (
+                <div className="mt-4 p-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <strong>Verified:</strong> Balances match perfectly.
+                </div>
+             )}
+          </div>
+        );
+
+      case 'SEC': // Security Log/Config
+        return (
+           <div className="font-mono text-xs text-green-400 bg-slate-900 p-4 rounded-lg shadow-inner h-full overflow-y-auto">
+              <p># Security Policy Configuration - Firewall Rule Set</p>
+              <p># Last Updated: {new Date().toISOString()}</p>
+              <br/>
+              <p className="text-slate-500">rule_id: 10224 action: ALLOW src: ANY dst: 192.168.1.10 port: 443</p>
+              <p className="text-slate-500">rule_id: 10225 action: DENY src: EXTERNAL dst: INTERNAL port: 22</p>
+              <p className={isFail ? "text-yellow-500 animate-pulse" : "text-slate-500"}>
+                 rule_id: 10226 action: ALLOW src: ANY dst: DATABASE_PROD port: 3306 {isFail ? "[WARNING: PUBLIC ACCESS DETECTED]" : ""}
+              </p>
+              <p className="text-slate-500">rule_id: 10227 action: ALLOW src: VPN_POOL dst: INTERNAL port: ALL</p>
+              <br/>
+              <p>{'>'} scanning vulnerability...</p>
+              <p>{'>'} {isFail ? "1 critical issue found." : "System secure."}</p>
+           </div>
+        );
+
+      case 'EXP': // Expense Receipt
+        return (
+            <div className="font-serif text-sm p-6 border border-slate-200 shadow-sm bg-white mx-auto max-w-sm mt-4 rotate-1">
+                <div className="text-center border-b-2 border-dashed border-slate-300 pb-4 mb-4">
+                    <h3 className="text-xl font-bold text-slate-800">STAR COFFEE</h3>
+                    <p className="text-xs text-slate-500">Gangnam-gu, Seoul, Korea</p>
+                    <p className="text-xs text-slate-500">Tel: 02-1234-5678</p>
+                </div>
+                <div className="space-y-2 mb-4 text-slate-600">
+                    <div className="flex justify-between"><span>Americano</span><span>4,500</span></div>
+                    <div className="flex justify-between"><span>Cafe Latte</span><span>5,000</span></div>
+                    <div className="flex justify-between"><span>Sandwich</span><span>6,800</span></div>
+                </div>
+                <div className="border-t-2 border-dashed border-slate-300 pt-2 font-bold flex justify-between text-slate-800">
+                    <span>TOTAL</span>
+                    <span>16,300</span>
+                </div>
+                <div className="mt-4 text-xs text-center text-slate-400">
+                    <p>{new Date(scenario.timestamp).toLocaleString()}</p>
+                    <p>Card: ****-****-****-1234</p>
+                    <p>Auth No: 9928311</p>
+                </div>
+                 {isFail && (
+                    <div className="mt-4 border-2 border-red-500 text-red-500 font-bold text-xs p-1 text-center -rotate-6">
+                        WEEKEND USAGE
+                    </div>
+                 )}
+            </div>
+        );
+        
+      default: // Generic Official Document
+        return (
+            <div className="p-8 bg-white h-full flex flex-col">
+                <div className="border-b-2 border-slate-800 pb-4 mb-6">
+                    <div className="flex justify-between items-start">
+                        <h1 className="text-xl font-bold uppercase text-slate-800">{title}</h1>
+                        <FileText className="w-8 h-8 text-slate-300" />
+                    </div>
+                    <p className="text-sm text-slate-500 mt-2">Document Ref: DOC-{scenario.id.split('-')[1]}</p>
+                </div>
+                <div className="space-y-4 text-sm text-slate-800 leading-relaxed text-justify flex-1">
+                    <p>
+                        This document serves as evidence for the audit procedure regarding <strong>{title}</strong>. 
+                        The contents herein have been extracted from the internal system on {new Date(scenario.timestamp).toLocaleDateString()}.
+                    </p>
+                    <div className="bg-slate-50 p-4 border border-slate-200 rounded my-4">
+                        <h4 className="font-bold mb-2 flex items-center gap-2">
+                            <Table className="w-4 h-4 text-slate-500"/> Data Extract
+                        </h4>
+                        <div className="space-y-2 text-xs font-mono text-slate-600">
+                             <div className="flex justify-between border-b pb-1"><span>Parameter</span><span>Value</span></div>
+                             <div className="flex justify-between"><span>System_ID</span><span>SYS-001</span></div>
+                             <div className="flex justify-between"><span>User_ID</span><span>admin_01</span></div>
+                             <div className="flex justify-between"><span>Timestamp</span><span>{scenario.timestamp}</span></div>
+                             <div className="flex justify-between font-bold"><span>Check_Result</span><span>{isFail ? "FAIL" : "PASS"}</span></div>
+                        </div>
+                    </div>
+                    <p>
+                        <strong>Audit Finding:</strong><br/>
+                        {isFail 
+                            ? "Based on the analysis, the system has identified discrepancies that require further investigation." 
+                            : "No anomalies detected. The process is compliant with internal policies."}
+                    </p>
+                </div>
+                <div className="mt-8 pt-4 border-t border-slate-200 flex justify-between text-xs text-slate-400">
+                    <span>Internal Audit Dept.</span>
+                    <span>Confidential</span>
+                </div>
+            </div>
+        );
+    }
+  };
+
+  return (
+    <div className="w-full h-full bg-slate-200 p-4 overflow-hidden flex items-center justify-center">
+         <div className="w-full max-w-2xl bg-white shadow-xl h-full max-h-[600px] overflow-auto flex flex-col transform transition-transform hover:scale-[1.01] duration-300">
+            {renderContent()}
+         </div>
+    </div>
+  );
+};
 
 const SimulatedEvidenceViewer: React.FC<{violation: ViolationDetail}> = ({ violation }) => {
     switch (violation.evidenceType) {
@@ -331,18 +477,12 @@ const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedScenario.detailedDescription}</p>
                 </div>
                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                         분석된 증빙 자료 (샘플)
+                        <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Generated by AuditFlow AI</span>
                     </h3>
-                    <div className="bg-slate-100 rounded-lg border border-slate-200 p-2">
-                        {selectedScenario.evidenceUrl ? (
-                             <img src={selectedScenario.evidenceUrl} alt="Evidence" className="rounded-md w-full h-auto object-cover" />
-                        ) : (
-                            <div className="h-48 flex items-center justify-center text-slate-500">
-                                <FileSearch className="w-8 h-8 mr-2"/>
-                                <span>표시할 증빙 자료가 없습니다.</span>
-                            </div>
-                        )}
+                    <div className="bg-slate-100 rounded-lg border border-slate-200 p-2 min-h-[400px]">
+                        <GenericDocViewer scenario={selectedScenario} />
                     </div>
                </div>
              </div>

@@ -14,7 +14,8 @@ import {
   FileText,
   Sparkles,
   Activity,
-  Briefcase
+  Briefcase,
+  type LucideIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,7 +29,7 @@ interface SidebarProps {
 type MenuItem = {
   id?: string;
   label?: string;
-  icon?: React.ElementType;
+  icon?: LucideIcon;
   type?: 'divider';
 };
 
