@@ -15,6 +15,7 @@ import {
   Sparkles,
   Activity,
   Briefcase,
+  ClipboardList, // Added Icon
   type LucideIcon
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
     { id: 'ai-chat', label: 'AI 어시스턴트', icon: Sparkles },
     { type: 'divider' },
     { id: 'audit-management', label: '감사 업무 관리', icon: Briefcase },
+    { id: 'audit-task-manager', label: '감사 이슈/제보', icon: ClipboardList }, // Added Menu Item
     { id: 'data-upload', label: '데이터 업로드', icon: UploadCloud },
     { id: 'scenario-manager', label: '시나리오 관리', icon: ListChecks },
     { type: 'divider' },

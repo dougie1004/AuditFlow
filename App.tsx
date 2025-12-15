@@ -7,7 +7,8 @@ import DataUpload from './components/DataUpload';
 import CorpCardAudit from './components/CorpCardAudit';
 import ProductionForecast from './components/ProductionForecast';
 import ProcessMonitoring from './components/ProcessMonitoring';
-import AuditManagement from './components/AuditManagement'; // Imported
+import AuditManagement from './components/AuditManagement';
+import AuditTaskManager from './components/AuditTaskManager'; // Imported
 import Login from './components/Login';
 import Reports from './components/Reports';
 import AuditReport from './components/AuditReport';
@@ -35,7 +36,8 @@ const App: React.FC = () => {
     'ai-reports': 'AI 분석 리포트',
     'final-report': '감사 보고서',
     'ai-chat': 'AI 어시스턴트',
-    'audit-management': '감사 업무 관리', // Added title
+    'audit-management': '감사 업무 관리',
+    'audit-task-manager': '감사 이슈 및 제보', // Added Title
     'data-upload': '데이터 업로드',
     'scenario-manager': '시나리오 관리',
     'corp-card-audit': '법인카드 감사',
@@ -53,8 +55,10 @@ const App: React.FC = () => {
         return <AuditReport />;
       case 'ai-chat':
         return <AIChat />;
-      case 'audit-management': // Added route
+      case 'audit-management':
         return <AuditManagement />;
+      case 'audit-task-manager': // Added Route
+        return <AuditTaskManager />;
       case 'data-upload':
         return <DataUpload setActiveView={setActiveView} />;
       case 'scenario-manager':
