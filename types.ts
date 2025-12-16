@@ -22,6 +22,7 @@ export interface Scenario {
   evidenceUrl: string; // URL to the proof document
   isNew: boolean;
   risk: 'High' | 'Medium' | 'Low';
+  violationId?: string; // Link to specific violation detail
 }
 
 export interface ViolationDetail {
@@ -84,6 +85,7 @@ export interface MockDocument {
 }
 
 export interface MockUploadFile {
+  id: string;
   name: string;
   type: 'Excel' | 'CSV' | 'PDF' | 'LOG';
   size: string;

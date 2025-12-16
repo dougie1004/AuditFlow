@@ -1,15 +1,14 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { CRITICAL_VIOLATIONS, AUDIT_AREAS } from '../data/mockData';
-import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table } from 'lucide-react';
+import { AUDIT_AREAS } from '../data/mockData';
+import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table, Sparkles } from 'lucide-react';
 import type { ViolationDetail, Scenario } from '../types';
 
 // --- Simulated Evidence Components (For Critical Violations) ---
-
 const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
   <div className="w-full h-full bg-white p-4 text-sm font-sans flex flex-col">
     <div className="border-b pb-2 mb-2">
-      <h4 className="font-bold text-slate-800 text-base">긴급 분개 요청: Q3 마케팅 캠페인 비용 조정</h4>
+      <h4 className="font-bold text-slate-800 text-base">긴급 분개 요청: {violation.transactionInfo.entity} 관련</h4>
       <div className="text-xs text-slate-500 mt-1">받은 편지함</div>
     </div>
     <div className="flex items-center gap-3 my-3">
@@ -17,24 +16,23 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
         {violation.transactionInfo.entity.charAt(0)}
       </div>
       <div>
-        <p className="font-semibold text-slate-700">{violation.transactionInfo.entity} &lt;chulsoo.kim@nexuscorp.com&gt;</p>
+        <p className="font-semibold text-slate-700">{violation.transactionInfo.entity} &lt;user@nexuscorp.com&gt;</p>
         <p className="text-xs text-slate-500">To: 재무승인팀</p>
       </div>
     </div>
     <div className="text-slate-800 space-y-3 text-sm leading-relaxed flex-1">
       <p>재무승인팀께,</p>
       <p>
-        Q3 마케팅 캠페인 비용 정산 과정에서 누락된 에이전시 수수료가 발견되어, 긴급하게 아래와 같이 비표준 분개 처리를 요청드립니다.
+        아래 거래에 대한 긴급 승인을 요청드립니다. 시스템 상 예외 처리가 필요합니다.
       </p>
       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 my-2">
         <p><strong>- 전표 ID:</strong> {violation.transactionInfo.id}</p>
         <p><strong>- 금액:</strong> {violation.transactionInfo.amount}</p>
-        <p><strong>- 계정:</strong> 505001 - 광고선전비</p>
       </div>
-      <p>월말 마감에 차질이 없도록 신속한 처리 부탁드립니다. 감사합니다.</p>
+      <p>감사합니다.</p>
     </div>
     <div className="text-xs text-slate-400 mt-auto pt-2 border-t">
-      {violation.transactionInfo.date} {new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute:'2-digit'})}
+      {violation.transactionInfo.date}
     </div>
   </div>
 );
@@ -42,25 +40,19 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
 const SimulatedContract: React.FC<{ violation: ViolationDetail }> = () => (
   <div className="w-full h-full bg-white p-6 text-sm font-serif flex flex-col">
     <div className="text-center border-b-2 border-black pb-2 mb-4">
-      <h3 className="text-xl font-bold">공급 계약서</h3>
-      <p className="text-xs">Supply Agreement</p>
+      <h3 className="text-xl font-bold">계약서 (Contract)</h3>
     </div>
     <div className="text-xs space-y-2 mb-4">
-      <p><strong>갑 (Purchaser):</strong> Nexus Corp (넥서스 주식회사)</p>
-      <p><strong>을 (Supplier):</strong> Alpha Components</p>
+      <p><strong>갑:</strong> Nexus Corp</p>
+      <p><strong>을:</strong> Supplier Inc.</p>
     </div>
     <div className="text-slate-800 space-y-3 text-xs leading-relaxed flex-1">
       <p>...</p>
-      <h4 className="font-bold pt-2 text-sm">제 5조 (가격 및 대금 지급)</h4>
-      <p>5.1 단가는 별첨 A에 따른다.</p>
+      <h4 className="font-bold pt-2 text-sm">제 5조 (특약)</h4>
       <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 my-2 text-yellow-900 shadow-inner">
-        <p><strong>5.2 연간 총 구매액이 $1,000,000 (일백만 달러)를 초과하는 경우, 초과분에 대해 5%의 추가 할인을 적용한다.</strong></p>
+        <p><strong>본 계약의 단가는 별첨 A를 따르며, 추가 할인은 적용되지 않는다.</strong></p>
       </div>
-      <p>5.3 대금은 '을'의 청구일로부터 30일 이내에 '갑'이 지정한 계좌로 현금 지급한다.</p>
       <p>...</p>
-    </div>
-    <div className="text-right text-xs text-slate-400 mt-auto pt-2">
-      Page 5 of 12
     </div>
   </div>
 );
@@ -69,185 +61,46 @@ const SimulatedLog: React.FC<{ violation: ViolationDetail }> = ({ violation }) =
   <div className="w-full h-full bg-slate-900 text-slate-300 p-4 text-xs font-mono flex flex-col">
     <div className="flex items-center gap-2 text-slate-500 border-b border-slate-700 pb-2 mb-2">
       <Terminal className="w-4 h-4" />
-      <span>{violation.areaCode === 'SEC' ? 'DLP System Log' : 'Transaction Analysis Log'}</span>
+      <span>System Analysis Log</span>
     </div>
     <div className="flex-1 space-y-1 overflow-y-auto">
-      {violation.areaCode === 'SEC' ? (
-        <>
-          <p><span className="text-cyan-400">[{violation.transactionInfo.date} 15:29:58]</span> <span className="text-green-400">INFO</span>: User {violation.transactionInfo.entity} authenticated.</p>
-          <p className="bg-red-900/50 text-red-300 p-1 rounded my-1">
-            <span className="text-cyan-400">[{violation.transactionInfo.date} 15:30:01]</span> <span className="text-red-400">ALERT</span>: [DLP-RULE-03] Large data transfer to removable media detected.
-          </p>
-          <p className="pl-4"> <span className="text-yellow-400">User:</span> {violation.transactionInfo.entity}</p>
-          <p className="pl-4"> <span className="text-yellow-400">Action:</span> COPY</p>
-          <p className="pl-4"> <span className="text-yellow-400">Source:</span> /project_aurora/</p>
-          <p className="pl-4"> <span className="text-yellow-400">Destination:</span> /media/usb0</p>
-          <p className="pl-4"> <span className="text-yellow-400">Size:</span> {violation.transactionInfo.amount}</p>
-          <p className="pl-4"> <span className="text-yellow-400">ApprovalStatus:</span> <span className="font-bold text-red-400 animate-pulse">NOT_FOUND</span></p>
-        </>
-      ) : ( // For EXP-V01
-        <>
-          <p><span className="text-green-400">INFO</span>: Analyzing transactions for user {violation.transactionInfo.entity}</p>
-          <p><span className="text-green-400">INFO</span>: Transaction TXN006... OK</p>
-          <p className="bg-red-900/50 text-red-300 p-1 rounded my-1">
-            <span className="text-red-400">ALERT</span>: [EXP-RULE-07] Prohibited merchant category detected.
-          </p>
-          <p className="pl-4"> <span className="text-yellow-400">TransactionID:</span> TXN007</p>
-          <p className="pl-4"> <span className="text-yellow-400">Merchant:</span> 락휴 노래타운</p>
-          <p className="pl-4"> <span className="text-yellow-400">MerchantCode:</span> 7992 (유흥주점)</p>
-          <p className="bg-red-900/50 text-red-300 p-1 rounded mt-2">
-            <span className="text-red-400">ALERT</span>: [EXP-RULE-11] Potential split payment detected.
-          </p>
-          <p className="pl-4"> <span className="text-yellow-400">CorrelatedID:</span> TXN008</p>
-          <p className="pl-4"> <span className="text-yellow-400">TimeDelta:</span> 10 mins</p>
-        </>
-      )}
+      <p><span className="text-cyan-400">[{violation.transactionInfo.date} 15:30:01]</span> <span className="text-red-400">ALERT</span>: Rule Violation Detected.</p>
+      <p className="pl-4"> <span className="text-yellow-400">ID:</span> {violation.transactionInfo.id}</p>
+      <p className="pl-4"> <span className="text-yellow-400">User:</span> {violation.transactionInfo.entity}</p>
+      <p className="pl-4"> <span className="text-yellow-400">Amount:</span> {violation.transactionInfo.amount}</p>
+      <p className="bg-red-900/50 text-red-300 p-1 rounded mt-2">
+        <span className="text-red-400">CRITICAL</span>: {violation.violationType}
+      </p>
     </div>
   </div>
 );
 
-// --- New Generic Simulated Document Viewer ---
-// Handles scenarios that don't have a specific critical violation mapping but need realistic evidence.
-
 const GenericDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
-  const { areaCode, title } = scenario;
+  const { title } = scenario;
   const isFail = scenario.status === 'Fail';
-  
-  // Helper to render content based on area
-  const renderContent = () => {
-    switch (areaCode) {
-      case 'FSC': // Financial Spreadsheet
-        return (
-          <div className="font-mono text-xs text-slate-700 w-full h-full flex flex-col">
-             <div className="flex border-b border-slate-300 font-bold bg-slate-100 p-2">
-                <div className="w-24">Account</div>
-                <div className="flex-1">Description</div>
-                <div className="w-24 text-right">Debit</div>
-                <div className="w-24 text-right">Credit</div>
-             </div>
-             {[1,2,3,4,5,6].map(i => (
-                <div key={i} className="flex border-b border-slate-100 p-2 hover:bg-slate-50">
-                    <div className="w-24 text-slate-500">10-200-{10+i}</div>
-                    <div className="flex-1">Accrued Expenses - Q{i%4 + 1} Adjustment</div>
-                    <div className="w-24 text-right">{(Math.random() * 5000).toFixed(2)}</div>
-                    <div className="w-24 text-right">-</div>
-                </div>
-             ))}
-             <div className="flex border-t-2 border-slate-300 font-bold p-2 bg-yellow-50">
-                <div className="w-24">Total</div>
-                <div className="flex-1"></div>
-                <div className="w-24 text-right">$45,230.00</div>
-                <div className="w-24 text-right">$45,230.02</div>
-             </div>
-             {isFail ? (
-                <div className="mt-4 p-2 text-red-600 bg-red-50 border border-red-100 rounded flex items-center gap-2">
-                    <AlertOctagon className="w-4 h-4" />
-                    <strong>Anomaly:</strong> Reconciliation difference of $0.02 detected in sub-ledger.
-                </div>
-             ) : (
-                <div className="mt-4 p-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <strong>Verified:</strong> Balances match perfectly.
-                </div>
-             )}
-          </div>
-        );
-
-      case 'SEC': // Security Log/Config
-        return (
-           <div className="font-mono text-xs text-green-400 bg-slate-900 p-4 rounded-lg shadow-inner h-full overflow-y-auto">
-              <p># Security Policy Configuration - Firewall Rule Set</p>
-              <p># Last Updated: {new Date().toISOString()}</p>
-              <br/>
-              <p className="text-slate-500">rule_id: 10224 action: ALLOW src: ANY dst: 192.168.1.10 port: 443</p>
-              <p className="text-slate-500">rule_id: 10225 action: DENY src: EXTERNAL dst: INTERNAL port: 22</p>
-              <p className={isFail ? "text-yellow-500 animate-pulse" : "text-slate-500"}>
-                 rule_id: 10226 action: ALLOW src: ANY dst: DATABASE_PROD port: 3306 {isFail ? "[WARNING: PUBLIC ACCESS DETECTED]" : ""}
-              </p>
-              <p className="text-slate-500">rule_id: 10227 action: ALLOW src: VPN_POOL dst: INTERNAL port: ALL</p>
-              <br/>
-              <p>{'>'} scanning vulnerability...</p>
-              <p>{'>'} {isFail ? "1 critical issue found." : "System secure."}</p>
-           </div>
-        );
-
-      case 'EXP': // Expense Receipt
-        return (
-            <div className="font-serif text-sm p-6 border border-slate-200 shadow-sm bg-white mx-auto max-w-sm mt-4 rotate-1">
-                <div className="text-center border-b-2 border-dashed border-slate-300 pb-4 mb-4">
-                    <h3 className="text-xl font-bold text-slate-800">STAR COFFEE</h3>
-                    <p className="text-xs text-slate-500">Gangnam-gu, Seoul, Korea</p>
-                    <p className="text-xs text-slate-500">Tel: 02-1234-5678</p>
-                </div>
-                <div className="space-y-2 mb-4 text-slate-600">
-                    <div className="flex justify-between"><span>Americano</span><span>4,500</span></div>
-                    <div className="flex justify-between"><span>Cafe Latte</span><span>5,000</span></div>
-                    <div className="flex justify-between"><span>Sandwich</span><span>6,800</span></div>
-                </div>
-                <div className="border-t-2 border-dashed border-slate-300 pt-2 font-bold flex justify-between text-slate-800">
-                    <span>TOTAL</span>
-                    <span>16,300</span>
-                </div>
-                <div className="mt-4 text-xs text-center text-slate-400">
-                    <p>{new Date(scenario.timestamp).toLocaleString()}</p>
-                    <p>Card: ****-****-****-1234</p>
-                    <p>Auth No: 9928311</p>
-                </div>
-                 {isFail && (
-                    <div className="mt-4 border-2 border-red-500 text-red-500 font-bold text-xs p-1 text-center -rotate-6">
-                        WEEKEND USAGE
-                    </div>
-                 )}
-            </div>
-        );
-        
-      default: // Generic Official Document
-        return (
+  return (
+    <div className="w-full h-full bg-slate-200 p-4 overflow-hidden flex items-center justify-center">
+         <div className="w-full max-w-2xl bg-white shadow-xl h-full max-h-[600px] overflow-auto flex flex-col transform transition-transform hover:scale-[1.01] duration-300">
             <div className="p-8 bg-white h-full flex flex-col">
                 <div className="border-b-2 border-slate-800 pb-4 mb-6">
                     <div className="flex justify-between items-start">
                         <h1 className="text-xl font-bold uppercase text-slate-800">{title}</h1>
                         <FileText className="w-8 h-8 text-slate-300" />
                     </div>
-                    <p className="text-sm text-slate-500 mt-2">Document Ref: DOC-{scenario.id.split('-')[1]}</p>
+                    <p className="text-sm text-slate-500 mt-2">Ref: {scenario.id}</p>
                 </div>
                 <div className="space-y-4 text-sm text-slate-800 leading-relaxed text-justify flex-1">
-                    <p>
-                        This document serves as evidence for the audit procedure regarding <strong>{title}</strong>. 
-                        The contents herein have been extracted from the internal system on {new Date(scenario.timestamp).toLocaleDateString()}.
-                    </p>
+                    <p>Evidence document for <strong>{title}</strong>.</p>
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded my-4">
                         <h4 className="font-bold mb-2 flex items-center gap-2">
                             <Table className="w-4 h-4 text-slate-500"/> Data Extract
                         </h4>
                         <div className="space-y-2 text-xs font-mono text-slate-600">
-                             <div className="flex justify-between border-b pb-1"><span>Parameter</span><span>Value</span></div>
-                             <div className="flex justify-between"><span>System_ID</span><span>SYS-001</span></div>
-                             <div className="flex justify-between"><span>User_ID</span><span>admin_01</span></div>
-                             <div className="flex justify-between"><span>Timestamp</span><span>{scenario.timestamp}</span></div>
-                             <div className="flex justify-between font-bold"><span>Check_Result</span><span>{isFail ? "FAIL" : "PASS"}</span></div>
+                             <div className="flex justify-between font-bold"><span>Result</span><span>{isFail ? "FAIL" : "PASS"}</span></div>
                         </div>
                     </div>
-                    <p>
-                        <strong>Audit Finding:</strong><br/>
-                        {isFail 
-                            ? "Based on the analysis, the system has identified discrepancies that require further investigation." 
-                            : "No anomalies detected. The process is compliant with internal policies."}
-                    </p>
-                </div>
-                <div className="mt-8 pt-4 border-t border-slate-200 flex justify-between text-xs text-slate-400">
-                    <span>Internal Audit Dept.</span>
-                    <span>Confidential</span>
                 </div>
             </div>
-        );
-    }
-  };
-
-  return (
-    <div className="w-full h-full bg-slate-200 p-4 overflow-hidden flex items-center justify-center">
-         <div className="w-full max-w-2xl bg-white shadow-xl h-full max-h-[600px] overflow-auto flex flex-col transform transition-transform hover:scale-[1.01] duration-300">
-            {renderContent()}
          </div>
     </div>
   );
@@ -255,39 +108,29 @@ const GenericDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
 
 const SimulatedEvidenceViewer: React.FC<{violation: ViolationDetail}> = ({ violation }) => {
     switch (violation.evidenceType) {
-        case 'Approval Email':
-            return <SimulatedEmail violation={violation} />;
-        case 'Contract':
-            return <SimulatedContract violation={violation} />;
-        case 'Log File':
-            return <SimulatedLog violation={violation} />;
-        default:
-            return (
-                <div className="w-full h-full object-cover flex items-center justify-center bg-slate-200">
-                    <p className="text-slate-500">미리보기를 지원하지 않는 증빙입니다.</p>
-                </div>
-            );
+        case 'Approval Email': return <SimulatedEmail violation={violation} />;
+        case 'Contract': return <SimulatedContract violation={violation} />;
+        case 'Log File': return <SimulatedLog violation={violation} />;
+        default: return <div className="w-full h-full flex items-center justify-center bg-slate-200"><p className="text-slate-500">No Preview Available</p></div>;
     }
 };
 
 interface ReportsProps {
   scenarios: Scenario[];
+  violations: ViolationDetail[];
 }
 
-const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
+const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
   const [selectedScenario, setSelectedScenario] = useState<Scenario>(scenarios.length > 0 ? scenarios[0] : {} as Scenario);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'FAIL' | 'PASS'>('ALL');
 
-  // Update selected scenario if scenarios change and current selection is invalid
   useEffect(() => {
     if (!scenarios.find(s => s.id === selectedScenario.id) && scenarios.length > 0) {
       setSelectedScenario(scenarios[0]);
     }
   }, [scenarios, selectedScenario.id]);
 
-  const getAreaName = (code: string) => {
-    return AUDIT_AREAS.find(a => a.code === code)?.name || code;
-  };
+  const getAreaName = (code: string) => AUDIT_AREAS.find(a => a.code === code)?.name || code;
   
   const filteredScenarios = useMemo(() => {
     return scenarios.filter(s => {
@@ -305,25 +148,22 @@ const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
 
   const violationDetail = useMemo(() => {
     if (selectedScenario.status === 'Fail') {
+        if (selectedScenario.violationId) {
+            return violations.find(v => v.id === selectedScenario.violationId);
+        }
         const violationId = violationMap[selectedScenario.id as keyof typeof violationMap];
-        return CRITICAL_VIOLATIONS.find(v => v.id === violationId);
+        return violations.find(v => v.id === violationId);
     }
     return null;
-  }, [selectedScenario, violationMap]);
-
+  }, [selectedScenario, violations, violationMap]);
 
   const RiskIndicator = ({ risk }: { risk: Scenario['risk'] }) => {
-    const colors = {
-      High: 'bg-red-500',
-      Medium: 'bg-orange-500',
-      Low: 'bg-emerald-500',
-    };
+    const colors = { High: 'bg-red-500', Medium: 'bg-orange-500', Low: 'bg-emerald-500' };
     return <div className={`w-2 h-2 rounded-full ${colors[risk]}`} />;
   };
 
   return (
     <div className="h-full flex flex-col md:flex-row bg-slate-50">
-      {/* Left List Pane */}
       <div className="w-full md:w-1/3 md:h-full flex flex-col border-r border-slate-200 bg-white">
         <div className="p-4 sm:p-6 border-b border-slate-100 hidden md:block">
           <h2 className="text-xl font-bold text-slate-900">전체 감사 시나리오</h2>
@@ -362,95 +202,55 @@ const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
         </div>
       </div>
 
-      {/* Right Detail Pane */}
       <div className="w-full md:w-2/3 h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
-          
-          {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6">
             <div className="mb-4 sm:mb-0">
               <div className="flex items-center flex-wrap space-x-2 text-slate-500 text-sm mb-1">
                 <span className="font-medium text-blue-600">{getAreaName(selectedScenario.areaCode)}</span>
-                <span>/</span>
-                <span>시나리오</span>
                 <span>/</span>
                 <span className="font-semibold text-slate-900">{selectedScenario.id}</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{selectedScenario.title}</h1>
             </div>
             <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center">
-              <FileText className="w-4 h-4" />
-              PDF 내보내기
+              <FileText className="w-4 h-4" /> PDF 내보내기
             </button>
           </div>
           
-          {/* DYNAMIC CONTENT AREA */}
           {violationDetail ? (
             <>
-              {/* AI Analysis Box for Violation */}
               <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-4 sm:p-6 mb-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <Eye className="w-16 h-16 sm:w-24 sm:h-24 text-red-600" />
                 </div>
                 <h3 className="text-red-900 font-bold flex items-center gap-2 mb-3">
-                  <AlertOctagon className="w-5 h-5 text-red-600" />
-                  AuditFlow AI 분석 결과: 위반
+                  <AlertOctagon className="w-5 h-5 text-red-600" /> AuditFlow AI 분석 결과: 위반
                 </h3>
-                <p className="text-red-800 text-sm leading-relaxed mb-4">
-                  {violationDetail.aiAnalysis}
-                </p>
+                <p className="text-red-800 text-sm leading-relaxed mb-4">{violationDetail.aiAnalysis}</p>
                 <div className="bg-white/60 rounded-lg p-3 text-sm text-red-900 font-medium border border-red-100/50">
                   <span className="font-bold">권고 조치 (Recommendation):</span> {violationDetail.recommendation}
                 </div>
               </div>
 
-              {/* Comparison Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                {/* Structured Data */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                    시스템 데이터 (ERP Data)
-                  </h3>
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">시스템 데이터 (ERP Data)</h3>
                   <div className="space-y-4">
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Transaction ID</label>
-                      <p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">일자</label>
-                      <p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.date}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">금액 / 값</label>
-                      <p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.amount}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">대상 / 사용자</label>
-                      <p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.entity}</p>
-                    </div>
+                    <div><label className="text-xs text-slate-500 block mb-1">Transaction ID</label><p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">일자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.date}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">금액 / 값</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.amount}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">대상 / 사용자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.entity}</p></div>
                   </div>
                 </div>
 
-                {/* Unstructured Evidence */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                   <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                     <span>비정형 증빙 자료 ({violationDetail.evidenceType})</span>
                     <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Simulated View</span>
                   </h3>
-                  
                   <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[300px]">
                     <SimulatedEvidenceViewer violation={violationDetail} />
-                  </div>
-                  
-                  <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-                    <span>Source: SharePoint / Legal_Repos</span>
-                    <a 
-                      href="#"
-                      onClick={(e) => e.preventDefault()}
-                      className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                    >
-                      원본 문서 열기 <ArrowRight className="w-3 h-3" />
-                    </a>
                   </div>
                 </div>
               </div>
@@ -459,9 +259,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
              <div className="space-y-8">
                <div className={`bg-gradient-to-r ${selectedScenario.status === 'Pass' ? 'from-emerald-50 to-green-50 border-emerald-100' : 'from-red-50 to-orange-50 border-red-100'} rounded-xl p-6`}>
                  <h3 className={`font-bold flex items-center gap-2 mb-3 ${selectedScenario.status === 'Pass' ? 'text-emerald-900' : 'text-red-900'}`}>
-                    {selectedScenario.status === 'Pass' 
-                        ? <CheckCircle className="w-5 h-5 text-emerald-600" /> 
-                        : <XCircle className="w-5 h-5 text-red-600" />}
+                    {selectedScenario.status === 'Pass' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
                     AuditFlow AI 분석 결과: {selectedScenario.status === 'Pass' ? '적정' : '위반'}
                  </h3>
                  <p className={`text-sm leading-relaxed ${selectedScenario.status === 'Pass' ? 'text-emerald-800' : 'text-red-800'}`}>
@@ -471,9 +269,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios }) => {
                  </p>
                </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                        테스트 상세 내용
-                    </h3>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">테스트 상세 내용</h3>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedScenario.detailedDescription}</p>
                 </div>
                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">

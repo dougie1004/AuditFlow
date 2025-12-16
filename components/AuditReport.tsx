@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from '../data/mockData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AUDIT_AREAS } from '../data/mockData';
 import { Download, Printer, ShieldCheck, FileText, List, TrendingUp, Sparkles, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Scenario, ViolationDetail } from '../types';
 
 type ReportTemplate = 'executive' | 'detailed' | 'improvement';
 
@@ -11,12 +12,30 @@ const TEMPLATES = [
   { id: 'improvement', label: '프로세스 개선 제안', icon: TrendingUp, desc: 'AI 기반 근본 원인 분석' }
 ];
 
-const AuditReport: React.FC = () => {
+interface AuditReportProps {
+  scenarios: Scenario[];
+  violations: ViolationDetail[];
+}
+
+const AuditReport: React.FC<AuditReportProps> = ({ scenarios, violations }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate>('executive');
   const [isGenerating, setIsGenerating] = useState(false);
   const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  const totalScenarios = 90;
-  const totalViolations = AUDIT_AREAS.reduce((acc, curr) => acc + curr.violationCount, 0);
+  
+  // Dynamic Calculations based on props
+  const totalScenarios = scenarios.length;
+  const totalViolations = scenarios.filter(s => s.status === 'Fail').length;
+  const complianceRate = totalScenarios > 0 
+    ? ((totalScenarios - totalViolations) / totalScenarios * 100).toFixed(1)
+    : '100.0';
+
+  // Calculate dynamic statistics per area
+  const areaStats = useMemo(() => {
+    return AUDIT_AREAS.map(area => ({
+        ...area,
+        violationCount: scenarios.filter(s => s.areaCode === area.code && s.status === 'Fail').length
+    }));
+  }, [scenarios]);
 
   // Simulate AI Generation when switching templates
   const handleTemplateChange = (templateId: string) => {
@@ -29,7 +48,7 @@ const AuditReport: React.FC = () => {
     if (isGenerating) {
       const timer = setTimeout(() => {
         setIsGenerating(false);
-      }, 1200); // 1.2s fake loading time
+      }, 500); // Reduced delay for better performance
       return () => clearTimeout(timer);
     }
   }, [isGenerating]);
@@ -60,7 +79,7 @@ const AuditReport: React.FC = () => {
               </p>
 
               <div className="space-y-6">
-                {CRITICAL_VIOLATIONS.map((violation, idx) => (
+                {violations.map((violation, idx) => (
                   <div key={idx} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm break-inside-avoid">
                      <div className="flex flex-col sm:flex-row justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
@@ -181,10 +200,10 @@ const AuditReport: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-3 border-l-4 border-blue-600 pl-3">1. 경영진 요약 (Executive Summary)</h3>
               <p className="text-slate-700 leading-relaxed text-justify">
                 본 감사는 <strong>Nexus Corp (넥서스 주식회사)</strong>의 9개 핵심 재무 및 운영 영역에 대한 내부 통제 효과성을 평가하기 위해 수행되었습니다. 
-                AuditFlow AI 엔진을 활용하여 총 90개의 통제 시나리오를 점검하였으며, 특히 비정형 데이터(계약서, 이메일 승인 등)와 시스템 트랜잭션 간의 정합성 검증에 주력하였습니다.
+                AuditFlow AI 엔진을 활용하여 총 <strong>{totalScenarios}개</strong>의 통제 시나리오를 점검하였으며, 특히 비정형 데이터(계약서, 이메일 승인 등)와 시스템 트랜잭션 간의 정합성 검증에 주력하였습니다.
                 <br/><br/>
-                진단 결과, 전체적으로 <strong>{((totalScenarios - totalViolations) / totalScenarios * 100).toFixed(1)}%</strong>의 통제 준수율을 보였으나, 
-                재무 마감, 구매 지급, 정보 보안 영역에서 <strong>{totalViolations}건</strong>의 주요 위반 사항이 발견되어 즉각적인 시정 조치가 요구됩니다.
+                진단 결과, 전체적으로 <strong>{complianceRate}%</strong>의 통제 준수율을 보였으나, 
+                <strong>{totalViolations}건</strong>의 주요 위반 사항이 발견되어 즉각적인 시정 조치가 요구됩니다.
               </p>
             </section>
 
@@ -218,7 +237,7 @@ const AuditReport: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {AUDIT_AREAS.map((area) => (
+                    {areaStats.map((area) => (
                       <tr key={area.code}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{area.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{area.violationCount}건</td>
@@ -317,7 +336,7 @@ const AuditReport: React.FC = () => {
                     AI Insight
                 </div>
                 <p className="text-xs text-indigo-700 leading-relaxed">
-                    선택하신 템플릿에 맞춰 AI가 90개 시나리오 실행 결과와 비정형 데이터 분석 내용을 자동으로 요약 및 재구성합니다.
+                    선택하신 템플릿에 맞춰 AI가 {totalScenarios}개 시나리오 실행 결과와 비정형 데이터 분석 내용을 자동으로 요약 및 재구성합니다.
                 </p>
             </div>
          </div>

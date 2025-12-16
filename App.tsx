@@ -8,25 +8,36 @@ import CorpCardAudit from './components/CorpCardAudit';
 import ProductionForecast from './components/ProductionForecast';
 import ProcessMonitoring from './components/ProcessMonitoring';
 import AuditManagement from './components/AuditManagement';
-import AuditTaskManager from './components/AuditTaskManager'; // Imported
+import AuditTaskManager from './components/AuditTaskManager'; 
 import Login from './components/Login';
 import Reports from './components/Reports';
 import AuditReport from './components/AuditReport';
 import AIChat from './components/AIChat';
 import { Menu, Bell } from 'lucide-react';
-import { MOCK_SCENARIOS } from './data/mockData';
-import { Scenario } from './types';
+import { MOCK_SCENARIOS, CRITICAL_VIOLATIONS } from './data/mockData';
+import { Scenario, ViolationDetail } from './types';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Centralized State for Scenarios
+  // Centralized State for Scenarios and Violations
   const [scenarios, setScenarios] = useState<Scenario[]>(MOCK_SCENARIOS);
+  const [violations, setViolations] = useState<ViolationDetail[]>(CRITICAL_VIOLATIONS);
 
   const handleAddScenario = (newScenario: Scenario) => {
-    setScenarios(prev => [newScenario, ...prev]);
+    // Prevent adding duplicate scenarios
+    if (!scenarios.some(s => s.id === newScenario.id)) {
+      setScenarios(prev => [newScenario, ...prev]);
+    }
+  };
+
+  const handleAddScenarioAndViolation = (newScenario: Scenario, newViolation: ViolationDetail) => {
+    if (!scenarios.some(s => s.id === newScenario.id)) {
+      setScenarios(prev => [newScenario, ...prev]);
+      setViolations(prev => [...prev, newViolation]);
+    }
   };
 
   const newScenarioCount = useMemo(() => scenarios.filter(s => s.isNew).length, [scenarios]);
@@ -37,7 +48,7 @@ const App: React.FC = () => {
     'final-report': '감사 보고서',
     'ai-chat': 'AI 어시스턴트',
     'audit-management': '감사 업무 관리',
-    'audit-task-manager': '감사 이슈 및 제보', // Added Title
+    'audit-task-manager': '감사 이슈 및 제보',
     'data-upload': '데이터 업로드',
     'scenario-manager': '시나리오 관리',
     'corp-card-audit': '법인카드 감사',
@@ -50,17 +61,17 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard scenarios={scenarios} />;
       case 'ai-reports':
-        return <Reports scenarios={scenarios} />;
+        return <Reports scenarios={scenarios} violations={violations} />;
       case 'final-report':
-        return <AuditReport />;
+        return <AuditReport scenarios={scenarios} violations={violations} />;
       case 'ai-chat':
-        return <AIChat />;
+        return <AIChat onAddScenario={handleAddScenario} onAddScenarioAndViolation={handleAddScenarioAndViolation} />;
       case 'audit-management':
         return <AuditManagement />;
-      case 'audit-task-manager': // Added Route
+      case 'audit-task-manager':
         return <AuditTaskManager />;
       case 'data-upload':
-        return <DataUpload setActiveView={setActiveView} />;
+        return <DataUpload setActiveView={setActiveView} onAddScenarioAndViolation={handleAddScenarioAndViolation} />;
       case 'scenario-manager':
         return <ScenarioManager scenarios={scenarios} onAddScenario={handleAddScenario} />;
       case 'corp-card-audit':
@@ -91,7 +102,6 @@ const App: React.FC = () => {
         onLogout={() => setIsAuthenticated(false)}
       />
       <main className="flex-1 lg:ml-64 h-screen flex flex-col">
-        {/* Header for both mobile and desktop */}
         <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-slate-200">
           <div className="flex items-center gap-2">
             <button onClick={() => setIsSidebarOpen(true)} className="text-slate-800 p-2 -ml-2 lg:hidden">

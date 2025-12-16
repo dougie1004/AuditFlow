@@ -70,7 +70,7 @@ const AuditManagement: React.FC = () => {
         '재고 실사 보고서 및 조정 내역서'
       ]);
       setIsGeneratingRequests(false);
-    }, 1500);
+    }, 500); // Demo speed: 500ms
   };
 
   const generateQuestions = () => {
@@ -84,7 +84,7 @@ const AuditManagement: React.FC = () => {
         'ERP 시스템 접근 권한 검토 주기는 어떻게 되며, 최근 퇴직자 권한 회수는 적시에 이루어졌습니까?'
       ]);
       setIsGeneratingQuestions(false);
-    }, 1500);
+    }, 500); // Demo speed: 500ms
   };
 
   return (

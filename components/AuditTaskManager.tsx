@@ -192,7 +192,7 @@ const AuditTaskManager: React.FC = () => {
     setIsAnalyzing(true);
     setCeoResult(null);
 
-    // Simulate AI Processing
+    // Simulate AI Processing (Fast demo speed)
     setTimeout(() => {
       setIsAnalyzing(false);
       
@@ -215,7 +215,7 @@ const AuditTaskManager: React.FC = () => {
         file: 'CEO_Request_Report_20251206.pdf'
       });
       
-    }, 2000);
+    }, 400); 
   };
 
   return (
@@ -288,7 +288,7 @@ const AuditTaskManager: React.FC = () => {
                         <Bot className="absolute inset-0 m-auto w-6 h-6 text-blue-600" />
                       </div>
                       <h3 className="text-lg font-bold text-slate-800">AI 정밀 분석 중...</h3>
-                      <p className="text-sm text-slate-500 mt-1">관련 데이터셋 추출 및 이상 패턴 매칭 중 (약 3초 소요)</p>
+                      <p className="text-sm text-slate-500 mt-1">관련 데이터셋 추출 및 이상 패턴 매칭 중</p>
                     </motion.div>
                   )}
 
