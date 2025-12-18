@@ -1,21 +1,19 @@
+
 import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from "../data/mockData";
 
 export const sendMessageToGemini = async (message: string): Promise<string> => {
   try {
     const context = `
-      당신은 내부 감사 및 컴플라이언스 전문가 AI 'AuditFlow'입니다.
-      가상의 기업 "Nexus Corp (넥서스 주식회사)"의 감사 데이터를 분석하고 있습니다.
-      
-      현재 감사 현황:
-      - 전체 감사 영역: 9개 (${AUDIT_AREAS.map(a => a.name).join(', ')})
-      - 실행된 시나리오: 90개
-      - 발견된 주요 위반: ${CRITICAL_VIOLATIONS.length}건
-      
-      주요 위반 사항 데이터:
-      ${CRITICAL_VIOLATIONS.map(v => `- [${v.areaCode}] ${v.violationType}: ${v.aiAnalysis}`).join('\n')}
+      # Forensic Auditor Core Instructions
+      - You are an expert AI Forensic Auditor designed to detect fraud and internal control failures.
+      - Data Processing: Input is provided in a high-density Pipe(|) separated format to optimize token usage.
+      - Detection Targets:
+        1. Conflict of Interest: Match Employee Account Numbers vs Vendor Master Accounts.
+        2. Disbursement Fraud: Identify duplicate payments (same date/amt/vendor).
+        3. Ghost Vendors: Detect high-value payments to unverified or new vendors during non-business hours.
+      - Constraint: Analyze the context even if data appears truncated. Return findings in a structured JSON report including 'risk_score', 'summary', and 'findings' list.
 
-      당신의 역할은 이 위반 사항들을 설명하거나, 추가적인 감사 절차를 제안하고, 이해관계자에게 보낼 이메일 초안을 작성하는 것입니다.
-      답변은 한국어로, 전문적이고 명확하며 리스크 완화에 초점을 맞춰 작성하십시오.
+      위 지침에 따라 "Nexus Corp (넥서스 주식회사)"의 감사 데이터를 분석하고 답변은 항상 한국어로 전문적이고 명확하게 작성하십시오.
     `;
 
     // Call our own backend API route instead of Gemini API directly

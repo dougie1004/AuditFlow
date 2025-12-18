@@ -4,11 +4,11 @@ import { AUDIT_AREAS } from '../data/mockData';
 import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table, Sparkles } from 'lucide-react';
 import type { ViolationDetail, Scenario } from '../types';
 
-// --- Simulated Evidence Components (For Critical Violations) ---
+// --- (Simulated Evidence Components: SimulatedEmail, SimulatedContract, SimulatedLog, GenericDocViewer, SimulatedEvidenceViewer remain same) ---
 const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
   <div className="w-full h-full bg-white p-4 text-sm font-sans flex flex-col">
     <div className="border-b pb-2 mb-2">
-      <h4 className="font-bold text-slate-800 text-base">긴급 분개 요청: {violation.transactionInfo.entity} 관련</h4>
+      <h4 className="font-bold text-slate-800 text-base">긴급 요청: {violation.transactionInfo.entity} 관련</h4>
       <div className="text-xs text-slate-500 mt-1">받은 편지함</div>
     </div>
     <div className="flex items-center gap-3 my-3">
@@ -17,23 +17,19 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
       </div>
       <div>
         <p className="font-semibold text-slate-700">{violation.transactionInfo.entity} &lt;user@nexuscorp.com&gt;</p>
-        <p className="text-xs text-slate-500">To: 재무승인팀</p>
+        <p className="text-xs text-slate-500">To: 감사팀 / 재무팀</p>
       </div>
     </div>
     <div className="text-slate-800 space-y-3 text-sm leading-relaxed flex-1">
-      <p>재무승인팀께,</p>
-      <p>
-        아래 거래에 대한 긴급 승인을 요청드립니다. 시스템 상 예외 처리가 필요합니다.
-      </p>
+      <p>담당자님,</p>
+      <p>아래 거래에 대한 긴급 처리 및 승인을 요청드립니다. 특이사항이 있어 AI가 식별한 내용입니다.</p>
       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 my-2">
-        <p><strong>- 전표 ID:</strong> {violation.transactionInfo.id}</p>
+        <p><strong>- 참조 ID:</strong> {violation.transactionInfo.id}</p>
         <p><strong>- 금액:</strong> {violation.transactionInfo.amount}</p>
       </div>
       <p>감사합니다.</p>
     </div>
-    <div className="text-xs text-slate-400 mt-auto pt-2 border-t">
-      {violation.transactionInfo.date}
-    </div>
+    <div className="text-xs text-slate-400 mt-auto pt-2 border-t">{violation.transactionInfo.date}</div>
   </div>
 );
 
@@ -64,7 +60,7 @@ const SimulatedLog: React.FC<{ violation: ViolationDetail }> = ({ violation }) =
       <span>System Analysis Log</span>
     </div>
     <div className="flex-1 space-y-1 overflow-y-auto">
-      <p><span className="text-cyan-400">[{violation.transactionInfo.date} 15:30:01]</span> <span className="text-red-400">ALERT</span>: Rule Violation Detected.</p>
+      <p><span className="text-cyan-400">[{violation.transactionInfo.date} 15:30:01]</span> <span className="text-red-400">ALERT</span>: Compliance Violation Detected.</p>
       <p className="pl-4"> <span className="text-yellow-400">ID:</span> {violation.transactionInfo.id}</p>
       <p className="pl-4"> <span className="text-yellow-400">User:</span> {violation.transactionInfo.entity}</p>
       <p className="pl-4"> <span className="text-yellow-400">Amount:</span> {violation.transactionInfo.amount}</p>
@@ -125,6 +121,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'FAIL' | 'PASS'>('ALL');
 
   useEffect(() => {
+    // If current selected is not in current list (e.g. filtered out), select the first one available
     if (!scenarios.find(s => s.id === selectedScenario.id) && scenarios.length > 0) {
       setSelectedScenario(scenarios[0]);
     }
@@ -139,23 +136,14 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
     });
   }, [statusFilter, scenarios]);
 
-  const violationMap = useMemo(() => ({
-    'FSC-001': 'FSC-V01',
-    'STP-001': 'STP-V01',
-    'EXP-002': 'EXP-V01',
-    'SEC-001': 'SEC-V01'
-  }), []);
-
+  // FIXED: Dynamically find violation details using the violationId on the scenario object
+  // This ensures that AI-discovered violations are found within the current session's violations state.
   const violationDetail = useMemo(() => {
-    if (selectedScenario.status === 'Fail') {
-        if (selectedScenario.violationId) {
-            return violations.find(v => v.id === selectedScenario.violationId);
-        }
-        const violationId = violationMap[selectedScenario.id as keyof typeof violationMap];
-        return violations.find(v => v.id === violationId);
+    if (selectedScenario.status === 'Fail' && selectedScenario.violationId) {
+        return violations.find(v => v.id === selectedScenario.violationId);
     }
     return null;
-  }, [selectedScenario, violations, violationMap]);
+  }, [selectedScenario, violations]);
 
   const RiskIndicator = ({ risk }: { risk: Scenario['risk'] }) => {
     const colors = { High: 'bg-red-500', Medium: 'bg-orange-500', Low: 'bg-emerald-500' };
@@ -186,7 +174,10 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
               }`}
             >
               <div className="flex justify-between items-start mb-2">
-                 <span className="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-bold">{scenario.areaCode}</span>
+                 <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-bold">{scenario.areaCode}</span>
+                    {scenario.isNew && <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold animate-pulse">NEW AI</span>}
+                 </div>
                  <div className="flex items-center gap-2">
                     <RiskIndicator risk={scenario.risk} />
                     <span className="text-xs font-medium text-slate-500">{scenario.risk}</span>
@@ -210,6 +201,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
                 <span className="font-medium text-blue-600">{getAreaName(selectedScenario.areaCode)}</span>
                 <span>/</span>
                 <span className="font-semibold text-slate-900">{selectedScenario.id}</span>
+                {selectedScenario.isNew && <span className="flex items-center gap-1 text-blue-600 font-bold ml-2"><Sparkles className="w-3 h-3"/> AI 실시간 발굴</span>}
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{selectedScenario.title}</h1>
             </div>
@@ -225,7 +217,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
                   <Eye className="w-16 h-16 sm:w-24 sm:h-24 text-red-600" />
                 </div>
                 <h3 className="text-red-900 font-bold flex items-center gap-2 mb-3">
-                  <AlertOctagon className="w-5 h-5 text-red-600" /> AuditFlow AI 분석 결과: 위반
+                  <AlertOctagon className="w-5 h-5 text-red-600" /> AuditFlow AI 분석 결과: 위반 (Violation)
                 </h3>
                 <p className="text-red-800 text-sm leading-relaxed mb-4">{violationDetail.aiAnalysis}</p>
                 <div className="bg-white/60 rounded-lg p-3 text-sm text-red-900 font-medium border border-red-100/50">
@@ -235,19 +227,19 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">시스템 데이터 (ERP Data)</h3>
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">시스템 데이터 (Audit Evidence)</h3>
                   <div className="space-y-4">
-                    <div><label className="text-xs text-slate-500 block mb-1">Transaction ID</label><p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p></div>
-                    <div><label className="text-xs text-slate-500 block mb-1">일자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.date}</p></div>
-                    <div><label className="text-xs text-slate-500 block mb-1">금액 / 값</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.amount}</p></div>
-                    <div><label className="text-xs text-slate-500 block mb-1">대상 / 사용자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.entity}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">Transaction ID / Log ID</label><p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">식별 일자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.date}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">관련 금액 / 크기</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.amount}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">대상 엔티티 / 담당자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.entity}</p></div>
                   </div>
                 </div>
 
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                   <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                     <span>비정형 증빙 자료 ({violationDetail.evidenceType})</span>
-                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Simulated View</span>
+                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-bold">AI SCANNER</span>
                   </h3>
                   <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[300px]">
                     <SimulatedEvidenceViewer violation={violationDetail} />

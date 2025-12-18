@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useMemo } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -8,16 +9,40 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
-import { ShieldAlert, CheckCircle, FileSearch, Activity } from 'lucide-react';
+import { ShieldAlert, CheckCircle, FileSearch, Activity, UploadCloud, Sparkles } from 'lucide-react';
 import { AUDIT_AREAS } from '../data/mockData';
 import { Scenario } from '../types';
 
 interface DashboardProps {
   scenarios: Scenario[];
+  isAuditComplete: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
-  // Dynamic Calculation based on passed scenarios
+const Dashboard: React.FC<DashboardProps> = ({ scenarios, isAuditComplete }) => {
+  // --- Empty State View ---
+  if (!isAuditComplete) {
+      return (
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50">
+              <div className="bg-white p-12 rounded-3xl shadow-xl border border-slate-200 max-w-2xl w-full">
+                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <ShieldAlert className="w-12 h-12 text-blue-600" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900 mb-4">감사 데이터가 없습니다.</h2>
+                  <p className="text-slate-500 mb-8 text-lg leading-relaxed">
+                      AI 감사를 시작하려면 감사 대상 기간(최근 2년)의 데이터를 업로드해주세요.<br/>
+                      ERP 원장, 규정 문서, 이메일 로그 등을 분석하여 잠재적 위험을 탐지합니다.
+                  </p>
+                  <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center gap-3 mx-auto text-lg pointer-events-none opacity-50">
+                      <UploadCloud className="w-6 h-6" /> 
+                      데이터 업로드 메뉴로 이동하여 시작
+                  </button>
+                  <p className="text-sm text-slate-400 mt-4">* 좌측 메뉴의 '데이터 업로드' 탭을 이용해주세요.</p>
+              </div>
+          </div>
+      );
+  }
+
+  // --- Populated View ---
   const totalScenarios = scenarios.length;
   const totalViolations = scenarios.filter(s => s.status === 'Fail').length;
   const complianceRate = totalScenarios > 0 
@@ -33,6 +58,18 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
       준수: areaScenarios.length - failCount
     };
   });
+
+  // Sort alerts: AI-discovered (isNew) first, then by timestamp
+  const recentAlerts = useMemo(() => {
+    return [...scenarios]
+      .filter(s => s.status === 'Fail')
+      .sort((a, b) => {
+        if (a.isNew && !b.isNew) return -1;
+        if (!a.isNew && b.isNew) return 1;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      })
+      .slice(0, 5);
+  }, [scenarios]);
 
   const StatsCard = ({ title, value, subtext, icon: Icon, color }: any) => (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start justify-between">
@@ -53,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <div className="hidden lg:block">
         <h2 className="text-2xl font-bold text-slate-900">경영진 감사 대시보드 (Executive Dashboard)</h2>
-        <p className="text-slate-500 mt-1">9개 핵심 영역에 대한 내부 통제 및 컴플라이언스 실시간 모니터링</p>
+        <p className="text-slate-500 mt-1">최근 2년(2024-2025) 데이터에 대한 내부 통제 및 컴플라이언스 모니터링 결과</p>
       </div>
 
       {/* KPI Cards */}
@@ -68,14 +105,14 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
         <StatsCard 
           title="총 적발 건수" 
           value={totalViolations} 
-          subtext="13건의 중요 위험 감지됨" 
+          subtext={`${scenarios.filter(s => s.isNew).length}건의 신규 이슈 포함`} 
           icon={ShieldAlert} 
           color="bg-red-500" 
         />
         <StatsCard 
           title="실행된 시나리오" 
           value={totalScenarios} 
-          subtext="100% 진단 완료" 
+          subtext="AI 자동 발굴 시나리오 포함" 
           icon={Activity} 
           color="bg-blue-500" 
         />
@@ -110,18 +147,44 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios }) => {
 
         {/* Recent Activity Feed */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">최근 위험 알림</h3>
-          <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-80 lg:max-h-none">
-            {scenarios.filter(s => s.status === 'Fail').slice(0, 5).map(scenario => (
-              <div key={scenario.id} className="p-3 bg-red-50 border border-red-100 rounded-lg">
+          <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            최근 위험 알림
+          </h3>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[500px] lg:max-h-none">
+            {recentAlerts.map(scenario => (
+              <div 
+                key={scenario.id} 
+                className={`p-3 rounded-lg border transition-all ${
+                  scenario.isNew 
+                    ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100 shadow-sm animate-in fade-in slide-in-from-right-2' 
+                    : 'bg-red-50 border-red-100'
+                }`}
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold text-red-600 px-2 py-0.5 bg-white rounded border border-red-200">
-                    {scenario.areaCode}
-                  </span>
-                  <span className="text-xs text-slate-400">방금 전</span>
+                  <div className="flex gap-2">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      scenario.isNew ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-red-600 border-red-200'
+                    }`}>
+                      {scenario.areaCode}
+                    </span>
+                    {scenario.isNew && (
+                      <span className="text-[10px] font-bold text-indigo-700 flex items-center gap-0.5">
+                        <Sparkles className="w-2.5 h-2.5" /> NEW
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400">방금 전</span>
                 </div>
-                <p className="text-sm font-semibold text-slate-800 mt-2">{scenario.title}</p>
+                <p className={`text-sm font-bold mt-2 ${scenario.isNew ? 'text-blue-900' : 'text-slate-800'}`}>
+                  {scenario.title}
+                </p>
                 <p className="text-xs text-slate-500 mt-1 line-clamp-2">{scenario.description}</p>
+                {scenario.isNew && (
+                  <div className="mt-2 pt-2 border-t border-blue-100 flex justify-end">
+                    <span className="text-[10px] font-bold text-blue-600">AI 분석 데이터 기반 발굴</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

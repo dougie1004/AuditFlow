@@ -2,8 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Bar, ComposedChart, Line } from 'recharts';
 import { MOCK_FORECAST_DATA, INITIAL_INVENTORY } from '../data/mockData';
-import { TrendingUp, Archive, Target, ShieldAlert, Settings, PlayCircle } from 'lucide-react';
+import { TrendingUp, Archive, Target, ShieldAlert, Settings, PlayCircle, X } from 'lucide-react'; // Added X icon
 import type { ForecastDataPoint } from '../types';
+import { AnimatePresence, motion } from 'framer-motion'; // Added for animation
 
 const StatsCard = ({ icon: Icon, title, value, unit, colorClass }: { icon: any, title: string, value: string, unit: string, colorClass: string }) => (
   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
@@ -24,6 +25,7 @@ const StatsCard = ({ icon: Icon, title, value, unit, colorClass }: { icon: any, 
 const ProductionForecast: React.FC = () => {
   const [safetyStockRatio, setSafetyStockRatio] = useState(20); // in percent
   const [productionCapacity, setProductionCapacity] = useState(10000);
+  const [selectedChartData, setSelectedChartData] = useState<ForecastDataPoint | null>(null); // New state for selected data
 
   const simulationResult = useMemo(() => {
     const forecastWeeks = MOCK_FORECAST_DATA.filter(d => d.demand !== undefined);
@@ -73,6 +75,15 @@ const ProductionForecast: React.FC = () => {
 
   const { processedData, kpis } = simulationResult;
 
+  // Handler for chart click
+  const handleChartClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      setSelectedChartData(data.activePayload[0].payload);
+    } else {
+      setSelectedChartData(null);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="hidden lg:block">
@@ -92,14 +103,22 @@ const ProductionForecast: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
            {/* Chart */}
-           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-[28rem]">
+           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-[28rem] relative">
               <h3 className="text-lg font-bold text-slate-900 mb-6">주간 수요-생산-재고 현황</h3>
               <ResponsiveContainer width="100%" height="90%">
-                <ComposedChart data={processedData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <ComposedChart 
+                    data={processedData} 
+                    margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                    onClick={handleChartClick} // Add click handler to chart
+                    cursor={{ fill: '#f1f5f9' }} // Add cursor style for clickability
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="week" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}/>
+                  <Tooltip 
+                    cursor={{ fill: '#f1f5f9' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
                   <Legend verticalAlign="top" wrapperStyle={{paddingBottom: '20px'}} />
                   <Bar yAxisId="left" dataKey="sales" name="판매 실적" fill="#3b82f6" barSize={30} />
                   <Line yAxisId="left" type="monotone" dataKey="demand" name="수요 예측" stroke="#f97316" strokeWidth={2} strokeDasharray="3 3" dot={{ r: 4 }} />
@@ -108,6 +127,48 @@ const ProductionForecast: React.FC = () => {
               </ResponsiveContainer>
            </div>
            
+           {/* Detailed Week Data (New Panel) */}
+            <AnimatePresence>
+                {selectedChartData && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="bg-white p-6 rounded-xl shadow-sm border border-blue-200"
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <Archive className="w-5 h-5 text-blue-600" />
+                                {selectedChartData.week} 상세 데이터
+                            </h3>
+                            <button onClick={() => setSelectedChartData(null)} className="p-1 rounded-full hover:bg-slate-100">
+                                <X className="w-5 h-5 text-slate-500" />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <p className="text-slate-500">판매 실적</p>
+                                <p className="font-bold text-slate-800">{selectedChartData.sales?.toLocaleString() || '-'}</p>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <p className="text-slate-500">수요 예측</p>
+                                <p className="font-bold text-orange-600">{selectedChartData.demand?.toLocaleString() || '-'}</p>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                <p className="text-slate-500">생산 계획</p>
+                                <p className="font-bold text-green-600">{selectedChartData.production?.toLocaleString() || '-'}</p>
+                            </div>
+                            <div className={`p-3 rounded-lg border ${selectedChartData.inventory !== undefined && selectedChartData.inventory < 0 ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+                                <p className="text-slate-500">기말 재고</p>
+                                <p className={`font-bold ${selectedChartData.inventory !== undefined && selectedChartData.inventory < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                                    {selectedChartData.inventory?.toLocaleString() || '-'}
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
            {/* Data Table */}
            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
              <h3 className="text-lg font-bold text-slate-900 mb-4">상세 데이터</h3>
@@ -124,7 +185,10 @@ const ProductionForecast: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-100">
                         {processedData.map(d => (
-                            <tr key={d.week} className={d.inventory !== undefined && d.inventory < 0 ? 'bg-red-50' : ''}>
+                            <tr 
+                                key={d.week} 
+                                className={`${d.inventory !== undefined && d.inventory < 0 ? 'bg-red-50' : ''} ${selectedChartData?.week === d.week ? 'bg-blue-50 border-l-4 border-blue-600' : ''}`} // Highlight selected row
+                            >
                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">{d.week}</td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 text-right">{d.sales?.toLocaleString() || '-'}</td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600 text-right">{d.demand?.toLocaleString() || '-'}</td>

@@ -2,74 +2,83 @@
 import { MockUploadFile } from '../types';
 
 export const MOCK_UPLOAD_FILES: MockUploadFile[] = [
+  // --- Regulations & Policies (Unstructured) ---
   { 
-    id: 'file-je',
-    name: 'Journal_Entry.csv', 
-    type: 'CSV', 
-    size: '1,915KB', 
-    category: 'FSC',
-    content: `"Journal_ID","Date","Account","Debit","Credit","Description","Entered_By","Approved_By"
-"JE-20251105-014","2025-11-05","101001 - Cash","5000.00","","Regular Deposit","auto-proc","SYSTEM"
-"GL-JE-20251105-015","2025-11-05","505001 - Misc Expense","75200.00","","Urgent adjustment for Q3 marketing","chulsoo.kim","chulsoo.kim"
-"JE-20251105-016","2025-11-05","101001 - Cash","","75200.00","To balance JE-20251105-015","chulsoo.kim","chulsoo.kim"
-"JE-20251106-001","2025-11-06","401001 - Sales Revenue","","120000.00","Invoice INV-1001","auto-proc","SYSTEM"
-... (15,230 more rows)`
+    id: 'doc-ethics',
+    name: 'Code_of_Ethics_2024.pdf', 
+    type: 'PDF', 
+    size: '1.2MB', 
+    category: 'SEC',
+    content: `[NEXUS CORP 윤리 강령]\n제1장 총칙\n...임직원은 업무와 관련하여 이해관계자로부터 금품, 향응, 편의를 수수해서는 안 된다...`
   },
   { 
-    id: 'file-ap',
-    name: 'AP_Invoice.csv', 
-    type: 'CSV', 
-    size: '522KB', 
+    id: 'doc-purchase',
+    name: 'Procurement_Policy_v3.pdf', 
+    type: 'PDF', 
+    size: '850KB', 
     category: 'STP',
-    content: `"InvoiceID","VendorID","Date","Amount","DueDate","Status"
-"INV-2025-001","V-0078","2025-10-07","18000.00","2025-11-07","Paid"
-"INV-2025-002","V-005","2025-01-12","1200.00","2025-02-12","Pending"
-"INV-2025-003","V-0022","2025-10-22","120000.00","2025-11-22","Paid"
-...`
+    content: `[구매 규정]\n제 5조 (경쟁 입찰)\n1천만원 이상의 구매 계약은 반드시 3개 이상의 업체 견적을 비교하여 경쟁 입찰로 진행해야 한다...`
   },
   { 
-    id: 'file-payment',
-    name: 'Payment.csv', 
-    type: 'CSV', 
-    size: '337KB', 
-    category: 'TRE',
-    content: `"PaymentID","InvoiceID","Date","Amount","Method","Beneficiary","Approver"
-"PAY-001","INV-2025-001","2025-10-07","18000.00","Wire","NewBiz Partner","E1002"
-"PAY-002","INV-2025-003","2025-10-25","120000.00","Wire","Alpha Components","E1002"
-...`
-  },
-  { 
-    id: 'file-po',
-    name: 'Purchase_Order.csv', 
-    type: 'CSV', 
-    size: '190KB', 
-    category: 'STP',
-    content: `"PO_ID","VendorID","Date","TotalAmount","Status","Approver"
-"PO-NEXUS-20251020-088","V-0022","2025-10-20","120000.00","Approved","E1002"
-"PO-NEXUS-20251021-090","V-0078","2025-10-06","18000.00","Approved","E1002"
-...`
-  },
-  { 
-    id: 'file-ar',
-    name: 'AR_Invoice.csv', 
-    type: 'CSV', 
-    size: '74KB', 
+    id: 'doc-sales',
+    name: 'Sales_Recognition_Policy.pdf', 
+    type: 'PDF', 
+    size: '620KB', 
     category: 'OTC',
-    content: `"InvoiceID","CustomerID","Date","Amount","DueDate"
-"AR-2025-001","C-001","2025-01-15","5000.00","2025-02-15"
-"AR-2025-002","C-003","2025-01-10","24000.00","2025-02-10"
-...`
+    content: `[매출 인식 규정]\n재화의 인도가 완료되고 수익 금액을 신뢰성 있게 측정할 수 있을 때 매출을 인식한다...`
   },
   { 
-    id: 'file-deposit',
-    name: 'Deposit.csv', 
-    type: 'CSV', 
-    size: '52KB', 
-    category: 'TRE',
-    content: `"DepositID","Date","Amount","Bank","Account"
-"DEP-001","2025-01-02","50000.00","Shinhan","110-123-456789"
-...`
+    id: 'doc-accounting',
+    name: 'Accounting_Standard_Manual.pdf', 
+    type: 'PDF', 
+    size: '2.5MB', 
+    category: 'FSC',
+    content: `[회계 처리 기준]\n본 규정은 K-IFRS를 기반으로 작성되었으며...`
   },
+  { 
+    id: 'doc-entertainment',
+    name: 'Entertainment_Expense_Policy.pdf', 
+    type: 'PDF', 
+    size: '450KB', 
+    category: 'EXP',
+    content: `[접대비 규정]\n1인당 5만원 초과 식대 집행 시 사전 품의 필수. 유흥업소 사용 절대 금지...`
+  },
+  { 
+    id: 'doc-travel',
+    name: 'Travel_Expense_Policy.pdf', 
+    type: 'PDF', 
+    size: '520KB', 
+    category: 'EXP',
+    content: `[여비 교통비 규정]\n해외 출장 시 숙박비 한도는 1박당 $200이며, 초과 시 사유서 제출...`
+  },
+
+  // --- Financial Data (Structured - 2 Years) ---
+  { 
+    id: 'file-bank-24-25',
+    name: 'Bank_Transaction_2024_2025.csv', 
+    type: 'CSV', 
+    size: '15.4MB', 
+    category: 'TRE',
+    content: `Date,Bank,Account,Amount,Beneficiary,Description\n2024-01-02,Shinhan,110-xxx,5000000,Alpha Corp,Payment\n...`
+  },
+  { 
+    id: 'file-je-24-25',
+    name: 'Journal_Entry_2024_2025.csv', 
+    type: 'CSV', 
+    size: '48.2MB', 
+    category: 'FSC',
+    content: `Journal_ID,Date,Account,Debit,Credit,Description\nJE-20240101-001,2024-01-01,Cash,1000,0,Opening Balance\n...`
+  },
+  { 
+    id: 'file-ap-24-25',
+    name: 'AP_Invoice_2024_2025.csv', 
+    type: 'CSV', 
+    size: '12.5MB', 
+    category: 'STP',
+    content: `InvoiceID,VendorID,Date,Amount,Status\nINV-001,V-01,2024-01-05,5000,Paid\n...`
+  },
+  
+  // --- Master Data ---
   { 
     id: 'file-vendor',
     name: 'Vendor_Master.csv', 
@@ -79,28 +88,6 @@ export const MOCK_UPLOAD_FILES: MockUploadFile[] = [
     content: `"VendorID","Name","TaxID","Address","BankAccount","RegistrationDate"
 "V-0078","NewBiz Partner","123-45-67890","서울시 강남구 테헤란로 427, 101호","110-123-456789","2025-10-06"
 "V-0079","Alpha Supply","222-33-44444","경기도 판교로 55","220-456-789012","2020-01-01"
-"V-0022","Alpha Components","888-99-11111","인천시 남동구 공단로 12","330-111-222222","2018-05-15"
-...`
-  },
-  { 
-    id: 'file-customer',
-    name: 'Customer_Master.csv', 
-    type: 'CSV', 
-    size: '7KB', 
-    category: 'OTC',
-    content: `"CustomerID","Name","CreditLimit","Address"
-"C-001","Global Tech","100000","Seoul, Korea"
-"C-003","Omega Retail","50000","Busan, Korea"
-...`
-  },
-  { 
-    id: 'file-pending',
-    name: 'Pending_Items.csv', 
-    type: 'CSV', 
-    size: '7KB', 
-    category: 'FSC',
-    content: `"ItemID","Date","Amount","Reason","Department"
-"PEND-001","2025-12-01","1500.00","Missing Receipt","Sales"
 ...`
   },
   { 
@@ -112,7 +99,16 @@ export const MOCK_UPLOAD_FILES: MockUploadFile[] = [
     content: `"EmployeeID","Name","Dept","Position","Address","JoinDate","TerminationDate"
 "E1002","김철수","Finance","Manager","서울시 강남구 테헤란로 427, 101호","2019-05-10",""
 "E1023","김민준","R&D","Researcher","서울시 강남구 테헤란로 427","2021-03-01",""
-"E5001","박지성","R&D","Senior","경기도 분당구 정자로 15","2020-01-15","2025-11-30"
 ...`
+  },
+  
+  // --- Unstructured Communications ---
+  { 
+    id: 'file-email',
+    name: 'Email_Archive_Finance_2024_2025.pst', 
+    type: 'LOG', 
+    size: '2.1GB', 
+    category: 'SEC',
+    content: `[System] Binary file. Contains email backup for Finance Dept.`
   }
 ];

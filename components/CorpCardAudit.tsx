@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MOCK_CORP_CARD_TRANSACTIONS } from '../data/mockData';
 import { CorpCardTransaction, AnomalyType } from '../types';
-import { AlertTriangle, Users, User, Filter, MapPin, Sparkles, Send, Settings, CheckCircle2, Home, Store, Eraser, Info, ExternalLink, XCircle } from 'lucide-react';
+import { AlertTriangle, Users, User, Filter, MapPin, Sparkles, Send, Settings, CheckCircle2, Home, Store, Eraser, Info, ExternalLink, XCircle, Lock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 declare global {
@@ -224,8 +224,11 @@ const GoogleMapViewer: React.FC<{
     return <div ref={mapContainerRef} className="w-full h-full rounded-xl bg-slate-100 min-h-[400px]" style={{ minHeight: '100%' }} />;
 };
 
+interface CorpCardAuditProps {
+    isAuditComplete: boolean;
+}
 
-const CorpCardAudit: React.FC = () => {
+const CorpCardAudit: React.FC<CorpCardAuditProps> = ({ isAuditComplete }) => {
   const [auditMode, setAuditMode] = useState<AuditMode>('individual');
   const [selectedDept, setSelectedDept] = useState<Department>('영업');
   const [selectedTxn, setSelectedTxn] = useState<CorpCardTransaction>(MOCK_CORP_CARD_TRANSACTIONS[0]);
@@ -312,6 +315,29 @@ const CorpCardAudit: React.FC = () => {
         if (riskyTxn) handleSelectTransaction(riskyTxn);
     }, 600);
   };
+
+  // --- Empty State View ---
+  if (!isAuditComplete) {
+    return (
+        <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50">
+            <div className="bg-white p-12 rounded-3xl shadow-xl border border-slate-200 max-w-xl w-full">
+                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Lock className="w-10 h-10 text-slate-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">법인카드 데이터가 없습니다.</h2>
+                <p className="text-slate-500 mb-8 leading-relaxed">
+                    AI 감사 분석이 완료되어야 카드 사용 내역을 조회할 수 있습니다.<br/>
+                    데이터 업로드 메뉴에서 감사를 실행해주세요.
+                </p>
+                <div className="flex justify-center">
+                    <span className="px-4 py-2 bg-slate-100 text-slate-500 rounded-lg text-sm font-medium border border-slate-200">
+                        상태: 데이터 대기 중
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+  }
   
   return (
     <div className="h-full flex flex-col">

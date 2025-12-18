@@ -15,29 +15,79 @@ import AuditReport from './components/AuditReport';
 import AIChat from './components/AIChat';
 import { Menu, Bell } from 'lucide-react';
 import { MOCK_SCENARIOS, CRITICAL_VIOLATIONS } from './data/mockData';
-import { Scenario, ViolationDetail } from './types';
+import { MOCK_UPLOAD_FILES } from './data/mockUploadData';
+import { Scenario, ViolationDetail, MockUploadFile } from './types';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAuditComplete, setIsAuditComplete] = useState(false);
   
-  // Centralized State for Scenarios and Violations
-  const [scenarios, setScenarios] = useState<Scenario[]>(MOCK_SCENARIOS);
-  const [violations, setViolations] = useState<ViolationDetail[]>(CRITICAL_VIOLATIONS);
+  // Persisted state for files and findings
+  const [uploadedFiles, setUploadedFiles] = useState<MockUploadFile[]>(MOCK_UPLOAD_FILES);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [violations, setViolations] = useState<ViolationDetail[]>([]);
+
+  // Improved: Merge baseline with existing 'new' findings to prevent data loss
+  const handleAuditComplete = () => {
+    setIsAuditComplete(true);
+    
+    setScenarios(prev => {
+      // Keep ALL scenarios that were previously marked as isNew (from chat or prior upload)
+      const existingNewScenarios = prev.filter(s => s.isNew);
+      
+      // Filter out only baseline IDs from the 'new' list to prevent identity conflicts if any
+      const baselineIds = new Set(MOCK_SCENARIOS.map(s => s.id));
+      const filteredExistingNew = existingNewScenarios.filter(s => !baselineIds.has(s.id));
+      
+      // Return combination: Baseline (90) + All AI-discovered ones
+      return [...MOCK_SCENARIOS, ...filteredExistingNew];
+    });
+
+    setViolations(prev => {
+        // Keep existing non-baseline violations
+        const baselineViolationIds = new Set(CRITICAL_VIOLATIONS.map(v => v.id));
+        const existingNewViolations = prev.filter(v => !baselineViolationIds.has(v.id));
+        return [...CRITICAL_VIOLATIONS, ...existingNewViolations];
+    });
+  };
 
   const handleAddScenario = (newScenario: Scenario) => {
-    // Prevent adding duplicate scenarios
-    if (!scenarios.some(s => s.id === newScenario.id)) {
-      setScenarios(prev => [newScenario, ...prev]);
-    }
+    setScenarios(prev => {
+      // For manually added scenarios, just check exact ID
+      if (prev.some(s => s.id === newScenario.id)) return prev;
+      return [newScenario, ...prev];
+    });
   };
 
   const handleAddScenarioAndViolation = (newScenario: Scenario, newViolation: ViolationDetail) => {
-    if (!scenarios.some(s => s.id === newScenario.id)) {
-      setScenarios(prev => [newScenario, ...prev]);
-      setViolations(prev => [...prev, newViolation]);
-    }
+    // Determine the base ID of the scenario (e.g., 'SCN-SEC-004' from 'SCN-SEC-004-TIMESTAMP')
+    // Assumes base IDs from AI_DISCOVERY_POOL do not contain further hyphens within their core identifier.
+    // e.g., 'SCN-SEC-004' is split as ['SCN', 'SEC', '004']
+    const baseScenarioIdPrefix = newScenario.id.split('-').slice(0, 3).join('-'); 
+    const baseViolationIdPrefix = newViolation.id.split('-').slice(0, 3).join('-'); 
+
+    setScenarios(prev => {
+        const existingScenarioIndex = prev.findIndex(s => s.id.startsWith(baseScenarioIdPrefix) && s.isNew);
+        if (existingScenarioIndex > -1) {
+            // Update the existing scenario with new details, keeping its original dynamic ID if it already had one.
+            // This prevents adding a new card for the same "type" of AI discovery.
+            const updatedScenario = { ...newScenario, id: prev[existingScenarioIndex].id }; 
+            return prev.map((s, idx) => idx === existingScenarioIndex ? updatedScenario : s);
+        }
+        return [newScenario, ...prev]; // Add if it's truly a new base type or first discovery
+    });
+    
+    setViolations(prev => {
+        const existingViolationIndex = prev.findIndex(v => v.id.startsWith(baseViolationIdPrefix) && v.areaCode === newViolation.areaCode);
+        if (existingViolationIndex > -1) {
+            // Update the existing violation with new details, preserving its original dynamic ID.
+            const updatedViolation = { ...newViolation, id: prev[existingViolationIndex].id }; 
+            return prev.map((v, idx) => idx === existingViolationIndex ? updatedViolation : v);
+        }
+        return [...prev, newViolation]; // Add if truly new
+    });
   };
 
   const newScenarioCount = useMemo(() => scenarios.filter(s => s.isNew).length, [scenarios]);
@@ -59,11 +109,11 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard scenarios={scenarios} />;
+        return <Dashboard scenarios={scenarios} isAuditComplete={isAuditComplete} />;
       case 'ai-reports':
         return <Reports scenarios={scenarios} violations={violations} />;
       case 'final-report':
-        return <AuditReport scenarios={scenarios} violations={violations} />;
+        return <AuditReport scenarios={scenarios} violations={violations} isAuditComplete={isAuditComplete} />;
       case 'ai-chat':
         return <AIChat onAddScenario={handleAddScenario} onAddScenarioAndViolation={handleAddScenarioAndViolation} />;
       case 'audit-management':
@@ -71,17 +121,25 @@ const App: React.FC = () => {
       case 'audit-task-manager':
         return <AuditTaskManager />;
       case 'data-upload':
-        return <DataUpload setActiveView={setActiveView} onAddScenarioAndViolation={handleAddScenarioAndViolation} />;
+        return (
+          <DataUpload 
+            setActiveView={setActiveView} 
+            onAddScenarioAndViolation={handleAddScenarioAndViolation} 
+            onAuditComplete={handleAuditComplete}
+            files={uploadedFiles}
+            setFiles={setUploadedFiles} 
+          />
+        );
       case 'scenario-manager':
         return <ScenarioManager scenarios={scenarios} onAddScenario={handleAddScenario} />;
       case 'corp-card-audit':
-        return <CorpCardAudit />;
+        return <CorpCardAudit isAuditComplete={isAuditComplete} />;
       case 'production-forecast':
         return <ProductionForecast />;
       case 'process-monitoring':
         return <ProcessMonitoring />;
       default:
-        return <Dashboard scenarios={scenarios} />;
+        return <Dashboard scenarios={scenarios} isAuditComplete={isAuditComplete} />;
     }
   };
 
