@@ -1,4 +1,5 @@
 
+
 export type AuditAreaCode = 
   | 'FSC' | 'TRE' | 'EXP' | 'OTC' | 'STP' | 'FXA' | 'INV' | 'HRE' | 'SEC';
 
@@ -47,9 +48,10 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   timestamp: Date;
+  isJson?: boolean; // New property to indicate if text content is JSON
 }
 
-export type AnomalyType = '자택 근처 사용' | '주말/심야 사용' | '한도 초과' | '쪼개기 결제 의심' | '유흥업소 사용 의심' | null;
+export type AnomalyType = '자택 근처 사용' | '주말/심야 사용' | '한도 초과' | '쪼개기 결제 의심' | '유흥업소 사용 의심' | '사적 사용 의심' | null;
 
 export interface CorpCardTransaction {
   id: string;
@@ -90,7 +92,7 @@ export interface MockUploadFile {
   type: 'Excel' | 'CSV' | 'PDF' | 'LOG';
   size: string;
   category: AuditAreaCode;
-  content?: string;
+  content: string; // Made content mandatory
 }
 
 // New Types for Audit Management

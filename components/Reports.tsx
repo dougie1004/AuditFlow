@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { AUDIT_AREAS } from '../data/mockData';
-import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table, Sparkles } from 'lucide-react';
-import type { ViolationDetail, Scenario } from '../types';
+import { AlertOctagon, FileText, ArrowRight, Eye, Terminal, CheckCircle, XCircle, Table, Sparkles, FileSpreadsheet } from 'lucide-react';
+import type { ViolationDetail, Scenario, MockUploadFile } from '../types';
 
 // --- (Simulated Evidence Components: SimulatedEmail, SimulatedContract, SimulatedLog, GenericDocViewer, SimulatedEvidenceViewer remain same) ---
 const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation }) => (
@@ -20,7 +20,7 @@ const SimulatedEmail: React.FC<{ violation: ViolationDetail }> = ({ violation })
         <p className="text-xs text-slate-500">To: 감사팀 / 재무팀</p>
       </div>
     </div>
-    <div className="text-slate-800 space-y-3 text-sm leading-relaxed flex-1">
+    <div className="text-slate-800 space-y-3 text-sm leading-relaxed flex-1 overflow-y-auto">
       <p>담당자님,</p>
       <p>아래 거래에 대한 긴급 처리 및 승인을 요청드립니다. 특이사항이 있어 AI가 식별한 내용입니다.</p>
       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 my-2">
@@ -42,7 +42,7 @@ const SimulatedContract: React.FC<{ violation: ViolationDetail }> = () => (
       <p><strong>갑:</strong> Nexus Corp</p>
       <p><strong>을:</strong> Supplier Inc.</p>
     </div>
-    <div className="text-slate-800 space-y-3 text-xs leading-relaxed flex-1">
+    <div className="text-slate-800 space-y-3 text-xs leading-relaxed flex-1 overflow-y-auto">
       <p>...</p>
       <h4 className="font-bold pt-2 text-sm">제 5조 (특약)</h4>
       <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 my-2 text-yellow-900 shadow-inner">
@@ -71,24 +71,58 @@ const SimulatedLog: React.FC<{ violation: ViolationDetail }> = ({ violation }) =
   </div>
 );
 
-const GenericDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
+// New Generic Viewer that can display raw text content from uploaded files
+const GenericTextFileViewer: React.FC<{ file: MockUploadFile }> = ({ file }) => (
+  <div className="w-full h-full bg-white p-4 text-sm font-mono flex flex-col overflow-hidden">
+    <div className="flex items-center gap-2 text-slate-500 border-b pb-2 mb-2">
+      {file.type === 'CSV' ? <FileSpreadsheet className="w-4 h-4" /> : file.type === 'LOG' ? <Terminal className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+      <span>{file.name} (Preview)</span>
+    </div>
+    <pre className="flex-1 overflow-y-auto text-slate-800 text-xs leading-relaxed">
+      {file.content || "파일 내용을 불러올 수 없습니다."}
+    </pre>
+  </div>
+);
+
+
+const SimulatedEvidenceViewer: React.FC<{violation: ViolationDetail; uploadedFiles: MockUploadFile[]}> = ({ violation, uploadedFiles }) => {
+    // Attempt to find an uploaded file that matches the violation's transaction ID
+    const matchingFile = uploadedFiles.find(f => 
+      f.content.includes(violation.transactionInfo.id) || 
+      f.name.toLowerCase().includes(violation.transactionInfo.id.toLowerCase().split('-')[0]) // Simplified match for demo
+    );
+
+    if (matchingFile) {
+      return <GenericTextFileViewer file={matchingFile} />;
+    }
+
+    // Fallback to hardcoded simulated viewers if no matching uploaded file
+    switch (violation.evidenceType) {
+        case 'Approval Email': return <SimulatedEmail violation={violation} />;
+        case 'Contract': return <SimulatedContract violation={violation} />;
+        case 'Log File': return <SimulatedLog violation={violation} />;
+        default: return <div className="w-full h-full flex items-center justify-center bg-slate-200"><p className="text-slate-500">No Preview Available</p></div>;
+    }
+};
+
+const GenericScenarioDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
   const { title } = scenario;
   const isFail = scenario.status === 'Fail';
   return (
     <div className="w-full h-full bg-slate-200 p-4 overflow-hidden flex items-center justify-center">
-         <div className="w-full max-w-2xl bg-white shadow-xl h-full max-h-[600px] overflow-auto flex flex-col transform transition-transform hover:scale-[1.01] duration-300">
-            <div className="p-8 bg-white h-full flex flex-col">
-                <div className="border-b-2 border-slate-800 pb-4 mb-6">
+         <div className="w-full max-w-md sm:max-w-2xl bg-white shadow-xl h-full max-h-[600px] overflow-auto flex flex-col transform transition-transform hover:scale-[1.01] duration-300">
+            <div className="p-4 sm:p-8 bg-white h-full flex flex-col">
+                <div className="border-b-2 border-slate-800 pb-2 sm:pb-4 mb-3 sm:mb-6">
                     <div className="flex justify-between items-start">
-                        <h1 className="text-xl font-bold uppercase text-slate-800">{title}</h1>
-                        <FileText className="w-8 h-8 text-slate-300" />
+                        <h1 className="text-base sm:text-xl font-bold uppercase text-slate-800">{title}</h1>
+                        <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-slate-300" />
                     </div>
-                    <p className="text-sm text-slate-500 mt-2">Ref: {scenario.id}</p>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-1 sm:mt-2">Ref: {scenario.id}</p>
                 </div>
-                <div className="space-y-4 text-sm text-slate-800 leading-relaxed text-justify flex-1">
+                <div className="space-y-3 sm:space-y-4 text-sm text-slate-800 leading-relaxed text-justify flex-1">
                     <p>Evidence document for <strong>{title}</strong>.</p>
-                    <div className="bg-slate-50 p-4 border border-slate-200 rounded my-4">
-                        <h4 className="font-bold mb-2 flex items-center gap-2">
+                    <div className="bg-slate-50 p-3 sm:p-4 border border-slate-200 rounded my-3 sm:my-4">
+                        <h4 className="font-bold mb-2 flex items-center gap-2 text-sm">
                             <Table className="w-4 h-4 text-slate-500"/> Data Extract
                         </h4>
                         <div className="space-y-2 text-xs font-mono text-slate-600">
@@ -102,21 +136,14 @@ const GenericDocViewer: React.FC<{ scenario: Scenario }> = ({ scenario }) => {
   );
 };
 
-const SimulatedEvidenceViewer: React.FC<{violation: ViolationDetail}> = ({ violation }) => {
-    switch (violation.evidenceType) {
-        case 'Approval Email': return <SimulatedEmail violation={violation} />;
-        case 'Contract': return <SimulatedContract violation={violation} />;
-        case 'Log File': return <SimulatedLog violation={violation} />;
-        default: return <div className="w-full h-full flex items-center justify-center bg-slate-200"><p className="text-slate-500">No Preview Available</p></div>;
-    }
-};
 
 interface ReportsProps {
   scenarios: Scenario[];
   violations: ViolationDetail[];
+  uploadedFiles: MockUploadFile[]; // Added uploadedFiles prop
 }
 
-const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
+const Reports: React.FC<ReportsProps> = ({ scenarios, violations, uploadedFiles }) => {
   const [selectedScenario, setSelectedScenario] = useState<Scenario>(scenarios.length > 0 ? scenarios[0] : {} as Scenario);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'FAIL' | 'PASS'>('ALL');
 
@@ -133,6 +160,13 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
     return scenarios.filter(s => {
         if (statusFilter === 'ALL') return true;
         return s.status.toUpperCase() === statusFilter;
+    }).sort((a, b) => { // Sort to show new/high risk scenarios first
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      const riskOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+      if (riskOrder[a.risk] > riskOrder[b.risk]) return -1;
+      if (riskOrder[a.risk] < riskOrder[b.risk]) return 1;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
   }, [statusFilter, scenarios]);
 
@@ -154,8 +188,8 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
     <div className="h-full flex flex-col md:flex-row bg-slate-50">
       <div className="w-full md:w-1/3 md:h-full flex flex-col border-r border-slate-200 bg-white">
         <div className="p-4 sm:p-6 border-b border-slate-100 hidden md:block">
-          <h2 className="text-xl font-bold text-slate-900">전체 감사 시나리오</h2>
-          <p className="text-sm text-slate-500 mt-1">{scenarios.length}개 시나리오 실행 결과</p>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900">전체 감사 시나리오</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">{scenarios.length}개 시나리오 실행 결과</p>
         </div>
          <div className="p-3 border-b border-slate-100">
             <div className="flex bg-slate-100 rounded-lg p-1">
@@ -164,12 +198,12 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
                 <button onClick={() => setStatusFilter('PASS')} className={`flex-1 text-sm p-2 rounded-md ${statusFilter === 'PASS' ? 'bg-white shadow' : ''}`}>적정</button>
             </div>
         </div>
-        <div className="md:flex-1 md:overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           {filteredScenarios.map(scenario => (
             <button
               key={scenario.id}
               onClick={() => setSelectedScenario(scenario)}
-              className={`w-full text-left p-4 border-b border-slate-100 transition-all hover:bg-slate-50 ${
+              className={`w-full text-left p-3 sm:p-4 border-b border-slate-100 transition-all hover:bg-slate-50 ${
                 selectedScenario.id === scenario.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'border-l-4 border-l-transparent'
               }`}
             >
@@ -195,7 +229,7 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
 
       <div className="w-full md:w-2/3 h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-4 sm:mb-6">
             <div className="mb-4 sm:mb-0">
               <div className="flex items-center flex-wrap space-x-2 text-slate-500 text-sm mb-1">
                 <span className="font-medium text-blue-600">{getAreaName(selectedScenario.areaCode)}</span>
@@ -212,11 +246,11 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
           
           {violationDetail ? (
             <>
-              <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-4 sm:p-6 mb-8 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <Eye className="w-16 h-16 sm:w-24 sm:h-24 text-red-600" />
                 </div>
-                <h3 className="text-red-900 font-bold flex items-center gap-2 mb-3">
+                <h3 className="text-red-900 font-bold flex items-center gap-2 mb-3 text-lg">
                   <AlertOctagon className="w-5 h-5 text-red-600" /> AuditFlow AI 분석 결과: 위반 (Violation)
                 </h3>
                 <p className="text-red-800 text-sm leading-relaxed mb-4">{violationDetail.aiAnalysis}</p>
@@ -227,9 +261,9 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">시스템 데이터 (Audit Evidence)</h3>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 sm:mb-4 border-b border-slate-100 pb-2">시스템 데이터 (Audit Evidence)</h3>
                   <div className="space-y-4">
-                    <div><label className="text-xs text-slate-500 block mb-1">Transaction ID / Log ID</label><p className="text-base sm:text-lg font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p></div>
+                    <div><label className="text-xs text-slate-500 block mb-1">Transaction ID / Log ID</label><p className="text-sm sm:text-base font-mono font-medium text-slate-900 break-all">{violationDetail.transactionInfo.id}</p></div>
                     <div><label className="text-xs text-slate-500 block mb-1">식별 일자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.date}</p></div>
                     <div><label className="text-xs text-slate-500 block mb-1">관련 금액 / 크기</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.amount}</p></div>
                     <div><label className="text-xs text-slate-500 block mb-1">대상 엔티티 / 담당자</label><p className="text-sm font-medium text-slate-900">{violationDetail.transactionInfo.entity}</p></div>
@@ -237,20 +271,20 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
                 </div>
 
                 <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 sm:mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                     <span>비정형 증빙 자료 ({violationDetail.evidenceType})</span>
                     <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-bold">AI SCANNER</span>
                   </h3>
-                  <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[300px]">
-                    <SimulatedEvidenceViewer violation={violationDetail} />
+                  <div className="flex-1 bg-slate-100 rounded-lg border border-slate-200 relative group overflow-hidden min-h-[200px] sm:min-h-[300px]">
+                    <SimulatedEvidenceViewer violation={violationDetail} uploadedFiles={uploadedFiles} />
                   </div>
                 </div>
               </div>
             </>
           ) : (
-             <div className="space-y-8">
-               <div className={`bg-gradient-to-r ${selectedScenario.status === 'Pass' ? 'from-emerald-50 to-green-50 border-emerald-100' : 'from-red-50 to-orange-50 border-red-100'} rounded-xl p-6`}>
-                 <h3 className={`font-bold flex items-center gap-2 mb-3 ${selectedScenario.status === 'Pass' ? 'text-emerald-900' : 'text-red-900'}`}>
+             <div className="space-y-6 sm:space-y-8">
+               <div className={`bg-gradient-to-r ${selectedScenario.status === 'Pass' ? 'from-emerald-50 to-green-50 border-emerald-100' : 'from-red-50 to-orange-50 border-red-100'} rounded-xl p-4 sm:p-6`}>
+                 <h3 className={`font-bold flex items-center gap-2 mb-3 text-lg ${selectedScenario.status === 'Pass' ? 'text-emerald-900' : 'text-red-900'}`}>
                     {selectedScenario.status === 'Pass' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
                     AuditFlow AI 분석 결과: {selectedScenario.status === 'Pass' ? '적정' : '위반'}
                  </h3>
@@ -260,17 +294,17 @@ const Reports: React.FC<ReportsProps> = ({ scenarios, violations }) => {
                         : 'AI가 증빙 자료와 시스템 데이터를 분석한 결과, 통제 미흡 또는 정책 위반 가능성이 발견되었습니다.'}
                  </p>
                </div>
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">테스트 상세 내용</h3>
+                <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 sm:mb-4 border-b border-slate-100 pb-2">테스트 상세 내용</h3>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedScenario.detailedDescription}</p>
                 </div>
-               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
+               <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 sm:mb-4 border-b border-slate-100 pb-2 flex justify-between items-center">
                         분석된 증빙 자료 (샘플)
                         <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">Generated by AuditFlow AI</span>
                     </h3>
-                    <div className="bg-slate-100 rounded-lg border border-slate-200 p-2 min-h-[400px]">
-                        <GenericDocViewer scenario={selectedScenario} />
+                    <div className="bg-slate-100 rounded-lg border border-slate-200 p-2 min-h-[200px] sm:min-h-[400px]">
+                        <GenericScenarioDocViewer scenario={selectedScenario} />
                     </div>
                </div>
              </div>

@@ -1,20 +1,13 @@
 
+
 import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from "../data/mockData";
 
-export const sendMessageToGemini = async (message: string): Promise<string> => {
+// `contents` parameter should be an array of parts, as expected by Gemini API.
+export const sendMessageToGemini = async (contents: any[], systemInstruction: string, requestType: string, hasUploadedFiles: boolean): Promise<any> => { // Added requestType and hasUploadedFiles
   try {
-    const context = `
-      # Forensic Auditor Core Instructions
-      - You are an expert AI Forensic Auditor designed to detect fraud and internal control failures.
-      - Data Processing: Input is provided in a high-density Pipe(|) separated format to optimize token usage.
-      - Detection Targets:
-        1. Conflict of Interest: Match Employee Account Numbers vs Vendor Master Accounts.
-        2. Disbursement Fraud: Identify duplicate payments (same date/amt/vendor).
-        3. Ghost Vendors: Detect high-value payments to unverified or new vendors during non-business hours.
-      - Constraint: Analyze the context even if data appears truncated. Return findings in a structured JSON report including 'risk_score', 'summary', and 'findings' list.
-
-      위 지침에 따라 "Nexus Corp (넥서스 주식회사)"의 감사 데이터를 분석하고 답변은 항상 한국어로 전문적이고 명확하게 작성하십시오.
-    `;
+    // The context is now passed dynamically from AIChat.tsx based on the user's prompt
+    // and the specific AI Studio system instruction.
+    const context = systemInstruction; 
 
     // Call our own backend API route instead of Gemini API directly
     const apiResponse = await fetch('/api/gemini', {
@@ -22,7 +15,7 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, context }),
+      body: JSON.stringify({ contents, context, requestType, hasUploadedFiles }), // Pass requestType and hasUploadedFiles
     });
 
     if (!apiResponse.ok) {
@@ -31,10 +24,11 @@ export const sendMessageToGemini = async (message: string): Promise<string> => {
     }
 
     const data = await apiResponse.json();
-    return data.response;
+    return data; // Return full data including response and requestType
 
-  } catch (error) {
+  } catch (error: any) { // Type error as any
     console.error("API call error:", error);
-    return "AuditFlow AI에 연결하는 중 오류가 발생했습니다. Vercel 프로젝트에 `API_KEY` 환경 변수가 올바르게 설정되었는지 확인해주세요.";
+    // Return a structured error if possible
+    return { error: error.message || "AuditFlow AI에 연결하는 중 오류가 발생했습니다. Vercel 프로젝트에 `API_KEY` 환경 변수가 올바르게 설정되었는지 확인해주세요." };
   }
 };

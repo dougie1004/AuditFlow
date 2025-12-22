@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react'; // Added useEffect
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import ScenarioManager from './components/ScenarioManager';
@@ -22,12 +22,19 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isAuditComplete, setIsAuditComplete] = useState(false);
   
-  // Persisted state for files and findings
-  const [uploadedFiles, setUploadedFiles] = useState<MockUploadFile[]>(MOCK_UPLOAD_FILES);
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [violations, setViolations] = useState<ViolationDetail[]>([]);
+  // Clean Slate: Initial state should be empty for a fresh demo
+  const [isAuditComplete, setIsAuditComplete] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<MockUploadFile[]>([]); // Start empty
+  const [scenarios, setScenarios] = useState<Scenario[]>([]); // Start empty
+  const [violations, setViolations] = useState<ViolationDetail[]>([]); // Start empty
+
+  // Reset localStorage on initial load for a clean demo experience
+  useEffect(() => {
+    localStorage.removeItem('audit_count');
+    localStorage.removeItem('google_maps_api_key');
+    // For a more complete reset, one might clear other relevant local storage items here
+  }, []);
 
   // Improved: Merge baseline with existing 'new' findings to prevent data loss
   const handleAuditComplete = () => {
@@ -111,11 +118,11 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard scenarios={scenarios} isAuditComplete={isAuditComplete} />;
       case 'ai-reports':
-        return <Reports scenarios={scenarios} violations={violations} />;
+        return <Reports scenarios={scenarios} violations={violations} uploadedFiles={uploadedFiles} />; // Pass uploadedFiles
       case 'final-report':
-        return <AuditReport scenarios={scenarios} violations={violations} isAuditComplete={isAuditComplete} />;
+        return <AuditReport scenarios={scenarios} violations={violations} isAuditComplete={isAuditComplete} uploadedFiles={uploadedFiles} />; // Pass uploadedFiles
       case 'ai-chat':
-        return <AIChat onAddScenario={handleAddScenario} onAddScenarioAndViolation={handleAddScenarioAndViolation} />;
+        return <AIChat onAddScenario={handleAddScenario} onAddScenarioAndViolation={handleAddScenarioAndViolation} uploadedFiles={uploadedFiles} />; // Pass uploadedFiles
       case 'audit-management':
         return <AuditManagement />;
       case 'audit-task-manager':
@@ -165,10 +172,10 @@ const App: React.FC = () => {
             <button onClick={() => setIsSidebarOpen(true)} className="text-slate-800 p-2 -ml-2 lg:hidden">
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-base font-bold text-slate-900">{pageTitles[activeView]}</h1>
+            <h1 className="text-base md:text-lg font-bold text-slate-900">{pageTitles[activeView]}</h1>
           </div>
           <div className="relative">
-            <Bell className="w-6 h-6 text-slate-500" />
+            <Bell className="w-5 h-5 md:w-6 md:h-6 text-slate-500" />
             {newScenarioCount > 0 && (
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-pulse">
                 {newScenarioCount}
