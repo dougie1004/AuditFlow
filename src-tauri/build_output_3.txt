@@ -1,0 +1,37 @@
+﻿cargo : warning: variable doe
+s not need to be mutable
+위치 줄:1 문자:1
++ cargo check 2>&1 | Out-File
+ -Encoding utf8 build_output_
+3.txt
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (warning  
+  : variab...d to be mutab   
+ le:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+   --> src\commands.rs:442:9
+    |
+442 |     let mut conn = Conn
+ection::open(db_path).map_err
+(|e| e.to_string())?;
+    |         ----^^^^
+    |         |
+    |         help: remove th
+is `mut`
+    |
+    = note: `#[warn(unused_mu
+t)]` (part of `#[warn(unused)
+]`) on by default
+
+warning: `auditflow` (bin "au
+ditflow") generated 1 warning
+ (run `cargo fix --bin "audit
+flow" -p auditflow` to apply 
+1 suggestion)
+    Finished `dev` profile [u
+noptimized + debuginfo] targe
+t(s) in 2.03s

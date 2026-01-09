@@ -1,0 +1,36 @@
+# Rust 빌드 결과물
+target/
+target_*/
+src-tauri/target/
+src-tauri/target_*/
+**/target/
+**/target_*/
+
+# Node.js 의존성
+/node_modules
+/dist
+
+# 데이터 및 백업 (가장 중요)
+/backup_src
+/backup
+/audit_dataset_v2
+/auditflow_source_backup_*.zip
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.csv
+*.xlsx
+
+# 환경 변수 및 설정
+.env
+.env.local
+app_config.json
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

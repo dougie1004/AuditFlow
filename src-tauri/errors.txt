@@ -1,0 +1,101 @@
+﻿cargo :    Compiling auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\scratch\auditf
+low\src-tauri)
+위치 줄:1 문자:1
++ cargo build 2>&1 | Out-File
+ -FilePath errors.txt -Encodi
+ng UTF8
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (   Comp  
+  iling au...flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+warning: variable does not ne
+ed to be mutable
+   --> src\audit_engine.rs:38
+2:29
+    |
+382 |                        
+ let mut result: Value = serd
+e_json::from_str(&json_res_te
+xt).unwrap_or(json!({ "findin
+gs": [] }));
+    |                        
+     ----^^^^^^
+    |                        
+     |
+    |                        
+     help: remove this `mut`
+    |
+    = note: `#[warn(unused_mu
+t)]` (part of `#[warn(unused)
+]`) on by default
+
+error[E0599]: no method named
+ `path` found for struct `App
+Handle<R>` in the current sco
+pe
+   --> src\dedup.rs:6:30
+    |
+  6 |     let db_path = app_h
+andle.path().app_data_dir().u
+nwrap().join("audit_data_v4.d
+b");
+    |                        
+      ^^^^ method not found i
+n `AppHandle`
+    |
+   ::: C:\Users\user\.cargo\r
+egistry\src\index.crates.io-1
+949cf8c6b5b557f\tauri-2.9.5\s
+rc\lib.rs:772:6
+    |
+772 |   fn path(&self) -> &cr
+ate::path::PathResolver<R> {
+    |      ---- the method is
+ available for `AppHandle` he
+re
+    |
+    = help: items from traits
+ can only be used if the trai
+t is in scope
+help: trait `Manager` which p
+rovides `path` is implemented
+ but not in scope; perhaps yo
+u want to import it
+    |
+  1 + use tauri::Manager;
+    |
+
+warning: unused variable: `co
+ntext_clone`
+   --> src\audit_engine.rs:30
+3:13
+    |
+303 |         let context_clo
+ne = Arc::clone(&shared_conte
+xt);
+    |             ^^^^^^^^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_context_clone`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+For more information about th
+is error, try `rustc --explai
+n E0599`.
+warning: `auditflow` (bin "au
+ditflow") generated 2 warning
+s
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 1 previous error; 2 warni
+ngs emitted

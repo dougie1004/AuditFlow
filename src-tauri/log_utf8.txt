@@ -1,0 +1,214 @@
+﻿cargo :     Checking a
+uditflow v0.1.0 (C:\Us
+ers\user\.gemini\antig
+ravity\scratch\auditfl
+ow\src-tauri)
+위치 줄:1 문자:1
++ cargo check > log.tx
+t 2>&1
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (    Checki   
+ ng au...flow\src-    
+tauri):String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+error[E0425]: cannot f
+ind function `mask_sen
+sitive_data` in this s
+cope
+   --> src\commands.rs
+:448:34
+    |
+448 |                 
+    if masking { mask_
+sensitive_data(&s) } e
+lse { s }
+    |                 
+                 ^^^^^
+^^^^^^^^^^^^^^ not fou
+nd in this scope
+    |
+help: consider importi
+ng this function
+    |
+  1 + use crate::file_
+utils::mask_sensitive_
+data;
+    |
+
+error[E0425]: cannot f
+ind function `mask_sen
+sitive_data` in this s
+cope
+   --> src\commands.rs
+:459:47
+    |
+459 |             let 
+processed_line = if ma
+sking { mask_sensitive
+_data(line) } else { l
+ine.to_string() };
+    |                 
+                      
+        ^^^^^^^^^^^^^^
+^^^^^ not found in thi
+s scope
+    |
+help: consider importi
+ng this function
+    |
+  1 + use crate::file_
+utils::mask_sensitive_
+data;
+    |
+
+error[E0425]: cannot f
+ind function `mask_sen
+sitive_data` in this s
+cope
+   --> src\commands.rs
+:475:21
+    |
+475 |             *cel
+l = mask_sensitive_dat
+a(cell);
+    |                 
+    ^^^^^^^^^^^^^^^^^^
+^ not found in this sc
+ope
+    |
+help: consider importi
+ng this function
+    |
+  1 + use crate::file_
+utils::mask_sensitive_
+data;
+    |
+
+warning: unused import
+: `regex::Regex`
+  --> src\commands.rs:
+12:5
+   |
+12 | use regex::Regex;
+   |     ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unu
+sed_imports)]` (part o
+f `#[warn(unused)]`) o
+n by default
+
+error[E0282]: type ann
+otations needed
+   --> src\commands.rs
+:460:93
+    |
+460 |             if p
+rocessed_line.contains
+('\t') { preview.push(
+processed_line.split('
+\t').map(|s| s.to_stri
+ng()).collect::<Vec<St
+ring>>()); }
+    |                 
+                      
+                      
+                      
+          ^  - type mu
+st be known at this po
+int
+    |
+help: consider giving 
+this closure parameter
+ an explicit type
+    |
+460 |             if p
+rocessed_line.contains
+('\t') { preview.push(
+processed_line.split('
+\t').map(|s: /* Type *
+/| s.to_string()).coll
+ect::<Vec<String>>());
+ }
+    |                 
+                      
+                      
+                      
+           +++++++++++
++
+
+error[E0282]: type ann
+otations needed
+   --> src\commands.rs
+:461:130
+    |
+461 | ...) { preview.p
+ush(processed_line.spl
+it(',').map(|s| s.to_s
+tring()).collect::<Vec
+<String>>()); }
+    |                 
+                      
+             ^  - type
+ must be known at this
+ point
+    |
+help: consider giving 
+this closure parameter
+ an explicit type
+    |
+461 |             else
+ if processed_line.con
+tains(',') && (ext == 
+"csv" || ext == "log")
+ { preview.push(proces
+sed_line.split(',').ma
+p(|s: /* Type */| s.to
+_string()).collect::<V
+ec<String>>()); }
+    |                 
+                      
+                      
+                      
+                      
+                      
+    ++++++++++++
+
+warning: unused variab
+le: `i`
+   --> src\commands.rs
+:800:10
+    |
+800 |     for (i, f) i
+n findings_raw.iter().
+enumerate() {
+    |          ^ help:
+ if this is intentiona
+l, prefix it with an u
+nderscore: `_i`
+    |
+    = note: `#[warn(un
+used_variables)]` (par
+t of `#[warn(unused)]`
+) on by default
+
+Some errors have detai
+led explanations: E028
+2, E0425.
+For more information a
+bout an error, try `ru
+stc --explain E0282`.
+warning: `auditflow` (
+bin "auditflow") gener
+ated 2 warnings
+error: could not compi
+le `auditflow` (bin "a
+uditflow") due to 5 pr
+evious errors; 2 warni
+ngs emitted

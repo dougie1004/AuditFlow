@@ -1,0 +1,93 @@
+﻿cargo :     Checking a
+uditflow v0.1.0 (C:\Us
+ers\user\.gemini\antig
+ravity\scratch\auditfl
+ow\src-tauri)
+위치 줄:1 문자:1
++ cargo check --no-def
+ault-features 2>&1 | O
+ut-File -FilePath chec
+k_out ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (    Checki   
+ ng au...flow\src-    
+tauri):String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+warning: unused variab
+le: `conn`
+   --> src\database.rs
+:337:28
+    |
+337 | pub fn seed_audi
+t_universe(conn: &Conn
+ection) -> Result<(), 
+String> {
+    |                 
+           ^^^^ help: 
+if this is intentional
+, prefix it with an un
+derscore: `_conn`
+    |
+    = note: `#[warn(un
+used_variables)]` (par
+t of `#[warn(unused)]`
+) on by default
+
+error[E0505]: cannot m
+ove out of `conn` beca
+use it is borrowed
+   --> src\commands.rs
+:521:24
+    |
+508 |     let conn = C
+onnection::open(db_pat
+h).map_err(|e| e.to_st
+ring())?;
+    |         ---- bin
+ding `conn` declared h
+ere
+509 |     let mut stmt
+ = conn.prepare("SELEC
+T id, unit_name, categ
+ory, impact_score, lik
+elihood_score, last_au
+dit_year FROM audit_un
+iverse ORDE...
+    |                 
+   ---- borrow of `con
+n` occurs here
+...
+521 |         let mut 
+conn = conn; // Re-bin
+d as mut to allow tran
+saction
+    |                 
+       ^^^^ move out o
+f `conn` occurs here
+...
+533 | }
+    | - borrow might b
+e used here, when `stm
+t` is dropped and runs
+ the `Drop` code for t
+ype `Statement`
+
+For more information a
+bout this error, try `
+rustc --explain E0505`
+.
+warning: `auditflow` (
+bin "auditflow") gener
+ated 1 warning
+error: could not compi
+le `auditflow` (bin "a
+uditflow") due to 1 pr
+evious error; 1 warnin
+g emitted

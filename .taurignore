@@ -1,0 +1,3 @@
+target_v3_final/
+src-tauri/target_v3_final/
+**/target_v3_final/**

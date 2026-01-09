@@ -1,0 +1,204 @@
+    Checking auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\scratch\auditflow\src-tauri)
+error[E0433]: failed to resolve: could not find `__cmd__delete_audit_file` in `commands`
+  --> src\main.rs:24:23
+   |
+24 |             commands::delete_audit_file,
+   |                       ^^^^^^^^^^^^^^^^^ could not find `__cmd__delete_audit_file` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__update_audit_issue_field` in `commands`
+  --> src\main.rs:29:23
+   |
+29 |             commands::update_audit_issue_field,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__update_audit_issue_field` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__dismiss_audit_issue` in `commands`
+  --> src\main.rs:30:23
+   |
+30 |             commands::dismiss_audit_issue,
+   |                       ^^^^^^^^^^^^^^^^^^^ could not find `__cmd__dismiss_audit_issue` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_masked_preview` in `commands`
+  --> src\main.rs:32:23
+   |
+32 |             commands::get_masked_preview,
+   |                       ^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_masked_preview` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__update_audit_plan_status` in `commands`
+  --> src\main.rs:40:23
+   |
+40 |             commands::update_audit_plan_status,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__update_audit_plan_status` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__reset_database` in `commands`
+  --> src\main.rs:41:23
+   |
+41 |             commands::reset_database,
+   |                       ^^^^^^^^^^^^^^ could not find `__cmd__reset_database` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__add_issue_to_scenarios` in `commands`
+  --> src\main.rs:42:23
+   |
+42 |             commands::add_issue_to_scenarios,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__add_issue_to_scenarios` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__create_custom_scenario` in `commands`
+  --> src\main.rs:43:23
+   |
+43 |             commands::create_custom_scenario,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__create_custom_scenario` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_annual_performance` in `commands`
+  --> src\main.rs:44:23
+   |
+44 |             commands::get_annual_performance,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_annual_performance` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__analyze_process_mining` in `commands`
+  --> src\main.rs:45:23
+   |
+45 |             commands::analyze_process_mining,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__analyze_process_mining` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__generate_mining_mock_data` in `commands`
+  --> src\main.rs:46:23
+   |
+46 |             commands::generate_mining_mock_data,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__generate_mining_mock_data` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_scenario_categories` in `commands`
+  --> src\main.rs:47:23
+   |
+47 |             commands::get_scenario_categories,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_scenario_categories` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__ask_ai_assistant` in `commands`
+  --> src\main.rs:48:23
+   |
+48 |             commands::ask_ai_assistant,
+   |                       ^^^^^^^^^^^^^^^^ could not find `__cmd__ask_ai_assistant` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__generate_professional_report` in `commands`
+  --> src\main.rs:49:23
+   |
+49 |             commands::generate_professional_report,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__generate_professional_report` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__update_risk_assessment` in `commands`
+  --> src\main.rs:51:23
+   |
+51 |             commands::update_risk_assessment,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__update_risk_assessment` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_risk_heatmap_data` in `commands`
+  --> src\main.rs:53:23
+   |
+53 |             commands::get_risk_heatmap_data,
+   |                       ^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_risk_heatmap_data` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__generate_audit_priorities` in `commands`
+  --> src\main.rs:55:23
+   |
+55 |             commands::generate_audit_priorities,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__generate_audit_priorities` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_google_maps_key` in `commands`
+  --> src\main.rs:56:23
+   |
+56 |             commands::get_google_maps_key,
+   |                       ^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_google_maps_key` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_card_transactions` in `commands`
+  --> src\main.rs:57:23
+   |
+57 |             commands::get_card_transactions,
+   |                       ^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_card_transactions` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__upload_knowledge_doc` in `commands`
+  --> src\main.rs:58:23
+   |
+58 |             commands::upload_knowledge_doc,
+   |                       ^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__upload_knowledge_doc` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_knowledge_docs` in `commands`
+  --> src\main.rs:59:23
+   |
+59 |             commands::get_knowledge_docs,
+   |                       ^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_knowledge_docs` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__get_global_patterns` in `commands`
+  --> src\main.rs:60:23
+   |
+60 |             commands::get_global_patterns,
+   |                       ^^^^^^^^^^^^^^^^^^^ could not find `__cmd__get_global_patterns` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__delete_knowledge_doc` in `commands`
+  --> src\main.rs:61:23
+   |
+61 |             commands::delete_knowledge_doc,
+   |                       ^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__delete_knowledge_doc` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__add_audit_plan_from_entity` in `commands`
+  --> src\main.rs:62:23
+   |
+62 |             commands::add_audit_plan_from_entity,
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `__cmd__add_audit_plan_from_entity` in `commands`
+
+error[E0433]: failed to resolve: could not find `__cmd__force_seed_universe` in `commands`
+  --> src\main.rs:63:23
+   |
+63 |             commands::force_seed_universe,
+   |                       ^^^^^^^^^^^^^^^^^^^ could not find `__cmd__force_seed_universe` in `commands`
+
+warning: unused import: `seed_master_scenarios`
+ --> src\commands.rs:9:23
+  |
+9 | use crate::database::{seed_master_scenarios, get_active_universe_column};
+  |                       ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `read_file_with_encoding`
+  --> src\commands.rs:10:40
+   |
+10 | use crate::file_utils::{read_any_file, read_file_with_encoding};
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `call_gemini_api`
+  --> src\commands.rs:11:17
+   |
+11 | use crate::ai::{call_gemini_api, call_gemini_direct, call_gemini_chat, extract_json};
+   |                 ^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> src\commands.rs:256:9
+    |
+256 |     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `headcount`
+   --> src\commands.rs:275:39
+    |
+275 |     let (unit_name, category, budget, headcount, rating, systems, pre_seeded_json) = {
+    |                                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_headcount`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `rating`
+   --> src\commands.rs:275:50
+    |
+275 |     let (unit_name, category, budget, headcount, rating, systems, pre_seeded_json) = {
+    |                                                  ^^^^^^ help: if this is intentional, prefix it with an underscore: `_rating`
+
+warning: unused variable: `systems`
+   --> src\commands.rs:275:58
+    |
+275 |     let (unit_name, category, budget, headcount, rating, systems, pre_seeded_json) = {
+    |                                                          ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_systems`
+
+For more information about this error, try `rustc --explain E0433`.
+warning: `auditflow` (bin "auditflow") generated 7 warnings
+error: could not compile `auditflow` (bin "auditflow") due to 25 previous errors; 7 warnings emitted
