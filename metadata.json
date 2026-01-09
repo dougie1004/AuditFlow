@@ -1,0 +1,7 @@
+{
+  "name": "AuditFlow",
+  "description": "Next-generation Audit-as-a-Service (SAA) platform demonstrating AI-driven unstructured data analysis and continuous compliance monitoring.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

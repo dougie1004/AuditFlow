@@ -1,33 +1,21 @@
-# Rust 빌드 결과물
-target/
-target_*/
-src-tauri/target/
-src-tauri/target_*/
-**/target/
-**/target_*/
-
-# Node.js 의존성
-/node_modules
-/dist
-
-# 데이터 및 백업 (가장 중요)
-/backup_src
-/backup
-/audit_dataset_v2
-/auditflow_source_backup_*.zip
-*.db
-*.db-shm
-*.db-wal
+# Logs
+logs
 *.log
-*.csv
-*.xlsx
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# 환경 변수 및 설정
-.env
-.env.local
-app_config.json
-.vscode/
-.idea/
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
 *.suo
 *.ntvs*
