@@ -38,12 +38,12 @@ const ProductionForecast: React.FC = () => {
         currentInventory = currentInventory - d.sales; // Simplified for demo
         return { ...d, inventory: currentInventory };
       }
-      
+
       if (d.demand) { // Forecast data
         const startingInventory = currentInventory;
         const requiredProduction = d.demand + targetSafetyStock - startingInventory;
         const productionPlan = Math.min(productionCapacity, Math.max(0, requiredProduction));
-        
+
         currentInventory = startingInventory + productionPlan - d.demand;
 
         return {
@@ -74,7 +74,7 @@ const ProductionForecast: React.FC = () => {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <AnimatePresence>
         {selectedChartData && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -82,7 +82,7 @@ const ProductionForecast: React.FC = () => {
             onClick={() => setSelectedChartData(null)}
           >
             <div className="bg-white rounded-xl shadow-2xl p-6 relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setSelectedChartData(null)} className="absolute top-3 right-3 p-2 rounded-full hover:bg-slate-100"><X className="w-5 h-5 text-slate-500"/></button>
+              <button onClick={() => setSelectedChartData(null)} className="absolute top-3 right-3 p-2 rounded-full hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
               <h3 className="text-xl font-bold text-slate-900 mb-4">주간 상세 정보</h3>
               <div className="space-y-3">
                 <p className="text-sm text-slate-700"><strong>주차:</strong> {selectedChartData.week}</p>
@@ -90,10 +90,10 @@ const ProductionForecast: React.FC = () => {
                 {selectedChartData.demand !== undefined && <p className="text-sm text-slate-700"><strong>예측 수요:</strong> {selectedChartData.demand.toLocaleString()}개</p>}
                 {selectedChartData.production !== undefined && <p className="text-sm text-slate-700"><strong>생산 계획:</strong> {selectedChartData.production.toLocaleString()}개</p>}
                 {selectedChartData.inventory !== undefined && <p className="text-sm text-slate-700"><strong>기말 재고:</strong> {selectedChartData.inventory.toLocaleString()}개</p>}
-                
+
                 {selectedChartData.inventory !== undefined && selectedChartData.inventory < targetSafetyStock && (
                   <p className="text-sm font-bold text-red-600 flex items-center gap-2 pt-2 border-t border-red-100">
-                    <ShieldAlert className="w-5 h-5"/> 안전 재고 미달! 즉시 검토 필요
+                    <ShieldAlert className="w-5 h-5" /> 안전 재고 미달! 즉시 검토 필요
                   </p>
                 )}
               </div>
@@ -109,33 +109,33 @@ const ProductionForecast: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <StatsCard 
-          icon={TrendingUp} 
-          title="평균 주간 수요" 
-          value={(processedData.filter(d => d.demand !== undefined).reduce((sum, d) => sum + (d.demand || 0), 0) / processedData.filter(d => d.demand !== undefined).length).toLocaleString(undefined, { maximumFractionDigits: 0 })} 
-          unit="개" 
-          colorClass="bg-blue-500" 
+        <StatsCard
+          icon={TrendingUp}
+          title="평균 주간 수요"
+          value={(processedData.filter(d => d.demand !== undefined).reduce((sum, d) => sum + (d.demand || 0), 0) / processedData.filter(d => d.demand !== undefined).length).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          unit="개"
+          colorClass="bg-blue-500"
         />
-        <StatsCard 
-          icon={Archive} 
-          title="안전 재고 목표" 
-          value={targetSafetyStock.toLocaleString()} 
-          unit="개" 
-          colorClass="bg-indigo-500" 
+        <StatsCard
+          icon={Archive}
+          title="안전 재고 목표"
+          value={targetSafetyStock.toLocaleString()}
+          unit="개"
+          colorClass="bg-indigo-500"
         />
-        <StatsCard 
-          icon={Target} 
-          title="최저 예측 재고" 
-          value={minInventory.toLocaleString()} 
-          unit="개" 
-          colorClass={isBelowSafetyStock ? "bg-red-500" : "bg-emerald-500"} 
+        <StatsCard
+          icon={Target}
+          title="최저 예측 재고"
+          value={minInventory.toLocaleString()}
+          unit="개"
+          colorClass={isBelowSafetyStock ? "bg-red-500" : "bg-emerald-500"}
         />
-        <StatsCard 
-          icon={ShieldAlert} 
-          title="잠재적 재고 위험 주차" 
-          value={isBelowSafetyStock ? highDemandWeeks.toLocaleString() : '0'} 
-          unit="주" 
-          colorClass={isBelowSafetyStock ? "bg-red-500" : "bg-slate-500"} 
+        <StatsCard
+          icon={ShieldAlert}
+          title="잠재적 재고 위험 주차"
+          value={isBelowSafetyStock ? highDemandWeeks.toLocaleString() : '0'}
+          unit="주"
+          colorClass={isBelowSafetyStock ? "bg-red-500" : "bg-slate-500"}
         />
       </div>
 
@@ -153,7 +153,7 @@ const ProductionForecast: React.FC = () => {
                 <XAxis dataKey="week" scale="band" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" orientation="left" stroke="#8884d8" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f1f5f9' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: number, name: string) => [`${value.toLocaleString()}개`, name]}
@@ -161,8 +161,8 @@ const ProductionForecast: React.FC = () => {
                 <Legend />
                 <Bar yAxisId="left" dataKey="sales" name="실제 판매량" fill="#8884d8" barSize={20} />
                 <Bar yAxisId="left" dataKey="demand" name="예측 수요" fill="#82ca9d" barSize={20} />
-                <Line yAxisId="right" type="monotone" dataKey="production" name="생산 계획" stroke="#ff7300" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, onClick: (e, payload) => setSelectedChartData(payload.payload) }} />
-                <Line yAxisId="right" type="monotone" dataKey="inventory" name="예측 재고" stroke="#4f46e5" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, onClick: (e, payload) => setSelectedChartData(payload.payload) }} />
+                <Line yAxisId="right" type="monotone" dataKey="production" name="생산 계획" stroke="#ff7300" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, onClick: (_e: any, props: any) => setSelectedChartData(props.payload) }} />
+                <Line yAxisId="right" type="monotone" dataKey="inventory" name="예측 재고" stroke="#4f46e5" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6, onClick: (_e: any, props: any) => setSelectedChartData(props.payload) }} />
                 <Line yAxisId="right" type="monotone" dataKey="targetSafetyStock" name="안전 재고 목표" stroke="#ef4444" strokeDasharray="3 3" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
@@ -203,18 +203,18 @@ const ProductionForecast: React.FC = () => {
               />
               <p className="text-xs text-slate-500 mt-2">주간 최대 생산 가능 수량을 설정합니다.</p>
             </div>
-            
+
             <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><PlayCircle className="w-4 h-4 text-blue-600"/> 시뮬레이션 실행</h4>
-                <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                  위 설정값을 기반으로 향후 8주간의 재고 및 생산 계획을 실시간으로 재계산합니다.
-                </p>
-                <button
-                    onClick={() => { /* re-runs useMemo, effectively re-simulates */ }}
-                    className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 shadow-md transition-colors flex items-center justify-center gap-2"
-                >
-                    <Sparkles className="w-4 h-4"/> 예측 재실행
-                </button>
+              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><PlayCircle className="w-4 h-4 text-blue-600" /> 시뮬레이션 실행</h4>
+              <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                위 설정값을 기반으로 향후 8주간의 재고 및 생산 계획을 실시간으로 재계산합니다.
+              </p>
+              <button
+                onClick={() => { /* re-runs useMemo, effectively re-simulates */ }}
+                className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 shadow-md transition-colors flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" /> 예측 재실행
+              </button>
             </div>
           </div>
         </div>

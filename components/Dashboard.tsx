@@ -1,12 +1,12 @@
 
 import React, { useMemo } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer
 } from 'recharts';
 import { ShieldAlert, CheckCircle, FileSearch, Activity, UploadCloud, Sparkles } from 'lucide-react';
@@ -21,31 +21,31 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ scenarios, isAuditComplete }) => {
   // --- Empty State View ---
   if (!isAuditComplete) {
-      return (
-          <div className="h-full flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-slate-50">
-              <div className="bg-white p-8 sm:p-12 rounded-3xl shadow-xl border border-slate-200 max-w-sm sm:max-w-md md:max-w-2xl w-full">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                      <ShieldAlert className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600" />
-                  </div>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">감사 데이터가 없습니다.</h2>
-                  <p className="text-sm sm:text-base md:text-lg text-slate-500 mb-6 sm:mb-8 leading-relaxed">
-                      AI 감사를 시작하려면 감사 대상 기간(최근 2년)의 데이터를 업로드해주세요.<br/>
-                      ERP 원장, 규정 문서, 이메일 로그 등을 분석하여 잠재적 위험을 탐지합니다.
-                  </p>
-                  <button className="px-6 py-3 sm:px-8 sm:py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center gap-2 sm:gap-3 mx-auto text-base sm:text-lg pointer-events-none opacity-50">
-                      <UploadCloud className="w-5 h-5 sm:w-6 sm:h-6" /> 
-                      데이터 업로드 메뉴로 이동하여 시작
-                  </button>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-3 sm:mt-4">* 좌측 메뉴의 '데이터 업로드' 탭을 이용해주세요.</p>
-              </div>
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 sm:p-8 text-center bg-slate-50">
+        <div className="bg-white p-8 sm:p-12 rounded-3xl shadow-xl border border-slate-200 max-w-sm sm:max-w-md md:max-w-2xl w-full">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <ShieldAlert className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600" />
           </div>
-      );
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">감사 데이터가 없습니다.</h2>
+          <p className="text-sm sm:text-base md:text-lg text-slate-500 mb-6 sm:mb-8 leading-relaxed">
+            AI 감사를 시작하려면 감사 대상 기간(최근 2년)의 데이터를 업로드해주세요.<br />
+            ERP 원장, 규정 문서, 이메일 로그 등을 분석하여 잠재적 위험을 탐지합니다.
+          </p>
+          <button className="px-6 py-3 sm:px-8 sm:py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center gap-2 sm:gap-3 mx-auto text-base sm:text-lg pointer-events-none opacity-50">
+            <UploadCloud className="w-5 h-5 sm:w-6 sm:h-6" />
+            데이터 업로드 메뉴로 이동하여 시작
+          </button>
+          <p className="text-xs sm:text-sm text-slate-400 mt-3 sm:mt-4">* 좌측 메뉴의 '데이터 업로드' 탭을 이용해주세요.</p>
+        </div>
+      </div>
+    );
   }
 
   // --- Populated View ---
   const totalScenarios = scenarios.length;
   const totalViolations = scenarios.filter(s => s.status === 'Fail').length;
-  const complianceRate = totalScenarios > 0 
+  const complianceRate = totalScenarios > 0
     ? ((totalScenarios - totalViolations) / totalScenarios * 100).toFixed(1)
     : '100.0';
 
@@ -95,33 +95,33 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios, isAuditComplete }) => 
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <StatsCard 
-          title="종합 통제 준수율" 
-          value={`${complianceRate}%`} 
-          subtext="전 분기 대비 +2.4%" 
-          icon={CheckCircle} 
-          color="bg-emerald-500" 
+        <StatsCard
+          title="종합 통제 준수율"
+          value={`${complianceRate}%`}
+          subtext="전 분기 대비 +2.4%"
+          icon={CheckCircle}
+          color="bg-emerald-500"
         />
-        <StatsCard 
-          title="총 적발 건수" 
-          value={totalViolations} 
-          subtext={`${scenarios.filter(s => s.isNew).length}건의 신규 이슈 포함`} 
-          icon={ShieldAlert} 
-          color="bg-red-500" 
+        <StatsCard
+          title="총 적발 건수"
+          value={totalViolations}
+          subtext={`${scenarios.filter(s => s.isNew).length}건의 신규 이슈 포함`}
+          icon={ShieldAlert}
+          color="bg-red-500"
         />
-        <StatsCard 
-          title="실행된 시나리오" 
-          value={totalScenarios} 
-          subtext="AI 자동 발굴 시나리오 포함" 
-          icon={Activity} 
-          color="bg-blue-500" 
+        <StatsCard
+          title="실행된 시나리오"
+          value={totalScenarios}
+          subtext="AI 자동 발굴 시나리오 포함"
+          icon={Activity}
+          color="bg-blue-500"
         />
-        <StatsCard 
-          title="비정형 문서 분석" 
-          value="4,215" 
-          subtext="계약서, 이메일, 규정집 스캔 완료" 
-          icon={FileSearch} 
-          color="bg-indigo-500" 
+        <StatsCard
+          title="비정형 문서 분석"
+          value="4,215"
+          subtext="계약서, 이메일, 규정집 스캔 완료"
+          icon={FileSearch}
+          color="bg-indigo-500"
         />
       </div>
 
@@ -135,11 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios, isAuditComplete }) => 
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip 
-                  cursor={{ fill: '#f1f5f9' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="위반건수" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} sm:barSize={40} />
+                <Bar dataKey="위반건수" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -153,19 +149,17 @@ const Dashboard: React.FC<DashboardProps> = ({ scenarios, isAuditComplete }) => 
           </h3>
           <div className="flex-1 overflow-y-auto pr-2 space-y-3 sm:space-y-4 max-h-[300px] lg:max-h-none">
             {recentAlerts.map(scenario => (
-              <div 
-                key={scenario.id} 
-                className={`p-3 rounded-lg border transition-all ${
-                  scenario.isNew 
-                    ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100 shadow-sm animate-in fade-in slide-in-from-right-2' 
-                    : 'bg-red-50 border-red-100'
-                }`}
+              <div
+                key={scenario.id}
+                className={`p-3 rounded-lg border transition-all ${scenario.isNew
+                  ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100 shadow-sm animate-in fade-in slide-in-from-right-2'
+                  : 'bg-red-50 border-red-100'
+                  }`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex gap-2">
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                      scenario.isNew ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-red-600 border-red-200'
-                    }`}>
+                    <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border ${scenario.isNew ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-red-600 border-red-200'
+                      }`}>
                       {scenario.areaCode}
                     </span>
                     {scenario.isNew && (
