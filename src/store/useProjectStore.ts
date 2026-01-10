@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../lib/tauri-bridge';
 
 export interface Project {
     id: number;
@@ -25,9 +25,9 @@ interface ProjectState {
 
     // Actions
     initDb: () => Promise<void>;
-    loadProjects: () => Promise<void>; // [체크] 이 이름이어야 함
+    loadProjects: () => Promise<void>;
     createProject: (name: string) => Promise<void>;
-    setCurrentProject: (projectId: number) => void; // [체크] 이 기능이 있어야 함
+    setCurrentProject: (projectId: number) => void;
     loadProjectData: (projectId: number) => Promise<void>;
 }
 
@@ -39,7 +39,7 @@ export const useProjectStore = create<ProjectState>((set: any, get: any) => ({
 
     initDb: async () => {
         try {
-            await invoke('init_db');
+            await safeInvoke('init_db');
             console.log('DB Init Success');
             get().loadProjects();
         } catch (error) {
@@ -47,11 +47,10 @@ export const useProjectStore = create<ProjectState>((set: any, get: any) => ({
         }
     },
 
-    // [중요] 함수 이름이 'loadProjects' 여야 DataImport와 연결됩니다.
     loadProjects: async () => {
         set({ loading: true });
         try {
-            const projects = await invoke<Project[]>('get_projects');
+            const projects = await safeInvoke<Project[]>('get_projects');
             set({ projects, loading: false });
         } catch (error) {
             console.error('Failed to load projects:', error);
@@ -61,7 +60,7 @@ export const useProjectStore = create<ProjectState>((set: any, get: any) => ({
 
     createProject: async (name: string) => {
         try {
-            const id = await invoke<number>('create_project', { name });
+            const id = await safeInvoke<number>('create_project', { name });
             console.log('Project created with ID:', id);
             await get().loadProjects();
         } catch (error) {
@@ -77,7 +76,7 @@ export const useProjectStore = create<ProjectState>((set: any, get: any) => ({
     loadProjectData: async (projectId: number) => {
         set({ loading: true });
         try {
-            const data = await invoke<AuditData[]>('get_project_data', { projectId });
+            const data = await safeInvoke<AuditData[]>('get_project_data', { projectId });
             set({ projectData: data || [], loading: false });
         } catch (error) {
             console.error('Failed to load project data:', error);

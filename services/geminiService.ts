@@ -2,12 +2,15 @@
 
 import { AUDIT_AREAS, CRITICAL_VIOLATIONS } from "../data/mockData";
 
+// Note: VITE_GEMINI_API_KEY can be used for local/client-side testing via import.meta.env.VITE_GEMINI_API_KEY
+// But we prioritize the secure Vercel Serverless Function route (/api/gemini)
+
 // `contents` parameter should be an array of parts, as expected by Gemini API.
 export const sendMessageToGemini = async (contents: any[], systemInstruction: string, requestType: string, hasUploadedFiles: boolean): Promise<any> => { // Added requestType and hasUploadedFiles
   try {
     // The context is now passed dynamically from AIChat.tsx based on the user's prompt
     // and the specific AI Studio system instruction.
-    const context = systemInstruction; 
+    const context = systemInstruction;
 
     // Call our own backend API route instead of Gemini API directly
     const apiResponse = await fetch('/api/gemini', {
@@ -19,8 +22,8 @@ export const sendMessageToGemini = async (contents: any[], systemInstruction: st
     });
 
     if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({})); // Gracefully handle non-json responses
-        throw new Error(errorData.error || `서버 오류: ${apiResponse.status}`);
+      const errorData = await apiResponse.json().catch(() => ({})); // Gracefully handle non-json responses
+      throw new Error(errorData.error || `서버 오류: ${apiResponse.status}`);
     }
 
     const data = await apiResponse.json();

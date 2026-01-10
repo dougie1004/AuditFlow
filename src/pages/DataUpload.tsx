@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { safeInvoke } from '../lib/tauri-bridge';
+import { pickFiles } from '../services/fileService';
 import {
     Upload, Zap, Loader2,
     FileText,
@@ -68,7 +68,7 @@ export default function DataUpload() {
     };
 
     useEffect(() => {
-        invoke("get_audit_projects").then((res: any) => {
+        safeInvoke("get_audit_projects").then((res: any) => {
             setProjects(res);
             if (id) {
                 setActiveProject(id);
@@ -81,7 +81,7 @@ export default function DataUpload() {
             if (uploadedFiles.length === 0) return;
 
             const updatedFiles = await Promise.all(uploadedFiles.map(async (file) => {
-                const preview: string[][] = await invoke('get_file_preview', {
+                const preview: string[][] = await safeInvoke('get_file_preview', {
                     filePath: file.path,
                     limit: 100,
                     enable_masking: isMasked
@@ -89,7 +89,7 @@ export default function DataUpload() {
 
                 let multiSheets = file.multiSheets;
                 if (file.ext === 'xlsx') {
-                    const sheetDetails: { name: string, data: string[][] }[] = await invoke('get_workbook_details', {
+                    const sheetDetails: { name: string, data: string[][] }[] = await safeInvoke('get_workbook_details', {
                         filePath: file.path,
                         enable_masking: isMasked
                     });
@@ -110,25 +110,21 @@ export default function DataUpload() {
     const handlePickFiles = async () => {
         if (!activeProject) return;
 
-        const selected = await open({
-            multiple: true,
-            filters: [{
-                name: 'Audit Files',
-                extensions: ['xlsx', 'csv', 'pdf', 'docx', 'txt', 'eml', 'msg', 'log']
-            }]
-        });
+        const selected = await pickFiles();
 
-        if (selected && Array.isArray(selected)) {
+        if (selected) {
             setIsProcessing(true);
             const newFiles: UploadedFile[] = [];
+            const fileList = selected instanceof FileList ? Array.from(selected) : selected;
 
-            for (const filePath of selected) {
+            for (const item of fileList) {
+                const filePath = typeof item === 'string' ? item : item.name; // Simple fallback for web
                 const name = filePath.split(/[\\/]/).pop() || filePath;
                 const ext = name.split('.').pop()?.toLowerCase() || '';
 
                 try {
                     // Phase 1: Basic Preview (First sheet or text content)
-                    const preview: string[][] = await invoke('get_file_preview', { filePath, limit: 100, enableMasking: isMasked });
+                    const preview: string[][] = await safeInvoke('get_file_preview', { filePath, limit: 100, enableMasking: isMasked });
                     const isTable = ext === 'xlsx' || ext === 'csv' || ext === 'log';
 
                     let fullContent = "";
@@ -137,7 +133,7 @@ export default function DataUpload() {
                     // Phase 2: Authentic Multi-Sheet Deep Read (Backend)
                     if (ext === 'xlsx') {
                         try {
-                            const sheetDetails: { name: string, data: string[][] }[] = await invoke('get_workbook_details', { filePath, enableMasking: isMasked });
+                            const sheetDetails: { name: string, data: string[][] }[] = await safeInvoke('get_workbook_details', { filePath, enableMasking: isMasked });
                             if (sheetDetails && sheetDetails.length > 0) {
                                 sheetDetails.forEach(s => {
                                     fullContent += `\n\n[[ SOURCE SHEET: ${s.name} ]]\n`;
@@ -162,7 +158,7 @@ export default function DataUpload() {
                         }
                     } else if (ext === 'csv' || ext === 'txt' || ext === 'log') {
                         try {
-                            const rawPreview: string[][] = await invoke('get_file_preview', { filePath, limit: 0, enableMasking: isMasked });
+                            const rawPreview: string[][] = await safeInvoke('get_file_preview', { filePath, limit: 0, enableMasking: isMasked });
                             fullContent = rawPreview.map(row => row.join("\t")).join("\n");
                         } catch (err) {
                             console.error("Text content read failed", err);
@@ -203,7 +199,7 @@ export default function DataUpload() {
         try {
             // Re-fetch all file previews and full content with masking enabled
             const updatedFiles = await Promise.all(uploadedFiles.map(async (file) => {
-                const previewRows: string[][] = await invoke('get_file_preview', {
+                const previewRows: string[][] = await safeInvoke('get_file_preview', {
                     filePath: file.path,
                     limit: 10,
                     enableMasking: true
@@ -213,7 +209,7 @@ export default function DataUpload() {
                 let fullContent = "";
 
                 if (file.isTable && (file.ext === 'xlsx' || file.ext === 'xls')) {
-                    const sheetDetails: any[] = await invoke('get_workbook_details', {
+                    const sheetDetails: any[] = await safeInvoke('get_workbook_details', {
                         filePath: file.path,
                         enableMasking: true
                     });
@@ -235,7 +231,7 @@ export default function DataUpload() {
                     });
                 } else {
                     // For non-table files, re-fetch full content with masking
-                    const rawPreview: string[][] = await invoke('get_file_preview', {
+                    const rawPreview: string[][] = await safeInvoke('get_file_preview', {
                         filePath: file.path,
                         limit: 0,
                         enableMasking: true
@@ -265,7 +261,7 @@ export default function DataUpload() {
                 .join("\n\n");
 
             const dept = activeProject?.includes("MKT") ? "Marketing" : activeProject?.includes("SAL") ? "Sales" : activeProject?.includes("FACT") ? "Vietnam Factory" : "General";
-            const result: AnalysisResult = await invoke('execute_project_analysis', {
+            const result: AnalysisResult = await safeInvoke('execute_project_analysis', {
                 projectId: activeProject,
                 department: dept,
                 fullContent: aggregatedContent || null

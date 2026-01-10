@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { safeInvoke } from '../lib/tauri-bridge';
+import { pickFiles, uploadFile } from '../services/fileService';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import { listen } from '@tauri-apps/api/event';
@@ -79,7 +79,7 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
 
         const runAnalysis = async () => {
             try {
-                const res: any = await invoke('run_audit_analysis', { projectType, enableMasking });
+                const res: any = await safeInvoke('run_audit_analysis', { projectType, enableMasking });
 
                 if (res.status === "Success") {
                     setTimeout(() => {
@@ -287,7 +287,7 @@ export default function DataImport() {
     const fetchFiles = useCallback(async () => {
         if (!activeProject) return;
         try {
-            const res = await invoke('get_files_by_type', { projectType });
+            const res = await safeInvoke('get_files_by_type', { projectType });
             if (Array.isArray(res)) {
                 setFiles(res as AuditFile[]);
                 setState((prev: any) => ({ ...prev, files: res }));
@@ -305,15 +305,12 @@ export default function DataImport() {
     const handleUpload = async () => {
         setIsLoading(true);
         try {
-            const selected = await open({
-                multiple: true, directory: false,
-                filters: [{ name: 'All Supported Files', extensions: ['xlsx', 'xls', 'csv', 'txt', 'json', 'pdf', 'docx', 'pptx', 'eml', 'html', 'md', 'log'] }]
-            });
+            const selected = await pickFiles();
             if (selected) {
-                const filePaths = Array.isArray(selected) ? selected : [selected];
-                for (const filePath of filePaths) {
+                const fileList = selected instanceof FileList ? Array.from(selected) : selected;
+                for (const item of fileList) {
                     try {
-                        const res: any = await invoke('upload_audit_file', { projectType: projectType, filePath: filePath });
+                        const res: any = await uploadFile(projectType, item);
                         if (res.pii_count > 0) {
                             const newNoti = { name: res.file_name, count: res.pii_count, id: Date.now() + Math.random() };
                             setPiiNotifications(prev => [...prev, newNoti]);
@@ -325,7 +322,7 @@ export default function DataImport() {
                         }
                     } catch (e) { console.error(e); }
                 }
-                const updatedFiles = await invoke('get_files_by_type', { projectType }) as AuditFile[];
+                const updatedFiles = await safeInvoke('get_files_by_type', { projectType }) as AuditFile[];
                 setFiles(updatedFiles);
                 setState((prev: any) => ({ ...prev, files: updatedFiles }));
                 setSelectedIds(new Set(updatedFiles.map(f => f.id)));
@@ -339,7 +336,7 @@ export default function DataImport() {
     const handleDeleteSelected = async () => {
         if (selectedIds.size === 0) return;
         if (confirm(`선택한 ${selectedIds.size}개를 삭제하시겠습니까?`)) {
-            for (const id of selectedIds) await invoke('delete_audit_file', { id });
+            for (const id of selectedIds) await safeInvoke('delete_audit_file', { id });
             fetchFiles();
         }
     };
@@ -347,7 +344,7 @@ export default function DataImport() {
     const handlePreview = async (filePath: string, fileName: string, limit?: number, masked?: boolean) => {
         try {
             const command = masked ? 'get_masked_preview' : 'get_file_preview';
-            const data: string[][] = await invoke(command, { filePath: filePath, limit: limit });
+            const data: string[][] = await safeInvoke(command, { filePath: filePath, limit: limit });
 
             // Find PII count for this file to show in modal
             // This is a bit simplified, ideally we'd get PII count from the DB or command

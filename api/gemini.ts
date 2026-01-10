@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // This is a server-side file. `process.env` is secure here.
-const apiKey = process.env.API_KEY;
+const apiKey = process.env.VITE_GEMINI_API_KEY;
 
 if (!apiKey) {
   // This error will be visible in Vercel logs, not to the user.
@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let model = 'gemini-3-flash-preview'; // Default for basic text tasks
     // Use gemini-3-pro-preview for all complex tasks to leverage "latest performance"
     if (requestType === 'audit-findings' || requestType === 'document-analysis' || requestType === 'sql-generation' || requestType === 'inventory-analysis' || requestType === 'self-learning-explanation' || requestType === 'checklist-generation' || requestType === 'general-chat') {
-        model = 'gemini-3-pro-preview'; 
+      model = 'gemini-3-pro-preview';
     }
 
     const generationConfig: any = {
@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Conditionally apply responseMimeType and responseSchema for audit-findings
     // ONLY when fallback mock data is used (i.e., NO relevant uploaded files were passed from client).
     // If uploaded files are present, Gemini provides natural language summary.
-    if (requestType === 'audit-findings' && !hasUploadedFiles && context.includes('JSON 형식의 법인카드 거래 데이터를 분석')) { 
+    if (requestType === 'audit-findings' && !hasUploadedFiles && context.includes('JSON 형식의 법인카드 거래 데이터를 분석')) {
       generationConfig.responseMimeType = "application/json";
       generationConfig.responseSchema = {
         type: Type.ARRAY,
@@ -87,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const text = response.text || ""; // Default to empty string if no text
-    
+
     // Conditionally parse JSON based on requestType and if JSON format was enforced
     if (requestType === 'audit-findings' && generationConfig.responseMimeType === "application/json") {
       try {

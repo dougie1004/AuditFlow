@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     Bot, User, Sparkles, Wand2,
     MessageSquare, Zap, Target,
@@ -51,7 +51,7 @@ export default function AIAssistant() {
         setIsTyping(true);
 
         try {
-            const response: string = await invoke("ask_ai_assistant", {
+            const response: string = await safeInvoke("ask_ai_assistant", {
                 message: text,
                 projectId: activeProject
             });

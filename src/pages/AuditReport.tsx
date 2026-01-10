@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from '../lib/tauri-bridge';
 import {
     Download, FileText, BrainCircuit, Printer,
     ShieldCheck, Share2, Loader2, AlertCircle,
@@ -17,7 +17,7 @@ export default function AuditReport() {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(activeProject);
 
     useEffect(() => {
-        invoke("get_audit_projects").then((res: any) => {
+        safeInvoke("get_audit_projects").then((res: any) => {
             setProjects(res);
             if (activeProject) setSelectedProjectId(activeProject);
             else if (res.length > 0) setSelectedProjectId(res[0].id);
@@ -36,7 +36,7 @@ export default function AuditReport() {
 
         try {
             // [CRITICAL] Validate that there are accepted findings before generating report
-            const issues: any[] = await invoke("get_audit_issues", { projectType: selectedProjectId });
+            const issues: any[] = await safeInvoke("get_audit_issues", { projectType: selectedProjectId });
             const acceptedFindings = issues.filter(f => f.status === "Accepted");
 
             if (acceptedFindings.length === 0) {
@@ -46,7 +46,7 @@ export default function AuditReport() {
             }
 
             // Generate report with validated data
-            const res: string = await invoke("generate_professional_report", { projectId: selectedProjectId });
+            const res: string = await safeInvoke("generate_professional_report", { projectId: selectedProjectId });
 
             if (!res || res.trim().length === 0) {
                 throw new Error("AI가 빈 보고서를 반환했습니다.");

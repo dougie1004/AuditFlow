@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../lib/tauri-bridge';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import { useAudit } from '../context/AuditContext';
@@ -80,11 +80,11 @@ export default function Dashboard() {
     const fetchData = async () => {
         try {
             console.log(">>> [Dashboard] Fetching Command Center Data. Context:", activeProject);
-            const [sum, evts, projs] = await Promise.all([
-                invoke('get_dashboard_summary', { projectId: activeProject }),
-                invoke('get_system_events', { projectId: activeProject }),
-                invoke('get_audit_projects')
-            ]) as [DashboardSummary, SystemEvent[], RealAuditProject[]];
+            const [sum, evts] = await Promise.all([
+                safeInvoke('get_dashboard_summary', { projectId: activeProject }),
+                safeInvoke('get_system_events', { projectId: activeProject }),
+            ]) as [DashboardSummary, SystemEvent[]];
+            const projs = await safeInvoke<RealAuditProject[]>('get_audit_projects');
 
             setSummary(sum);
             setEvents(evts);
@@ -93,9 +93,9 @@ export default function Dashboard() {
             // [IMPROVED] Calculate weighted risk score for each project
             const calculateRiskScore = async (projectId: string): Promise<number> => {
                 try {
-                    const issues: any[] = await invoke('get_audit_issues', { projectType: projectId });
+                    const projectIssues = await safeInvoke<any[]>('get_audit_issues', { projectType: projectId });
                     let score = 0;
-                    issues.forEach(issue => {
+                    projectIssues.forEach(issue => {
                         switch (issue.severity) {
                             case 'High': score += 3; break;
                             case 'Medium': score += 2; break;
