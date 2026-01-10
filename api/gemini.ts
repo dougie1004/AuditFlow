@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // This is a server-side file. `process.env` is secure here.
-const apiKey = process.env.VITE_GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
   // This error will be visible in Vercel logs, not to the user.
