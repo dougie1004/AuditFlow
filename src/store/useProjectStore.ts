@@ -31,7 +31,7 @@ interface ProjectState {
     loadProjectData: (projectId: number) => Promise<void>;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set: any, get: any) => ({
     projects: [],
     currentProject: null,
     projectData: [],
@@ -70,7 +70,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     },
 
     setCurrentProject: (projectId: number) => {
-        const project = get().projects.find((p) => p.id === projectId);
+        const project = get().projects.find((p: Project) => p.id === projectId);
         set({ currentProject: project || null });
     },
 

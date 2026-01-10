@@ -53,7 +53,7 @@ export default function ProcessMonitoring() {
         const unlisten = listen("process-mining-progress", (e: any) => {
             setProgress(e.payload);
         });
-        return () => { unlisten.then(f => f()); };
+        return () => { unlisten.then((f: any) => f()); };
     }, []);
 
     const runAnalysis = async () => {
@@ -188,7 +188,7 @@ export default function ProcessMonitoring() {
                             { icon: <Monitor className="text-blue-400" />, label: "PC Local Extraction", desc: "개별 담당자 PC에 잠자고 있는 엑셀, 메신저, 로그 및 임시 파일을 수집하여 비정형 데이터를 추출합니다." },
                             { icon: <Server className="text-emerald-400" />, label: "ERP/Legacy Sync", desc: "회사의 공식 ERP 시스템 및 데이터베이스와 연동하여 공식 경영 로그를 대조군으로 확보합니다." },
                             { icon: <Cpu className="text-indigo-400" />, label: "AI Normalization", desc: "분산된 비정형 데이터를 LLM이 실시간으로 표준 감사 스키마로 정규화하여 교차 분석이 가능한 상태로 만듭니다." }
-                        ].map((f, i) => (
+                        ].map((f: any, i: number) => (
                             <Card key={i} className="p-10 border-dashed border-2 bg-transparent hover:border-blue-500/50 hover:bg-blue-600/5 transition-all group">
                                 <div className="w-16 h-16 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center mb-8 shadow-sm group-hover:scale-110 transition-transform">
                                     {f.icon}
