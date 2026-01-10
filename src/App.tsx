@@ -92,7 +92,7 @@ function Layout() {
       {isMobile && (
         <div style={{ padding: "8px 20px", background: "#0f172a", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 200, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div style={{ background: "white", padding: "6px 10px", borderRadius: "10px" }}>
-            <img src={auditflowLogo} alt="AuditFlow" style={{ height: "24px", width: "auto", display: "block", objectFit: "contain" }} />
+            <img src={auditflowLogo as any} alt="AuditFlow" style={{ height: "24px", width: "auto", display: "block", objectFit: "contain" }} />
           </div>
           <button onClick={() => setSidebarOpen(!isSidebarOpen)} style={{ background: "none", border: "none", color: "white" }}>
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -120,7 +120,7 @@ function Layout() {
               onClick={() => navigate('/')}
               style={{ cursor: 'pointer', background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "24px", border: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "90px", overflow: "hidden" }}
             >
-              <img src={auditflowLogo} alt="AuditFlow" style={{ width: "160%", height: "160%", objectFit: "contain", display: "block", transform: "scale(1.1)", filter: "brightness(1.2)" }} />
+              <img src={auditflowLogo as any} alt="AuditFlow" style={{ width: "160%", height: "160%", objectFit: "contain", display: "block", transform: "scale(1.1)", filter: "brightness(1.2)" }} />
             </div>
             <div className="mt-4 px-1 flex items-center gap-2">
               <div className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${user?.tier === 'Enterprise' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
@@ -209,7 +209,7 @@ function Layout() {
             </div>
             <div style={{ height: "40px", width: "1px", background: "rgba(255,255,255,0.05)" }} />
             <div style={{ width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "rgba(255,255,255,0.02)", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <img src={insightrixLogo} alt="Engine" style={{ width: "140%", height: "140%", objectFit: "contain", display: "block", opacity: 0.8 }} />
+              <img src={insightrixLogo as any} alt="Engine" style={{ width: "140%", height: "140%", objectFit: "contain", display: "block", opacity: 0.8 }} />
             </div>
           </div>
         </header>

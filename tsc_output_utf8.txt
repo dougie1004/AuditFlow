@@ -1,0 +1,20 @@
+﻿backup/App.tsx(89,18): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+backup/App.tsx(114,20): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+backup/App.tsx(187,20): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+backup/pages/AnalysisResult.tsx(4,29): error TS2307: Cannot find module '../hooks/useAutoSave' or its corresponding type declarations.
+backup/pages/AuditProjects.tsx(3,33): error TS2307: Cannot find module '../store/useProjectStore' or its corresponding type declarations.
+backup/pages/AuditProjects.tsx(37,39): error TS7006: Parameter 'project' implicitly has an 'any' type.
+src-tauri/my-app/components/ui/badge.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src-tauri/my-app/components/ui/button.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src-tauri/my-app/components/ui/card.tsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src-tauri/my-app/components/ui/input.tsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src-tauri/my-app/components/ui/table.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+src/App.tsx(95,18): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+src/App.tsx(123,20): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+src/App.tsx(212,20): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+src/pages/AuditReport.tsx(182,38): error TS2322: Type 'StaticImageData' is not assignable to type 'string'.
+src/pages/Dashboard.tsx(334,45): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: Props): Treemap', gave the following error.
+    Type '(props: any) => JSX.Element' is not assignable to type 'ReactElement<any, string | JSXElementConstructor<any>>'.
+  Overload 2 of 2, '(props: Props, context: any): Treemap', gave the following error.
+    Type '(props: any) => JSX.Element' is not assignable to type 'ReactElement<any, string | JSXElementConstructor<any>>'.

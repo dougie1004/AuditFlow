@@ -389,7 +389,7 @@ export default function RiskHeatmap() {
                                     <Scatter
                                         name="Audit Units"
                                         data={entities}
-                                        onClick={(e) => handleSelectForEdit(e.payload)}
+                                        onClick={(e: any) => handleSelectForEdit(e.payload)}
                                     >
                                         {entities.map((entry, index) => {
                                             const isCritical = entry.impact_score >= 8 && entry.likelihood_score >= 8;

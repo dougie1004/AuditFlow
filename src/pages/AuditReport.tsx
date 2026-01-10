@@ -179,7 +179,7 @@ export default function AuditReport() {
                         <div className="bg-slate-900/40 backdrop-blur-xl p-16 md:p-24 shadow-[0_40px_100px_rgba(0,0,0,0.4)] border border-white/10 rounded-3xl relative paper-container overflow-hidden">
                             {/* Watermark/Logo */}
                             <div className="absolute top-10 right-10 opacity-20 grayscale invert">
-                                <img src={insightrixLogo} alt="AuditFlow" className="h-10 w-auto" />
+                                <img src={insightrixLogo as any} alt="AuditFlow" className="h-10 w-auto" />
                             </div>
 
                             {/* Markdown-like Content Styling */}

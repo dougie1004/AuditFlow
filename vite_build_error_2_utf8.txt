@@ -1,0 +1,73 @@
+﻿[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m??[39m 2 modules transformed.
+node.exe : [31mx[39m Build 
+failed in 210ms
+위치 줄:1 문자:1
++ & "C:\Program Files\nodejs/
+node.exe" "C:\Program Files\n
+odejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ([31mx  
+  [39m Build failed in 210   
+ ms:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+[31merror during build:
+[31m[vite:css] [postcss] It 
+looks like you're trying to u
+se `tailwindcss` directly as 
+a PostCSS plugin. The PostCSS
+ plugin has moved to a separa
+te package, so to continue us
+ing Tailwind CSS with PostCSS
+ you'll need to install `@tai
+lwindcss/postcss` and update 
+your PostCSS configuration.[
+31m
+file: [36mC:/Users/user/.gem
+ini/antigravity/scratch/audit
+flow/index.html?html-proxy&in
+line-css&index=0.css:undefine
+d:NaN[31m
+    at lt (C:\Users\user\.gem
+ini\antigravity\scratch\audit
+flow\node_modules\tailwindcss
+\dist\lib.js:38:1643)
+    at LazyResult.runOnRoot (
+C:\Users\user\.gemini\antigra
+vity\scratch\auditflow\node_m
+odules\postcss\lib\lazy-resul
+t.js:361:16)
+    at LazyResult.runAsync (C
+:\Users\user\.gemini\antigrav
+ity\scratch\auditflow\node_mo
+dules\postcss\lib\lazy-result
+.js:290:26)
+    at async compileCSS (file
+:///C:/Users/user/.gemini/ant
+igravity/scratch/auditflow/no
+de_modules/vite/dist/node/chu
+nks/dep-BK3b2jBa.js:36898:21)
+    at async Object.transform
+ (file:///C:/Users/user/.gemi
+ni/antigravity/scratch/auditf
+low/node_modules/vite/dist/no
+de/chunks/dep-BK3b2jBa.js:361
+71:11)
+    at async transform (file:
+///C:/Users/user/.gemini/anti
+gravity/scratch/auditflow/nod
+e_modules/rollup/dist/es/shar
+ed/node-entry.js:21206:16)
+    at async ModuleLoader.add
+ModuleSource (file:///C:/User
+s/user/.gemini/antigravity/sc
+ratch/auditflow/node_modules/
+rollup/dist/es/shared/node-en
+try.js:21420:36)[39m

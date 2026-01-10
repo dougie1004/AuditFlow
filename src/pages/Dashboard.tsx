@@ -331,7 +331,7 @@ export default function Dashboard() {
                                     fill="#8884d8"
                                     isAnimationActive={false}
                                     animationDuration={0}
-                                    content={(props: any) => {
+                                    content={((props: any) => {
                                         const { x, y, width, height, name, fill, findingsCount, riskScore } = props;
                                         if (width < 50 || height < 30) return <></>;
 
@@ -402,7 +402,7 @@ export default function Dashboard() {
                                                 )}
                                             </g>
                                         );
-                                    }}
+                                    }) as any}
                                 >
                                     <RechartsTooltip
                                         isAnimationActive={false} // CRITICAL: Stop Flicker

@@ -60,7 +60,7 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
         let unlisten: (() => void) | undefined;
 
         const setupListener = async () => {
-            unlisten = await listen<any>('analysis-progress', (event) => {
+            unlisten = await listen<any>('analysis-progress', (event: any) => {
                 const { progress, message, step: currentStep } = event.payload;
                 setProgress(progress);
                 setLogs(prev => [...prev, message]);
@@ -70,7 +70,7 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
 
         let unlistenRisk: (() => void) | undefined;
         const setupRiskListener = async () => {
-            unlistenRisk = await listen<any>('risk-detected', (event) => {
+            unlistenRisk = await listen<any>('risk-detected', (event: any) => {
                 setRiskyFindings(prev => [...prev, event.payload]);
             });
         };

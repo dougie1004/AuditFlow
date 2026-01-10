@@ -1,0 +1,79 @@
+﻿[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+node.exe : [31mx[39m Build 
+failed in 41ms
+위치 줄:1 문자:1
++ & "C:\Program Files\nodejs/
+node.exe" "C:\Program Files\n
+odejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: ([31mx  
+  [39m Build failed in 41m   
+ s:String) [], RemoteExce    
+ption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+[31merror during build:
+[31m[vite:css] Failed to loa
+d PostCSS config (searchPath:
+ C:/Users/user/.gemini/antigr
+avity/scratch/auditflow): [Er
+ror] Loading PostCSS Plugin f
+ailed: Cannot find module 'ta
+ilwindcss'
+Require stack:
+- C:\Users\user\.gemini\antig
+ravity\scratch\auditflow\post
+css.config.js
+
+(@C:\Users\user\.gemini\antig
+ravity\scratch\auditflow\post
+css.config.js)
+Error: Loading PostCSS Plugin
+ failed: Cannot find module '
+tailwindcss'
+Require stack:
+- C:\Users\user\.gemini\antig
+ravity\scratch\auditflow\post
+css.config.js
+
+(@C:\Users\user\.gemini\antig
+ravity\scratch\auditflow\post
+css.config.js)
+    at load (file:///C:/Users
+/user/.gemini/antigravity/scr
+atch/auditflow/node_modules/v
+ite/dist/node/chunks/dep-BK3b
+2jBa.js:33632:11)
+    at file:///C:/Users/user/
+.gemini/antigravity/scratch/a
+uditflow/node_modules/vite/di
+st/node/chunks/dep-BK3b2jBa.j
+s:33657:16
+    at Array.map (<anonymous>
+)
+    at plugins (file:///C:/Us
+ers/user/.gemini/antigravity/
+scratch/auditflow/node_module
+s/vite/dist/node/chunks/dep-B
+K3b2jBa.js:33656:8)
+    at processResult (file://
+/C:/Users/user/.gemini/antigr
+avity/scratch/auditflow/node_
+modules/vite/dist/node/chunks
+/dep-BK3b2jBa.js:33726:14)
+    at file:///C:/Users/user/
+.gemini/antigravity/scratch/a
+uditflow/node_modules/vite/di
+st/node/chunks/dep-BK3b2jBa.j
+s:33856:14[31m
+file: [36mC:/Users/user/.gem
+ini/antigravity/scratch/audit
+flow/index.html?html-proxy&in
+line-css&index=0.css[31m
+[39m
+[32m??[39m 2 modules transformed.
