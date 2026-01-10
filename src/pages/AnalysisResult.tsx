@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../lib/tauri-bridge';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAutoSave } from '../hooks/useAutoSave';
 import {
@@ -58,7 +58,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
     const fetchIssues = async () => {
         try {
             setLoading(true);
-            const res: any = await invoke('get_audit_issues', { projectType: activeProject || "Unknown" });
+            const res: any[] = await safeInvoke('get_audit_issues', { projectType: activeProject || "Unknown" });
             let data = (res as AuditIssue[]) || [];
 
             const state = location.state as any;
@@ -92,7 +92,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
     const handleDismiss = async (id: number) => {
         if (!confirm("해당 발견 사항을 항목에서 제외하시겠습니까?")) return;
         try {
-            await invoke('dismiss_audit_issue', { issueId: id });
+            await safeInvoke('dismiss_audit_issue', { issueId: id });
             setIssues(prev => prev.filter(i => i.id !== id));
             setSelectedId(null);
             alert("기각 처리되었습니다.");
@@ -104,7 +104,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
 
     const fetchCategories = async () => {
         try {
-            const res = await invoke('get_scenario_categories');
+            const res = await safeInvoke('get_scenario_categories');
             setCategories(res as string[]);
         } catch (err) { console.error(err); }
     };
@@ -129,7 +129,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
         if (!finalCategory) { alert("카테고리를 입력해주세요."); return; }
 
         try {
-            await invoke('add_issue_to_scenarios', { issueId: modalData.issueId, category: finalCategory, isAi: true });
+            await safeInvoke('add_issue_to_scenarios', { issueId: modalData.issueId, category: finalCategory, isAi: true });
             alert("시나리오에 성공적으로 반영되었습니다. (AI 지식베이스 학습 완료)");
             setIssues(prev => prev.filter(i => i.id !== modalData.issueId));
             setSelectedId(null);
@@ -348,13 +348,13 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                                     title="Manager's Review Comment"
                                     initialValue={selectedIssue.manager_comment || ""}
                                     placeholder="감사인의 검토 의견을 입력하세요. (자동 저장됨)"
-                                    onSave={async (val) => invoke('update_audit_issue_field', { id: selectedIssue.id, field: 'manager_comment', value: val })}
+                                    onSave={async (val) => safeInvoke('update_audit_issue_field', { id: selectedIssue.id, field: 'manager_comment', value: val })}
                                 />
                                 <AutoSaveEditor
                                     title="Remediation Plan"
                                     initialValue={selectedIssue.remediation_plan || ""}
                                     placeholder="구체적인 개선 계획을 입력하세요. (자동 저장됨)"
-                                    onSave={async (val) => invoke('update_audit_issue_field', { id: selectedIssue.id, field: 'remediation_plan', value: val })}
+                                    onSave={async (val) => safeInvoke('update_audit_issue_field', { id: selectedIssue.id, field: 'remediation_plan', value: val })}
                                 />
                             </div>
                         </div>

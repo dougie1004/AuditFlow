@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     Calendar, Users, Target, ShieldCheck,
     MapPin, Briefcase
@@ -25,7 +25,7 @@ export default function ProjectDetail() {
     useEffect(() => {
         if (id) {
             setActiveProject(id);
-            invoke("get_audit_projects").then((res: any) => {
+            safeInvoke("get_audit_projects").then((res: any) => {
                 const found = res.find((p: any) => p.id === id);
                 if (found) {
                     setProject(found);
@@ -43,13 +43,13 @@ export default function ProjectDetail() {
     }, [id, setActiveProject]);
 
     const handleSave = async () => {
-        await invoke("update_project_metadata", {
+        await safeInvoke("update_project_metadata", {
             projectId: id,
             ...editData
         });
         setIsEditing(false);
         // Refresh
-        const res: any = await invoke("get_audit_projects");
+        const res: any = await safeInvoke("get_audit_projects");
         const found = res.find((p: any) => p.id === id);
         if (found) setProject(found);
     };
