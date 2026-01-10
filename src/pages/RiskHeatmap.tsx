@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import ReactMarkdown from 'react-markdown';
 import {
     ScatterChart, Scatter, XAxis, YAxis, ZAxis,
@@ -118,7 +118,7 @@ export default function RiskHeatmap() {
         setLoading(true);
         try {
             console.log(">>> [RiskHeatmap] Fetching Audit Universe...");
-            const data: AuditEntity[] = await invoke("get_audit_universe");
+            const data: AuditEntity[] = await safeInvoke("get_audit_universe");
             console.log(">>> [RiskHeatmap] Received Data:", data);
             setEntities(data);
         } catch (err) {
@@ -149,10 +149,12 @@ export default function RiskHeatmap() {
 
     const handleAddEntity = async () => {
         try {
-            await invoke("add_audit_universe_entity", {
-                unitName: newEntityName,
-                category: newCategory,
-                lastAuditYear: parseInt(newLastAudit) || 2024
+            await safeInvoke("add_audit_entity", {
+                entity: {
+                    unit_name: newEntityName,
+                    category: newCategory,
+                    last_audit_year: parseInt(newLastAudit) || 2024
+                }
             });
             setIsAddModalOpen(false);
             setNewEntityName("");
@@ -166,7 +168,7 @@ export default function RiskHeatmap() {
     const handleApplyToPlan = async () => {
         if (!selectedEntity) return;
         try {
-            await invoke("add_audit_plan", {
+            await safeInvoke("add_audit_plan", {
                 year: 2024,
                 domain: selectedEntity.unit_name,
                 risk_score: editImpact * editLikelihood,
@@ -185,7 +187,7 @@ export default function RiskHeatmap() {
     const handleUpdateScores = async () => {
         if (!selectedEntity) return;
         try {
-            await invoke("update_risk_assessment", {
+            await safeInvoke("update_risk_assessment", {
                 id: selectedEntity.id,
                 impact: editImpact,
                 likelihood: editLikelihood,
@@ -214,7 +216,7 @@ export default function RiskHeatmap() {
         if (!selectedEntity) return;
         setIsSuggesting(true);
         try {
-            const res: AiRiskAnalysis = await invoke("ai_suggest_risk_score", {
+            const res: AiRiskAnalysis = await safeInvoke("ai_suggest_risk_score", {
                 id: selectedEntity.id,
                 use_live_ai: useLiveAi
             });
@@ -232,7 +234,7 @@ export default function RiskHeatmap() {
         setIsGeneratingPriority(true);
         setIsPriorityModalOpen(true);
         try {
-            const report: string = await invoke("generate_audit_priorities", { entities });
+            const report: string = await safeInvoke("generate_audit_priorities", { entities });
             setPriorityReport(report);
         } catch (err) {
             alert(err);
@@ -245,7 +247,7 @@ export default function RiskHeatmap() {
     const handleForceSeed = async () => {
         try {
             setLoading(true);
-            await invoke("force_seed_universe");
+            await safeInvoke("force_seed_universe");
             setPriorityReport("");
             await fetchData();
             alert("샘플 데이터가 성공적으로 생성되었습니다.");

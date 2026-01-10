@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { safeInvoke } from '../lib/tauri-bridge';
+import { safeInvoke, safeListen } from '../lib/tauri-bridge';
 import { pickFiles, uploadFile } from '../services/fileService';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
-import { listen } from '@tauri-apps/api/event';
 import {
     Upload, Trash2, CheckCircle, FileText,
     FileSpreadsheet, Loader2, Eye, File, BrainCircuit, X, Terminal,
@@ -60,7 +59,7 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
         let unlisten: (() => void) | undefined;
 
         const setupListener = async () => {
-            unlisten = await listen<any>('analysis-progress', (event: any) => {
+            unlisten = await safeListen<any>('analysis-progress', (event: any) => {
                 const { progress, message, step: currentStep } = event.payload;
                 setProgress(progress);
                 setLogs(prev => [...prev, message]);
@@ -70,7 +69,7 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
 
         let unlistenRisk: (() => void) | undefined;
         const setupRiskListener = async () => {
-            unlistenRisk = await listen<any>('risk-detected', (event: any) => {
+            unlistenRisk = await safeListen<any>('risk-detected', (event: any) => {
                 setRiskyFindings(prev => [...prev, event.payload]);
             });
         };

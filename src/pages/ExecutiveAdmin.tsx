@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     TrendingUp, BarChart3,
     Zap, AlertTriangle,
@@ -50,7 +50,7 @@ export default function ExecutiveAdmin() {
     const fetchReport = async () => {
         setIsGenerating(true);
         try {
-            const res: AnnualReport = await invoke("generate_annual_report", { year: selectedYear });
+            const res: AnnualReport = await safeInvoke("generate_annual_report", { year: selectedYear });
             setReport(res);
         } catch (err) {
             console.error(err);
@@ -61,7 +61,7 @@ export default function ExecutiveAdmin() {
 
     const fetchPlans = async () => {
         try {
-            const res: AuditPlan[] = await invoke("get_audit_plans", { year: selectedYear });
+            const res: AuditPlan[] = await safeInvoke("get_audit_plans", { year: selectedYear });
             setPlans(res);
         } catch (err) {
             console.error(err);
@@ -77,7 +77,7 @@ export default function ExecutiveAdmin() {
     const handleAddPlan = async () => {
         const riskScore = Math.round((impactScore + complexScore) / 2);
         try {
-            await invoke("add_audit_plan", {
+            await safeInvoke("add_audit_plan", {
                 year: selectedYear,
                 domain: newDomain,
                 riskScore,

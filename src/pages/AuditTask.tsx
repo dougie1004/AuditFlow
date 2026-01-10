@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from "../lib/tauri-bridge";
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import {
@@ -31,7 +31,7 @@ interface AuditProject {
 }
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-    <div onClick={onClick} className={`bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-sm overflow-hidden ${className}`}>{children}</div>
+    <div onClick={onClick} className={`bg - white / 5 backdrop - blur - xl rounded - 2xl border border - white / 10 shadow - sm overflow - hidden ${className} `}>{children}</div>
 );
 
 export default function AuditTask() {
@@ -65,7 +65,7 @@ export default function AuditTask() {
     const fetchProjects = async () => {
         setLoading(true);
         try {
-            const res: AuditProject[] = await invoke('get_audit_projects');
+            const res: AuditProject[] = await safeInvoke('get_audit_projects');
             setProjects(res);
         } catch (err) {
             console.error(err);
@@ -77,7 +77,7 @@ export default function AuditTask() {
     const fetchReport = async (year: number, years: number) => {
         setReportLoading(true);
         try {
-            const res = await invoke('get_annual_performance', { targetYear: year, yearsCount: years });
+            const res = await safeInvoke('get_annual_performance', { targetYear: year, yearsCount: years });
             setReportData(res);
         } catch (err) {
             console.error(err);
@@ -91,8 +91,8 @@ export default function AuditTask() {
     }, []);
 
     const generateId = () => {
-        const base = `${formData.audit_type}_${formData.target_year}-${formData.target_month}_${formData.department}`;
-        return idSuffix ? `${base}_${idSuffix}` : base;
+        const base = `${formData.audit_type}_${formData.target_year} -${formData.target_month}_${formData.department} `;
+        return idSuffix ? `${base}_${idSuffix} ` : base;
     };
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export default function AuditTask() {
 
         const project: AuditProject = {
             id: generateId(),
-            title: `${formData.department} ${formData.audit_type}`,
+            title: `${formData.department} ${formData.audit_type} `,
             status: 'Planning',
             progress_pct: 0,
             findings_count: 0,
@@ -127,7 +127,7 @@ export default function AuditTask() {
         };
 
         try {
-            await invoke('create_audit_project', { project });
+            await safeInvoke('create_audit_project', { project });
             setIsCreating(false);
             setIdSuffix("");
             fetchProjects();
@@ -144,9 +144,9 @@ export default function AuditTask() {
 
     const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (!confirm(`'${id}' 프로젝트와 연관된 모든 데이터(파일, 이슈)를 삭제하시겠습니까?`)) return;
+        if (!confirm(`'${id}' 프로젝트와 연관된 모든 데이터(파일, 이슈)를 삭제하시겠습니까 ? `)) return;
         try {
-            await invoke('delete_audit_project', { projectId: id });
+            await safeInvoke('delete_audit_project', { projectId: id });
             fetchProjects();
             if (activeProject === id) setActiveProject(null);
         } catch (err) {
@@ -157,7 +157,7 @@ export default function AuditTask() {
     const handleResetDB = async () => {
         if (!confirm("주의: 모든 프로젝트, 시나리오, 이슈 데이터를 삭제하고 초기화하시겠습니까?")) return;
         try {
-            await invoke('reset_database');
+            await safeInvoke('reset_database');
             fetchProjects();
             setActiveProject(null);
             alert("시스템이 초기화되었습니다.");
@@ -233,7 +233,7 @@ export default function AuditTask() {
                                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                     <input
                                         type="month"
-                                        value={`${formData.target_year}-${formData.target_month.padStart(2, '0')}`}
+                                        value={`${formData.target_year} -${formData.target_month.padStart(2, '0')} `}
                                         onChange={e => {
                                             const [y, m] = e.target.value.split('-');
                                             setFormData({ ...formData, target_year: y, target_month: m });
@@ -291,12 +291,12 @@ export default function AuditTask() {
                                 <div className="flex items-center gap-3">
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.target_period.split(' ~ ')[0] || ''} onChange={e => {
                                         const [, end] = (formData.target_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, target_period: `${e.target.value} ~ ${end || ''}` });
+                                        setFormData({ ...formData, target_period: `${e.target.value} ~${end || ''} ` });
                                     }} />
                                     <span className="font-bold text-slate-400">~</span>
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.target_period.split(' ~ ')[1] || ''} onChange={e => {
                                         const [start] = (formData.target_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, target_period: `${start || ''} ~ ${e.target.value}` });
+                                        setFormData({ ...formData, target_period: `${start || ''} ~${e.target.value} ` });
                                     }} />
                                 </div>
                             </div>
@@ -305,12 +305,12 @@ export default function AuditTask() {
                                 <div className="flex items-center gap-3">
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.execution_period.split(' ~ ')[0] || ''} onChange={e => {
                                         const [, end] = (formData.execution_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, execution_period: `${e.target.value} ~ ${end || ''}` });
+                                        setFormData({ ...formData, execution_period: `${e.target.value} ~${end || ''} ` });
                                     }} />
                                     <span className="font-bold text-slate-400">~</span>
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.execution_period.split(' ~ ')[1] || ''} onChange={e => {
                                         const [start] = (formData.execution_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, execution_period: `${start || ''} ~ ${e.target.value}` });
+                                        setFormData({ ...formData, execution_period: `${start || ''} ~${e.target.value} ` });
                                     }} />
                                 </div>
                             </div>
@@ -360,9 +360,9 @@ export default function AuditTask() {
                             key={p.id}
                             onClick={() => {
                                 setActiveProject(p.id);
-                                navigate(`/project/${p.id}`);
+                                navigate(`/ project / ${p.id} `);
                             }}
-                            className={`group border-2 transition-all cursor-pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'}`}
+                            className={`group border - 2 transition - all cursor - pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'} `}
                         >
                             <div className="p-8 space-y-6">
                                 <div className="flex justify-between items-start">
@@ -371,10 +371,10 @@ export default function AuditTask() {
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
                                         <div className="flex gap-2">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
-                                                p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
-                                                    'bg-rose-500/10 text-rose-400'
-                                                }`}>
+                                            <span className={`px - 3 py - 1 rounded - full text - [10px] font - black uppercase tracking - widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
+                                                    p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
+                                                        'bg-rose-500/10 text-rose-400'
+                                                } `}>
                                                 {p.audit_type}
                                             </span>
                                             <button
@@ -529,7 +529,7 @@ export default function AuditTask() {
                                                             <div className="w-full relative flex flex-col items-center justify-end h-full">
                                                                 <div
                                                                     className="w-12 bg-white/5 rounded-t-xl transition-all duration-700 group-hover:bg-blue-600 relative overflow-hidden"
-                                                                    style={{ height: `${height}%` }}
+                                                                    style={{ height: `${height}% ` }}
                                                                 >
                                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                                                                     <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-400 group-hover:text-white transition-colors">

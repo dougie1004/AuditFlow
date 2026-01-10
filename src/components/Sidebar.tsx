@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     LayoutDashboard,
     Upload,
@@ -61,8 +61,8 @@ export default function Sidebar() {
                     onClick={async () => {
                         if (confirm("DB 최적화 및 임시파일 삭제를 진행하시겠습니까? (약 10초 소요)")) {
                             try {
-                                const res = await invoke('optimize_database');
-                                const count = await invoke('clean_temp_files');
+                                const res = await safeInvoke('optimize_database');
+                                const count = await safeInvoke('clean_temp_files');
                                 alert(`유지보수 완료:\n${res}\n삭제된 임시파일: ${count}개`);
                             } catch (e) {
                                 alert("유지보수 실패: " + e);

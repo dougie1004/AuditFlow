@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     CheckCircle2, Clock, AlertCircle, User,
     Calendar, MessageSquare, ChevronRight,
@@ -55,7 +55,7 @@ export default function RemediationTracking() {
         setLoading(true);
         try {
             // Load all issues for current project scope
-            const res: AuditIssue[] = await invoke("get_audit_issues", { projectType: activeProject || "ALL" });
+            const res: AuditIssue[] = await safeInvoke("get_audit_issues", { projectType: activeProject || "ALL" });
             setIssues(res);
         } catch (err) {
             console.error(err);
@@ -80,7 +80,7 @@ export default function RemediationTracking() {
     const handleUpdate = async () => {
         if (!selectedIssue) return;
         try {
-            await invoke("update_issue_status", {
+            await safeInvoke("update_issue_status", {
                 id: selectedIssue.id,
                 status: editStatus,
                 assignee: editAssignee || null,

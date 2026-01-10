@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     History, Building2, Calendar, BrainCircuit, User,
     Search, Plus, ShieldCheck, Zap, AlertCircle, Database, Download
@@ -107,7 +107,7 @@ export default function ScenarioManager() {
 
     const loadScenarios = async () => {
         try {
-            const res: Scenario[] = await invoke("get_all_scenarios");
+            const res: Scenario[] = await safeInvoke("get_all_scenarios");
             setScenarios(res);
         } catch (err) {
             console.error(err);
@@ -139,7 +139,7 @@ export default function ScenarioManager() {
 
     const handleImportFromFindings = async () => {
         try {
-            const latestAccepted: any = await invoke("get_latest_accepted_finding");
+            const latestAccepted: any = await safeInvoke("get_latest_accepted_finding");
             if (latestAccepted) {
                 setFormData({
                     name: `[${latestAccepted.category}] 의심 패턴 (수동 임포트)`,
@@ -162,7 +162,7 @@ export default function ScenarioManager() {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await invoke("create_custom_scenario", {
+            await safeInvoke("create_custom_scenario", {
                 category: formData.category,
                 name: formData.name,
                 riskLevel: formData.risk_level,

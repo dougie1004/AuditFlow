@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 
 // 데이터 타입 정의
 interface AuditData {
@@ -15,7 +15,7 @@ export default function FileListManager({ projectId }: { projectId: number }) {
     // 1. 파일 목록 불러오기
     const loadFiles = async () => {
         try {
-            const result: AuditData[] = await invoke("get_project_data", { projectId });
+            const result: AuditData[] = await safeInvoke("get_project_data", { projectId });
             setFiles(result);
         } catch (error) {
             console.error("파일 목록 로드 실패:", error);
@@ -27,7 +27,7 @@ export default function FileListManager({ projectId }: { projectId: number }) {
         if (!confirm("이 데이터를 삭제하시겠습니까? 분석 범위에서 제외됩니다.")) return;
 
         try {
-            await invoke("delete_audit_data", { dataId });
+            await safeInvoke("delete_audit_data", { dataId });
             alert("삭제되었습니다.");
             loadFiles(); // 삭제 후 목록 갱신
         } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from "../lib/tauri-bridge";
 import { open } from '@tauri-apps/plugin-dialog';
 import {
     Upload, Book, FileText, CheckCircle, RefreshCw, Globe,
@@ -40,7 +40,7 @@ const KnowledgeBase: React.FC = () => {
     const fetchDocs = async () => {
         setLoading(true);
         try {
-            const data = await invoke<KnowledgeDoc[]>('get_knowledge_docs');
+            const data = await safeInvoke<KnowledgeDoc[]>('get_knowledge_docs');
             setDocs(data);
         } catch (error) {
             console.error('Failed to fetch docs:', error);
@@ -53,7 +53,7 @@ const KnowledgeBase: React.FC = () => {
         if (!isAdmin) return;
         setLoading(true);
         try {
-            const data = await invoke<GlobalPattern[]>('get_global_patterns');
+            const data = await safeInvoke<GlobalPattern[]>('get_global_patterns');
             setPatterns(data);
         } catch (error) {
             console.error('Failed to fetch patterns:', error);
@@ -65,7 +65,7 @@ const KnowledgeBase: React.FC = () => {
     const handleDeleteDoc = async (id: number) => {
         if (!confirm('정말로 이 지식 문서를 삭제하시겠습니까?')) return;
         try {
-            await invoke('delete_knowledge_doc', { id });
+            await safeInvoke('delete_knowledge_doc', { id });
             await fetchDocs();
         } catch (error) {
             console.error('Failed to delete doc:', error);
@@ -81,7 +81,7 @@ const KnowledgeBase: React.FC = () => {
 
             if (selected && typeof selected === 'string') {
                 setUploading(true);
-                await invoke('upload_knowledge_doc', { filePath: selected, category: 'External Knowledge' });
+                await safeInvoke('upload_knowledge_doc', { filePath: selected, category: 'External Knowledge' });
                 await fetchDocs();
                 setUploading(false);
             }

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../lib/tauri-bridge';
 
 interface AuditState {
     department: string;
@@ -42,9 +42,9 @@ export const AuditProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             // [FIX] Even if 0 issues, we should be able to load the project session
             const [projects, issues, files] = await Promise.all([
-                invoke('get_audit_projects') as Promise<any[]>,
-                invoke('get_audit_issues', { projectType: projectId }) as Promise<any[]>,
-                invoke('get_files_by_type', { projectType: projectId }) as Promise<any[]>
+                safeInvoke('get_audit_projects') as Promise<any[]>,
+                safeInvoke('get_audit_issues', { projectType: projectId }) as Promise<any[]>,
+                safeInvoke('get_files_by_type', { projectType: projectId }) as Promise<any[]>
             ]);
 
             const project = projects.find(p => p.id === projectId);

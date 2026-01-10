@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { listen as tauriListen, UnlistenFn } from "@tauri-apps/api/event";
 import { sendMessageToGemini } from "../../services/geminiService";
 
 export const isTauri = () => {
@@ -27,11 +28,31 @@ export const safeInvoke = async <T>(command: string, args?: any): Promise<T> => 
         }
 
         // Mock responses for web mode to allow UI to function
-        if (command === 'get_audit_projects' || command === 'get_projects') return [{ id: "P2026-001", title: "Global Factory Audit", audit_type: "Operational" }] as any;
+        if (command === 'get_audit_projects' || command === 'get_projects') return [{ id: "P2026-001", title: "Global Factory Audit", audit_type: "Operational", status: "Planning", progress_pct: 0, findings_count: 0 }] as any;
         if (command === 'get_audit_issues') return [] as any;
         if (command === 'init_db') return true as any;
         if (command === 'create_project') return Math.floor(Math.random() * 1000) as any;
+        if (command === 'get_dashboard_summary') return { total_risks: 0, ai_signals: 0, critical_coverage: "0%", open_findings: 0, risk_exposure_score: 0, trends: [] } as any;
+        if (command === 'get_system_events') return [] as any;
+        if (command === 'get_files_by_type') return [] as any;
+        if (command === 'get_all_scenarios') return [] as any;
+        if (command === 'get_audit_universe') return [] as any;
+        if (command === 'get_audit_plans') return [] as any;
+        if (command === 'get_latest_analysis') return { findings: [] } as any;
 
-        throw new Error(`Command ${command} not supported in web mode`);
+        // Default empty array for any plural getters
+        if (command.startsWith('get_') && command.endsWith('s')) return [] as any;
+
+        return null as any;
+    }
+};
+
+export const safeListen = async <T>(event: string, handler: (event: any) => void): Promise<UnlistenFn> => {
+    if (isTauri()) {
+        return await tauriListen<T>(event, handler);
+    } else {
+        console.warn(`[Web Mode] Listen called for event: ${event}`);
+        // Return a no-op unlisten function
+        return () => { };
     }
 };

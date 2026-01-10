@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import { CheckCircle, Clock, Calendar, User, Plus } from "lucide-react";
 
 interface AuditTask { id: number; phase: string; title: string; assignee: string; due_date: string; status: "Pending" | "InProgress" | "Completed"; }
@@ -10,7 +10,7 @@ export default function TaskManagement() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const data: AuditTask[] = await invoke("get_audit_tasks");
+                const data: AuditTask[] = await safeInvoke("get_audit_tasks");
                 setTasks(data);
             } catch (err) { console.error(err); }
         };

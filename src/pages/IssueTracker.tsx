@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import { AlertCircle, User, Mic, Send, Bot, CheckCircle2, Zap, Terminal } from "lucide-react";
 
 interface AuditIssue { id: number; source: string; title: string; description: string; date: string; status: string; risk: string; }
@@ -10,7 +10,7 @@ export default function IssueTracker() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const data: AuditIssue[] = await invoke("get_audit_issues");
+                const data: AuditIssue[] = await safeInvoke("get_audit_issues");
                 setIssues(data);
             } catch (err) { console.error(err); }
         };

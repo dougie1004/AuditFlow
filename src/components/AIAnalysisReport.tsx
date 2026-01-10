@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../lib/tauri-bridge';
 import { Check, X, Mail, FileText, AlertTriangle, ArrowLeft, Database } from 'lucide-react';
 import { useApp } from '../App';
 
@@ -28,7 +28,7 @@ const AIAnalysisReport = () => {
     const loadAnalysisResults = async () => {
         try {
             setLoading(true);
-            const result: any = await invoke('get_latest_analysis', { projectId: activeProject });
+            const result: any = await safeInvoke('get_latest_analysis', { projectId: activeProject });
             console.log(">>> [DEBUG] loadAnalysisResults: findings count =", result?.findings?.length);
             handleAnalysisUpdate(result);
         } catch (error) {
@@ -53,13 +53,13 @@ const AIAnalysisReport = () => {
 
     const handleAccept = async (id: string) => {
         try {
-            await invoke('update_audit_issue_status', { id, status: 'Accepted' });
+            await safeInvoke('update_audit_issue_status', { id, status: 'Accepted' });
             setFindings(prev => prev.map(f => f.id === id ? { ...f, status: 'Accepted' } : f));
 
             // [CRITICAL] Trigger real-time topology update
             // Force refresh of audit_universe data to reflect the new risk scores
             try {
-                await invoke('get_audit_universe', { projectId: activeProject });
+                await safeInvoke('get_audit_universe', { projectId: activeProject });
                 // Emit custom event to notify Dashboard/RiskHeatmap to refresh
                 window.dispatchEvent(new CustomEvent('topology-updated', {
                     detail: { projectId: activeProject, issueId: id }
@@ -77,7 +77,7 @@ const AIAnalysisReport = () => {
 
     const handleReject = async (id: string) => {
         try {
-            await invoke('update_audit_issue_status', { id, status: 'Rejected' });
+            await safeInvoke('update_audit_issue_status', { id, status: 'Rejected' });
             setFindings(prev => prev.map(f => f.id === id ? { ...f, status: 'Rejected' } : f));
         } catch (e) {
             console.error(e);

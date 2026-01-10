@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     Upload, Zap, Loader2,
     FileText, EyeOff,
@@ -39,7 +39,7 @@ export default function AuditWorkspace() {
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
     useEffect(() => {
-        invoke("get_audit_projects").then((res: any) => {
+        safeInvoke("get_audit_projects").then((res: any) => {
             setProjects(res);
             if (id) {
                 setActiveProject(id);
@@ -106,7 +106,7 @@ export default function AuditWorkspace() {
         setIsAnalyzing(true);
         try {
             const dept = activeProject?.includes("MKT") ? "Marketing" : activeProject?.includes("SAL") ? "Sales" : activeProject?.includes("FACT") ? "Vietnam Factory" : "General";
-            const result: AnalysisResult = await invoke('execute_project_analysis', {
+            const result: AnalysisResult = await safeInvoke('execute_project_analysis', {
                 projectId: activeProject,
                 department: dept
             });

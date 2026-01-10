@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from "../lib/tauri-bridge";
 import {
     AlertTriangle, Search, X, Send, Loader2, MapPin,
     ChevronRight, RotateCcw, BarChart3, Users, Brain, TrendingUp
@@ -66,8 +66,8 @@ export default function CorpCardAudit() {
             try {
                 // 실제 데이터 로딩 (Mock 예시)
                 const [txs, key] = await Promise.all([
-                    invoke("get_card_transactions") as Promise<CardTransaction[]>,
-                    invoke("get_google_maps_key") as Promise<string>
+                    safeInvoke("get_card_transactions") as Promise<CardTransaction[]>,
+                    safeInvoke("get_google_maps_key") as Promise<string>
                 ]);
                 setTransactions(txs);
                 loadGoogleMaps(key);
@@ -290,7 +290,7 @@ export default function CorpCardAudit() {
 
         try {
             const prompt = `당신은 법인카드 감사 전문가입니다. 다음 거래 현황을 바탕으로 사용자의 질문에 답변하세요.\n질문: ${msg}`;
-            const res: string = await invoke("ask_ai_assistant", { message: prompt });
+            const res: string = await safeInvoke("ask_ai_assistant", { message: prompt });
             setChatMessages(prev => [...prev, { role: "bot", content: res }]);
         } catch (err) {
             setChatMessages(prev => [...prev, { role: "bot", content: "분석 중 오류가 발생했습니다." }]);
