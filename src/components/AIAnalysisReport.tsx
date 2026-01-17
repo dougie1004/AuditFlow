@@ -51,6 +51,35 @@ const AIAnalysisReport = () => {
         }
     };
 
+    const handleAcceptAll = async () => {
+        if (!window.confirm(`현재 대기 중인 ${findings.filter(f => f.status !== 'Accepted').length}건의 항목을 모두 채택하시겠습니까?`)) return;
+
+        try {
+            const pendingFindings = findings.filter(f => f.status !== 'Accepted');
+            if (pendingFindings.length === 0) return;
+
+            // Batch processing
+            await Promise.all(pendingFindings.map(f =>
+                safeInvoke('update_audit_issue_status', { id: f.id, status: 'Accepted' })
+            ));
+
+            setFindings(prev => prev.map(f => ({ ...f, status: 'Accepted' })));
+
+            // Trigger Topology Refresh
+            try {
+                await safeInvoke('get_audit_universe', { projectId: activeProject });
+                window.dispatchEvent(new CustomEvent('topology-updated', {
+                    detail: { projectId: activeProject, issueId: 'ALL' }
+                }));
+            } catch (e) { console.warn(e); }
+
+            alert("모든 항목이 성공적으로 채택되었습니다.");
+        } catch (e) {
+            console.error(e);
+            alert("일괄 처리 중 오류가 발생했습니다.");
+        }
+    };
+
     const handleAccept = async (id: string) => {
         try {
             await safeInvoke('update_audit_issue_status', { id, status: 'Accepted' });
@@ -131,14 +160,24 @@ const AIAnalysisReport = () => {
     return (
         <div className="flex h-full bg-[#0B1221] text-white">
             <div className="w-1/3 border-r border-gray-700 overflow-y-auto p-4 flex flex-col">
-                <div className="flex items-center gap-4 mb-6">
-                    <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
-                        <ArrowLeft size={20} />
-                    </button>
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <AlertTriangle className="text-red-400" />
-                        탐지된 리스크 ({findings.length})
-                    </h2>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
+                            <ArrowLeft size={20} />
+                        </button>
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <AlertTriangle className="text-red-400" />
+                            Red Flags ({findings.length})
+                        </h2>
+                    </div>
+                    {findings.some(f => f.status !== 'Accepted') && (
+                        <button
+                            onClick={handleAcceptAll}
+                            className="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-blue-900/40 border border-blue-500/50"
+                        >
+                            전체 채택
+                        </button>
+                    )}
                 </div>
 
                 <div className="space-y-3">

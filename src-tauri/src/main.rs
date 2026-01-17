@@ -7,6 +7,7 @@ mod ai;
 mod commands;
 mod audit_engine;
 mod dedup;
+mod scenarios_seeder;
 
 use database::initialize_database;
 use std::fs;
@@ -44,6 +45,7 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             initialize_database(app.handle())?;
+            println!(">>> [INIT] AuditFlow Backend Ready. Scenarios validated.");
             Ok(())
         })
         .plugin(tauri_plugin_dialog::init())

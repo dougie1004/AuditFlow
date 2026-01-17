@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "check:models": "node scripts/ban-legacy-gemini-models.mjs"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@google/genai": "^0.14.0",
     "@tauri-apps/api": "^2.1.1",
-    "@tauri-apps/plugin-dialog": "^2.0.2",
+    "@tauri-apps/plugin-dialog": "^2.5.0",
     "framer-motion": "^11.2.10",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

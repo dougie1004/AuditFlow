@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+﻿use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditIssue { 
@@ -130,6 +130,7 @@ pub struct AiRiskAnalysis {
     pub reference_standard: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnalysisResult {
     pub findings_count: i32,
@@ -137,7 +138,7 @@ pub struct AnalysisResult {
     pub status: String,
 }
 
-// AI 분석 결과 전체를 담는 구조체
+// AI 遺꾩꽍 寃곌낵 ?꾩껜瑜??대뒗 援ъ“泥?
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditAnalysisResult {
     pub summary: String,
@@ -145,14 +146,14 @@ pub struct AuditAnalysisResult {
     pub findings: Vec<AuditFinding>,
 }
 
-// 개별 발견 사항 (여기에 채택/기각 여부, 증빙 등이 포함되어야 함)
+// 媛쒕퀎 諛쒓껄 ?ы빆 (?ш린??梨꾪깮/湲곌컖 ?щ?, 利앸튃 ?깆씠 ?ы븿?섏뼱????
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditFinding {
     pub id: String,
     pub category: String,
     pub severity: String, // High, Medium, Low
     pub description: String,
-    pub evidence: String, // 상세 증빙 데이터
+    pub evidence: String, // ?곸꽭 利앸튃 ?곗씠??
     pub recommendation: String,
     pub status: String, // "Pending", "Accepted", "Rejected"
 }
@@ -161,4 +162,46 @@ pub struct AuditFinding {
 pub struct SheetData {
     pub name: String,
     pub data: Vec<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuditScenario {
+    pub id: String, // e.g., "PR-01", "CC-01"
+    pub name: String,
+    pub domain: String,
+    pub risk_level: String, // High, Medium, Low
+    pub description: String,
+    pub rules: Option<String>, // JSON string
+    pub ai_prompt_template: Option<String>,
+    pub required_fields: Option<String>,
+    pub version: String,
+    pub enabled: bool,
+}
+
+// [CERTIFIED AUDIT] Structure for audit_run_log.json
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuditRunLog {
+    pub run_id: String,
+    pub scan_summary: ScanSummary,
+    pub rule_hits: Vec<String>,
+    pub ai_input_payload: String, // Masked summary
+    pub ai_output_cards: Vec<AiOutputCard>,
+    pub execution_time: String,
+    pub reproducibility_check: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScanSummary {
+    pub total_rows: usize,
+    pub candidate_rows: usize,
+    pub rule_engine_summary: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AiOutputCard {
+    pub title: String,
+    pub risk_level: String, // High, Medium, Low
+    pub rationale: Vec<String>, // Why we should look (3 points)
+    pub counter_argument: String, // Possible normal scenario
+    pub next_action: String, // Single step
 }

@@ -10,41 +10,18 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from 'recharts';
 
-interface DashboardSummary {
-    total_risks: number;
-    ai_signals: number;
-    critical_coverage: string;
-    open_findings: number;
-    risk_exposure_score: number;
-    trends: { day: string; value: number }[];
-}
+import { DashboardSummary, SystemEvent, AuditProject, AuditIssue } from '../types';
 
-interface SystemEvent {
-    id: string;
-    timestamp: string;
-    event_type: string;
-    description: string;
-    related_entity_id?: number | null;
-}
-
-interface RealAuditProject {
-    id: string;
-    title: string;
-    status: string;
-    progress_pct: number;
-    start_date: string;
-    end_date: string;
-    lead_auditor: string;
-    findings_count: number;
-}
 
 export default function Dashboard() {
     const { activeProject, setActiveProject } = useApp();
     const navigate = useNavigate();
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [events, setEvents] = useState<SystemEvent[]>([]);
-    const [projects, setProjects] = useState<RealAuditProject[]>([]);
+    const [projects, setProjects] = useState<AuditProject[]>([]);
     const [universe, setUniverse] = useState<any[]>([]);
+    const [optStats, setOptStats] = useState<any>(null);
+
     const [loading, setLoading] = useState(true);
     const { hydrateProject } = useAudit();
 
@@ -81,14 +58,15 @@ export default function Dashboard() {
         try {
             console.log(">>> [Dashboard] Fetching Command Center Data. Context:", activeProject);
             const [sum, evts] = await Promise.all([
-                safeInvoke('get_dashboard_summary', { projectId: activeProject }),
-                safeInvoke('get_system_events', { projectId: activeProject }),
-            ]) as [DashboardSummary, SystemEvent[]];
-            const projs = await safeInvoke<RealAuditProject[]>('get_audit_projects');
+                safeInvoke<DashboardSummary>('get_dashboard_summary', { projectId: activeProject }),
+                safeInvoke<SystemEvent[]>('get_system_events', { projectId: activeProject }),
+            ]);
+            const projs = await safeInvoke<AuditProject[]>('get_audit_projects');
 
             setSummary(sum);
             setEvents(evts);
             setProjects(projs);
+
 
             // [IMPROVED] Calculate weighted risk score for each project
             const calculateRiskScore = async (projectId: string): Promise<number> => {
@@ -110,11 +88,12 @@ export default function Dashboard() {
 
             // Calculate risk scores for all projects
             const projectsWithScores = await Promise.all(
-                projs.map(async (p: any) => ({
+                projs.map(async (p: AuditProject) => ({
                     ...p,
                     weightedRiskScore: await calculateRiskScore(p.id)
                 }))
             );
+
 
             const getRiskColor = (score: number) => {
                 if (score >= 15) return '#FF4444'; // Bright Red (Critical)
@@ -127,7 +106,7 @@ export default function Dashboard() {
             const treemapNodes = projectsWithScores.map((p: any) => {
                 const score = p.weightedRiskScore || 0;
                 return {
-                    name: p.title || "Unknown Department",
+                    name: String(p.title || "Unknown Department"),
                     size: score * 10 + 20, // Scale by risk score
                     findingsCount: p.findings_count || 0,
                     riskScore: score,
@@ -135,7 +114,11 @@ export default function Dashboard() {
                     fill: getRiskColor(score)
                 };
             });
+
             setUniverse(treemapNodes);
+
+            const stats = await safeInvoke<any>('get_optimization_stats');
+            setOptStats(stats);
         } catch (err) {
             console.error("Dashboard Load Error:", err);
         }
@@ -174,39 +157,47 @@ export default function Dashboard() {
         <div className="min-h-screen bg-[#0B1221] text-slate-300 font-sans p-6 overflow-x-hidden">
             <div className="max-w-[1600px] mx-auto space-y-8">
 
-                {/* Header Section */}
-                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-white/5 pb-8">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-600 rounded-lg shadow-[0_0_20px_rgba(37,99,235,0.4)]">
-                                <ShieldAlert className="text-white w-6 h-6" />
+                {/* Header Section - Top Layer */}
+                <header className="flex flex-col lg:flex-row justify-between items-center lg:items-end gap-8 border-b border-white/5 pb-10">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-600 rounded-2xl shadow-[0_0_30px_rgba(37,99,235,0.6)] relative overflow-hidden group">
+                                <ShieldAlert className="text-white w-8 h-8 relative z-10" />
+                                <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-700 -skew-x-12" />
                             </div>
-                            <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">
-                                AI COMMAND CENTER <span className="text-blue-500 text-sm font-black border border-blue-500/30 px-2 py-0.5 rounded italic">V4.5 PRO</span>
-                            </h1>
+                            <div className="space-y-1">
+                                <h1 className="text-5xl font-black text-white tracking-tighter flex items-center gap-3">
+                                    AI COMMAND <span className="text-blue-500">CENTER</span>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-blue-500 text-[10px] font-black border border-blue-500/40 bg-blue-500/5 px-2 py-0.5 rounded-full tracking-widest uppercase mb-1">PRO EDITION</span>
+                                        <span className="text-slate-600 text-[8px] font-bold">CORE ENGINE V4.5</span>
+                                    </div>
+                                </h1>
+                                <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                                    STRATEGIC RISK INTELLIGENCE & FORENSIC OPS
+                                </p>
+                            </div>
                         </div>
-                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Enterprise-Wide Strategic Risk Multi-Layer Grid
-                        </p>
                     </div>
-                    <div className="flex items-center gap-4 w-full lg:w-auto">
-                        <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2 rounded-2xl flex items-center gap-3">
-                            <Globe className="text-blue-400 w-4 h-4 ml-2" />
+
+                    <div className="flex items-center gap-4 bg-white/[0.03] p-1.5 rounded-[24px] border border-white/5 backdrop-blur-md shadow-2xl">
+                        <div className="flex items-center gap-3 px-4 h-12 border-r border-white/5">
+                            <Globe className="text-blue-400 w-4 h-4" />
                             <select
                                 value={activeProject || ''}
                                 onChange={(e) => handleAuditChange(e.target.value || null)}
-                                className="bg-transparent text-sm font-black text-white outline-none pr-8 cursor-pointer appearance-none uppercase tracking-tight"
+                                className="bg-transparent text-xs font-black text-white outline-none pr-6 cursor-pointer appearance-none uppercase tracking-widest min-w-[200px]"
                             >
-                                <option value="" className="bg-slate-900 font-black">Global Consolidated View</option>
+                                <option value="" className="bg-slate-900 font-black">All Consolidated Deals</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id} className="bg-slate-900 font-black">{p.title}</option>
                                 ))}
                             </select>
                         </div>
-                        <button onClick={handleNewAudit} className="px-6 py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-500 transition-all shadow-[0_10px_30px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-2">
+                        <button onClick={handleNewAudit} className="h-12 px-8 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-[18px] hover:bg-blue-500 transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-3 whitespace-nowrap">
                             <ShieldAlert className="w-4 h-4" />
-                            새 감사 시작 (New Audit)
+                            NEW BATCH ANALYSIS
                         </button>
                     </div>
                 </header>
@@ -214,24 +205,40 @@ export default function Dashboard() {
                 {/* Zone A: The Pulse (KPIs) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
-                        { label: "Total Risk Exposure", value: summary?.total_risks || 0, sub: (summary?.total_risks || 0) > 0 ? "+5.2%" : "0.0%", trend: "up", data: summary?.trends || [], color: "text-rose-500", areaColor: "#f43f5e", path: "/ai-discovery" },
-                        { label: "AI Anomaly Signals", value: summary?.ai_signals || 0, sub: (summary?.ai_signals || 0) > 0 ? "Real-time Detect" : "No Signals", trend: "up", data: summary?.trends?.map(t => ({ ...t, value: t.value * 0.5 })) || [], color: "text-amber-500", areaColor: "#f59e0b", path: "/ai-discovery" },
-                        { label: "Critical Coverage", value: summary?.critical_coverage || "0%", sub: (summary?.total_risks || 0) > 0 ? "High Risk Focused" : "Not Started", trend: "stable", data: summary?.trends || [], color: "text-blue-400", areaColor: "#3b82f6", path: "/universe" },
-                        { label: "Global Open findings", value: summary?.open_findings || 0, sub: (summary?.open_findings || 0) > 0 ? "Pending Action" : "Clean State", trend: "down", data: summary?.trends?.map(t => ({ ...t, value: t.value * 1.2 })) || [], color: "text-emerald-400", areaColor: "#10b981", path: "/remediation" },
+                        { label: "Critical Red Flags", value: summary?.total_risks || 0, sub: "Management Risks", trend: "up", data: summary?.trends || [], color: "text-rose-500", areaColor: "#f43f5e", path: "/ai-discovery" },
+                        { label: "AI Anomaly Signals", value: summary?.ai_signals || 0, sub: "Real-time AI Detect", trend: "up", data: summary?.trends?.map(t => ({ ...t, value: t.value * 0.5 })) || [], color: "text-amber-500", areaColor: "#f59e0b", path: "/ai-discovery" },
+                        { label: "Identified Risks", value: summary?.total_findings || 0, sub: "High+ Priorities", trend: "stable", data: summary?.trends || [], color: "text-blue-400", areaColor: "#3b82f6", path: "/portfolio" },
+                        { label: "Raw Signals Analyzed", value: summary?.raw_signals || 0, sub: "Compliance Coverage", trend: "down", data: summary?.trends?.map(t => ({ ...t, value: t.value * 1.2 })) || [], color: "text-emerald-400", areaColor: "#10b981", path: "/remediation" },
                     ].map((m, i) => (
                         <div
                             key={i}
                             onClick={() => navigate(m.path, { state: { projectFilter: activeProject, source: "dashboard_card", metric: m.label } })}
                             className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 relative overflow-hidden group hover:border-white/30 hover:shadow-[0_20px_40px_rgba(37,99,235,0.15)] hover:-translate-y-1 transition-all duration-500 cursor-pointer"
                         >
-                            {/* Background Sparkline */}
-                            <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-40 transition-all pointer-events-none">
+                            {/* Background Sparkline - Layer 0 (Base Depth) */}
+                            <div className="absolute inset-x-0 bottom-0 top-1/2 z-0 opacity-40 group-hover:opacity-60 transition-all pointer-events-none">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={m.data}>
-                                        <Area type="monotone" dataKey="value" stroke={m.areaColor} fill={m.areaColor} strokeWidth={3} />
+                                        <defs>
+                                            <linearGradient id={`color-${i}`} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={m.areaColor} stopOpacity={0.6} />
+                                                <stop offset="95%" stopColor={m.areaColor} stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke={m.areaColor}
+                                            fill={`url(#color-${i})`}
+                                            strokeWidth={3}
+                                            animationDuration={1500}
+                                        />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
+
+                            {/* Glass Glare Effect - Layer 1 */}
+                            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-1" />
 
                             <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
                                 <div className="flex justify-between items-start">
@@ -259,9 +266,9 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-1 h-6 bg-blue-500 rounded-full" />
-                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Recent Audit Continuity</h3>
+                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Deal Flow & Audit Portfolio</h3>
                         </div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60">Restore previous state instantly</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60">Review Active Deals & Past Batches</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -368,8 +375,9 @@ export default function Dashboard() {
                                                                 filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))'
                                                             }}
                                                         >
-                                                            {name.length > 15 ? name.substring(0, 15) + '...' : name}
+                                                            {name && name.length > 15 ? name.substring(0, 15) + '...' : name || "N/A"}
                                                         </text>
+
                                                         <text
                                                             x={x + width / 2}
                                                             y={y + height / 2 + 6}
@@ -522,17 +530,17 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Optimization Mode</span>
-                        <span className="text-xs font-black text-emerald-400">Hybrid (Local+AI)</span>
+                        <span className="text-xs font-black text-emerald-400">{optStats?.mode || 'Hybrid (Local+AI)'}</span>
                     </div>
                     <div className="w-px h-4 bg-white/10" />
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost Savings</span>
-                        <span className="text-xs font-black text-blue-400">$0.0000</span>
+                        <span className="text-xs font-black text-blue-400">{optStats?.cost_savings_usd || '$0.0000'}</span>
                     </div>
                     <div className="w-px h-4 bg-white/10" />
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Batch Size</span>
-                        <span className="text-xs font-black text-white">2000 rows</span>
+                        <span className="text-xs font-black text-white">{optStats?.batch_size || 2000} rows</span>
                     </div>
                 </div>
             </div>

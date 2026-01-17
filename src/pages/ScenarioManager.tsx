@@ -61,6 +61,10 @@ const ScenarioCard = ({ s }: { s: Scenario }) => (
             <p className="text-sm text-slate-400 font-medium leading-relaxed line-clamp-3 min-h-[4.5rem] mb-6">
                 {s.description}
             </p>
+            <div className="flex items-center justify-between mt-auto">
+                <span className="text-[10px] font-mono text-slate-600">ID: {s.id}</span>
+                <span className="text-[10px] font-mono text-slate-600">v1.2.0</span>
+            </div>
         </div>
 
         {/* Detailed Metadata Footer */}
@@ -327,6 +331,19 @@ export default function ScenarioManager() {
                     </div>
                 </div>
 
+                {viewMode === "all" && filtered.length > 0 && scenarios.filter(s => s.origin_audit_type === '시스템 마스터').length === filtered.length && (
+                    <div className="mb-12 p-8 bg-blue-600/10 border border-blue-500/20 rounded-3xl backdrop-blur-md">
+                        <div className="flex items-center gap-4 mb-4">
+                            <ShieldCheck className="text-blue-500 w-8 h-8" />
+                            <h2 className="text-2xl font-black text-white">Global Enterprise Master Scenarios</h2>
+                        </div>
+                        <p className="text-slate-400 font-medium leading-relaxed">
+                            AuditFlow의 지능형 엔진은 150개 이상의 글로벌 표준 감사 시나리오를 탑재하고 있습니다.
+                            이 시나리오들은 Anti-Bribery, AML, ESG 등 엔터프라이즈급 규정 준수를 지원하며,
+                            각 탐지 로직은 법인카드(CC), 구매(PR), 매출(SA) 등 전 도메인을 포괄합니다.
+                        </p>
+                    </div>
+                )}
                 {/* Content Area based on View Mode */}
                 {(viewMode === "all" || viewMode === "new") && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

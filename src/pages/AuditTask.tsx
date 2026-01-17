@@ -7,31 +7,13 @@ import {
     CheckCircle2, ChevronRight, Hash, ArrowLeft, Loader2, History, X, Download, TrendingUp,
     Clock, Trash2
 } from 'lucide-react';
+import { AuditProject, AuditPlan } from '../types';
 
-interface AuditProject {
-    id: string;
-    title: string;
-    status: string;
-    progress_pct: number;
-    findings_count: number;
-    risk_score: number;
-    start_date: string;
-    end_date: string;
-    lead_auditor: string;
-    // Extended for UI compatibility
-    planning_start?: string;
-    planning_end?: string;
-    fieldwork_start?: string;
-    fieldwork_end?: string;
-    reporting_start?: string;
-    reporting_end?: string;
-    audit_scope?: string;
-    audit_type?: string;
-    created_at?: string;
-}
+// Local UI wrapper for Card
+
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-    <div onClick={onClick} className={`bg - white / 5 backdrop - blur - xl rounded - 2xl border border - white / 10 shadow - sm overflow - hidden ${className} `}>{children}</div>
+    <div onClick={onClick} className={`bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-sm overflow-hidden ${className}`}>{children}</div>
 );
 
 export default function AuditTask() {
@@ -45,7 +27,12 @@ export default function AuditTask() {
     const [showReport, setShowReport] = useState(false);
     const [reportPeriod, setReportPeriod] = useState(3);
     const [reportYear, setReportYear] = useState(new Date().getFullYear());
-    const [reportData, setReportData] = useState<any>(null);
+    const [reportData, setReportData] = useState<{
+        total_findings: number;
+        year_data: { year: string; count: number }[];
+        avg_compliance?: number;
+    } | null>(null);
+
     const [reportLoading, setReportLoading] = useState(false);
 
     // Form State
@@ -77,7 +64,11 @@ export default function AuditTask() {
     const fetchReport = async (year: number, years: number) => {
         setReportLoading(true);
         try {
-            const res = await safeInvoke('get_annual_performance', { targetYear: year, yearsCount: years });
+            const res = await safeInvoke<{
+                total_findings: number;
+                year_data: { year: string; count: number }[];
+                avg_compliance?: number;
+            }>('get_annual_performance', { targetYear: year, yearsCount: years });
             setReportData(res);
         } catch (err) {
             console.error(err);
@@ -86,13 +77,14 @@ export default function AuditTask() {
         }
     };
 
+
     useEffect(() => {
         fetchProjects();
     }, []);
 
     const generateId = () => {
-        const base = `${formData.audit_type}_${formData.target_year} -${formData.target_month}_${formData.department} `;
-        return idSuffix ? `${base}_${idSuffix} ` : base;
+        const base = `${formData.audit_type}_${formData.target_year}-${formData.target_month}_${formData.department}`;
+        return idSuffix ? `${base}_${idSuffix}` : base;
     };
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -233,8 +225,9 @@ export default function AuditTask() {
                                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                                     <input
                                         type="month"
-                                        value={`${formData.target_year} -${formData.target_month.padStart(2, '0')} `}
+                                        value={`${formData.target_year}-${formData.target_month.padStart(2, '0')}`}
                                         onChange={e => {
+                                            if (!e.target.value) return;
                                             const [y, m] = e.target.value.split('-');
                                             setFormData({ ...formData, target_year: y, target_month: m });
                                         }}
@@ -291,12 +284,12 @@ export default function AuditTask() {
                                 <div className="flex items-center gap-3">
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.target_period.split(' ~ ')[0] || ''} onChange={e => {
                                         const [, end] = (formData.target_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, target_period: `${e.target.value} ~${end || ''} ` });
+                                        setFormData({ ...formData, target_period: `${e.target.value} ~ ${end || ''}` });
                                     }} />
                                     <span className="font-bold text-slate-400">~</span>
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.target_period.split(' ~ ')[1] || ''} onChange={e => {
                                         const [start] = (formData.target_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, target_period: `${start || ''} ~${e.target.value} ` });
+                                        setFormData({ ...formData, target_period: `${start || ''} ~ ${e.target.value}` });
                                     }} />
                                 </div>
                             </div>
@@ -305,12 +298,12 @@ export default function AuditTask() {
                                 <div className="flex items-center gap-3">
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.execution_period.split(' ~ ')[0] || ''} onChange={e => {
                                         const [, end] = (formData.execution_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, execution_period: `${e.target.value} ~${end || ''} ` });
+                                        setFormData({ ...formData, execution_period: `${e.target.value} ~ ${end || ''}` });
                                     }} />
                                     <span className="font-bold text-slate-400">~</span>
                                     <input type="date" className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white text-xs focus:ring-2 focus:ring-blue-500/20" value={formData.execution_period.split(' ~ ')[1] || ''} onChange={e => {
                                         const [start] = (formData.execution_period || ' ~ ').split(' ~ ');
-                                        setFormData({ ...formData, execution_period: `${start || ''} ~${e.target.value} ` });
+                                        setFormData({ ...formData, execution_period: `${start || ''} ~ ${e.target.value}` });
                                     }} />
                                 </div>
                             </div>
@@ -360,9 +353,9 @@ export default function AuditTask() {
                             key={p.id}
                             onClick={() => {
                                 setActiveProject(p.id);
-                                navigate(`/ project / ${p.id} `);
+                                navigate(`/project/${p.id}`);
                             }}
-                            className={`group border - 2 transition - all cursor - pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'} `}
+                            className={`group border-2 transition-all cursor-pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'}`}
                         >
                             <div className="p-8 space-y-6">
                                 <div className="flex justify-between items-start">
@@ -371,10 +364,10 @@ export default function AuditTask() {
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
                                         <div className="flex gap-2">
-                                            <span className={`px - 3 py - 1 rounded - full text - [10px] font - black uppercase tracking - widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
-                                                    p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
-                                                        'bg-rose-500/10 text-rose-400'
-                                                } `}>
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
+                                                p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
+                                                    'bg-rose-500/10 text-rose-400'
+                                                }`}>
                                                 {p.audit_type}
                                             </span>
                                             <button
@@ -510,7 +503,7 @@ export default function AuditTask() {
                                                 </div>
                                                 <div>
                                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Performance Index</p>
-                                                    <p className="text-3xl font-black text-white">{reportData?.avg_compliance || (reportData?.total_findings > 0 ? 92.4 : 0.0)} <span className="text-sm font-medium text-slate-400">%</span></p>
+                                                    <p className="text-3xl font-black text-white">{reportData?.avg_compliance || 0.0} <span className="text-sm font-medium text-slate-400">%</span></p>
                                                 </div>
                                             </div>
                                         </div>
@@ -521,9 +514,10 @@ export default function AuditTask() {
                                                 <TrendingUp size={14} /> Yearly Risk Trends & Activity
                                             </h3>
                                             <div className="flex items-end justify-between h-48 gap-4 pt-10">
-                                                {reportData.year_data.map((y: any, idx: number) => {
-                                                    const maxFindings = Math.max(...reportData.year_data.map((v: any) => v.count), 1);
+                                                {reportData.year_data.map((y, idx: number) => {
+                                                    const maxFindings = Math.max(...reportData.year_data.map(v => v.count), 1);
                                                     const height = (y.count / maxFindings) * 100;
+
                                                     return (
                                                         <div key={idx} className="flex-1 flex flex-col items-center gap-4 group">
                                                             <div className="w-full relative flex flex-col items-center justify-end h-full">

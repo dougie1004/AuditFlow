@@ -432,7 +432,7 @@ export default function DataUpload() {
                                     {isProcessing ? (
                                         <div className="py-12 space-y-8 flex flex-col items-center">
                                             <Loader2 className="animate-spin text-blue-500" size={80} />
-                                            <p className="text-2xl font-black text-white italic animate-pulse tracking-widest">INGESTING LOCAL ASSETS...</p>
+                                            <p className="text-2xl font-black text-white italic animate-pulse tracking-widest">UPLOADING LOCAL DATA...</p>
                                         </div>
                                     ) : (
                                         <>
@@ -440,7 +440,7 @@ export default function DataUpload() {
                                                 <Upload size={52} />
                                             </div>
                                             <div className="space-y-6">
-                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">Universal File Ingestion</h2>
+                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">Local Data Upload</h2>
                                                 <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
                                                     Select <span className="text-blue-400 underline decoration-blue-500/40">Real Files</span> from your Local PC. <br />
                                                     Supports Excel, CSV, PDF, Docx, and Emails (EML/MSG).

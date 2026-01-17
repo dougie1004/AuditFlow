@@ -22,8 +22,14 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Type check
+    - name: Typescript Type Check
       run: npx tsc --noEmit
+
+    - name: Rust Type Check
+      run: cd src-tauri && cargo check
+
+    - name: Rust Tests
+      run: cd src-tauri && cargo test --lib scenarios_seeder::tests::test_master_scenarios_integrity
 
     - name: Build
       run: npm run build

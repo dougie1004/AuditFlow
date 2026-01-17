@@ -224,7 +224,7 @@ export default function AuditReport() {
                                                 const tag = match.includes('**') ? 'th' : 'td';
                                                 return `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`;
                                             })
-                                            .replace(/(<tr>.*<\/tr>)+/gs, '<table>$0</table>')
+                                            .replace(/(<tr>.*<\/tr>)+/gs, '<table>$&</table>')
                                     }}
                                 />
                             </div>

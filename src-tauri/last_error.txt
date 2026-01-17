@@ -1,0 +1,98 @@
+﻿cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\scratch\auditf
+low\src-tauri)
+위치 줄:1 문자:1
++ cargo check 2>&1 | Out-File
+ -FilePath last_error.txt -En
+coding utf8
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+warning: unused import: `Tran
+saction`
+ --> src\scenarios_seeder.rs:
+1:36
+  |
+1 | use rusqlite::{params, Co
+nnection, Transaction};
+  |                          
+          ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_impo
+rts)]` (part of `#[warn(unuse
+d)]`) on by default
+
+error[E0716]: temporary value
+ dropped while borrowed
+    --> src\commands.rs:1150:
+90
+     |
+1150 |     let findings_raw =
+ result_json.get("findings").
+and_then(|v| v.as_array()).un
+wrap_or(&vec![]);
+     |                       
+                             
+                             
+         ^^^^^^ - temporary v
+alue is freed at the end of t
+his statement
+     |                       
+                             
+                             
+         |
+     |                       
+                             
+                             
+         creates a temporary 
+value which is freed while st
+ill in use
+1151 |     println!(">>> [AI 
+Engine] Detected {} findings 
+raw.", findings_raw.len());
+     |                       
+                             
+       ------------ borrow la
+ter used here
+     |
+     = note: consider using a
+ `let` binding to create a lo
+nger lived value
+     = note: this error origi
+nates in the macro `vec` (in 
+Nightly builds, run with -Z m
+acro-backtrace for more info)
+
+warning: unused variable: `fu
+ll_match`
+   --> src\file_utils.rs:201:
+13
+    |
+201 |         let full_match 
+= m.as_str();
+    |             ^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_full_match`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+For more information about th
+is error, try `rustc --explai
+n E0716`.
+warning: `auditflow` (bin "au
+ditflow") generated 2 warning
+s
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 1 previous error; 2 warni
+ngs emitted

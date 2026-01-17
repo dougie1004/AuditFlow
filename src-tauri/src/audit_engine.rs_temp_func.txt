@@ -1,0 +1,40 @@
+pub fn load_file_rows(path_str: &str) -> Vec<Vec<String>> {
+    let path = Path::new(path_str);
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let mut rows = Vec::new();
+
+    if ext == "xlsx" || ext == "xls" {
+        if let Ok(mut workbook) = open_workbook_auto(path) {
+            let mut best_range = None;
+            let mut max_rows = 0;
+            
+            for name in workbook.sheet_names().to_vec() {
+                if let Ok(range) = workbook.worksheet_range(&name) {
+                    let rows_count = range.rows().count();
+                    if rows_count > max_rows {
+                        max_rows = rows_count;
+                        best_range = Some(range);
+                    }
+                }
+            }
+
+            if let Some(range) = best_range {
+                rows = range.rows().map(|row| {
+                    row.iter().map(|c| c.to_string()).collect()
+                }).collect();
+            }
+        }
+    } else if ext == "csv" || ext == "txt" || ext == "log" {
+         if let Ok(content) = read_file_with_encoding(path) {
+             rows = content.lines().map(|line| parse_csv_line(line)).collect();
+         }
+    } else {
+        println!(">>> [WARN] load_file_rows skipping non-structured or unsupported file: {}", path_str);
+    }
+    
+    if (ext == "xlsx" || ext == "xls" || ext == "csv") && rows.is_empty() {
+        println!(">>> [ERROR] load_file_rows returned 0 rows for structure-eligible file: {}", path_str);
+    }
+    
+    rows
+}

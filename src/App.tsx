@@ -30,13 +30,25 @@ import RiskHeatmap from "./pages/RiskHeatmap";
 import ProjectDetail from "./pages/ProjectDetail";
 import AIAnalysisReport from "./components/AIAnalysisReport";
 
+import { AppConfig } from "./types";
+import { isTauri } from "./lib/tauri-bridge";
+
 // [Context] 전역 상태 관리 (인증 및 프로젝트 스코프)
 interface AppContextType {
   user: { tier: string } | null;
   activeProject: string | null;
   setActiveProject: (id: string | null) => void;
   logout: () => void;
+  config: AppConfig;
+  updateConfig: (patch: Partial<AppConfig>) => void;
 }
+
+const DEFAULT_CONFIG: AppConfig = {
+  theme: 'dark',
+  apiEndpoint: 'https://api.insightrix.ai.kr/v1',
+  enableAi: true,
+  userTier: 'Pro'
+};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -49,13 +61,45 @@ export const useApp = () => {
 export default function App() {
   const [user, setUser] = useState<{ tier: string } | null>(null);
   const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
+
+  // 로컬 스토리지에서 설정 로드 (데스크톱/웹 공통 영속성)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('auditflow_config');
+      if (saved) {
+        setConfig(prev => ({ ...prev, ...JSON.parse(saved) }));
+      }
+    } catch (e) {
+      console.warn("Failed to load config, using defaults", e);
+      setConfig(DEFAULT_CONFIG);
+    }
+  }, []);
+
+  const updateConfig = (patch: Partial<AppConfig>) => {
+    const newConfig = { ...config, ...patch };
+    setConfig(newConfig);
+    localStorage.setItem('auditflow_config', JSON.stringify(newConfig));
+  };
+
+  // 전역 에러 리스너 (tauri-bridge에서 발생시킨 에러 캐치)
+  useEffect(() => {
+    const handleError = (e: any) => {
+      alert(`[SYSTEM ALERT] ${e.detail}`);
+    };
+    window.addEventListener('app-error', handleError as any);
+    return () => window.removeEventListener('app-error', handleError as any);
+  }, []);
 
   // 세션 유지 (브라우저 메모리상)
-  const login = (tier: string) => setUser({ tier });
+  const login = (tier: string) => {
+    setUser({ tier });
+    updateConfig({ userTier: tier as any });
+  };
   const logout = () => { setUser(null); setActiveProject(null); };
 
   return (
-    <AppContext.Provider value={{ user, activeProject, setActiveProject, logout }}>
+    <AppContext.Provider value={{ user, activeProject, setActiveProject, logout, config, updateConfig }}>
       <AuditProvider>
         <Router>
           <Routes>

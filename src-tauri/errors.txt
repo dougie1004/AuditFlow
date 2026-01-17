@@ -1,101 +1,90 @@
-﻿cargo :    Compiling auditflo
-w v0.1.0 (C:\Users\user\.gemi
-ni\antigravity\scratch\auditf
-low\src-tauri)
-위치 줄:1 문자:1
-+ cargo build 2>&1 | Out-File
- -FilePath errors.txt -Encodi
-ng UTF8
-+ ~~~~~~~~~~~~~~~~
-    + CategoryInfo           
-   : NotSpecified: (   Comp  
-  iling au...flow\src-taur   
- i):String) [], RemoteExc    
-eption
-    + FullyQualifiedErrorId  
-   : NativeCommandError
- 
-warning: variable does not ne
-ed to be mutable
-   --> src\audit_engine.rs:38
-2:29
+    Checking auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\scratch\auditflow\src-tauri)
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:105:9
     |
-382 |                        
- let mut result: Value = serd
-e_json::from_str(&json_res_te
-xt).unwrap_or(json!({ "findin
-gs": [] }));
-    |                        
-     ----^^^^^^
-    |                        
-     |
-    |                        
-     help: remove this `mut`
+105 |         findings_count = conn.query_row(
+    |         ^^^^^^^^^^^^^^
     |
-    = note: `#[warn(unused_mu
-t)]` (part of `#[warn(unused)
-]`) on by default
+help: you might have meant to introduce a new binding
+    |
+105 |         let findings_count = conn.query_row(
+    |         +++
 
-error[E0599]: no method named
- `path` found for struct `App
-Handle<R>` in the current sco
-pe
-   --> src\dedup.rs:6:30
+error[E0425]: cannot find value `risk_score` in this scope
+   --> src\commands.rs:117:9
     |
-  6 |     let db_path = app_h
-andle.path().app_data_dir().u
-nwrap().join("audit_data_v4.d
-b");
-    |                        
-      ^^^^ method not found i
-n `AppHandle`
+117 |         risk_score = std::cmp::min(100, (high_count * 20) + (findings_count * 5));
+    |         ^^^^^^^^^^
     |
-   ::: C:\Users\user\.cargo\r
-egistry\src\index.crates.io-1
-949cf8c6b5b557f\tauri-2.9.5\s
-rc\lib.rs:772:6
+help: you might have meant to introduce a new binding
     |
-772 |   fn path(&self) -> &cr
-ate::path::PathResolver<R> {
-    |      ---- the method is
- available for `AppHandle` he
-re
-    |
-    = help: items from traits
- can only be used if the trai
-t is in scope
-help: trait `Manager` which p
-rovides `path` is implemented
- but not in scope; perhaps yo
-u want to import it
-    |
-  1 + use tauri::Manager;
-    |
+117 |         let risk_score = std::cmp::min(100, (high_count * 20) + (findings_count * 5));
+    |         +++
 
-warning: unused variable: `co
-ntext_clone`
-   --> src\audit_engine.rs:30
-3:13
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:117:62
     |
-303 |         let context_clo
-ne = Arc::clone(&shared_conte
-xt);
-    |             ^^^^^^^^^^^
-^^ help: if this is intention
-al, prefix it with an undersc
-ore: `_context_clone`
-    |
-    = note: `#[warn(unused_va
-riables)]` (part of `#[warn(u
-nused)]`) on by default
+117 |         risk_score = std::cmp::min(100, (high_count * 20) + (findings_count * 5));
+    |                                                              ^^^^^^^^^^^^^^ not found in this scope
 
-For more information about th
-is error, try `rustc --explai
-n E0599`.
-warning: `auditflow` (bin "au
-ditflow") generated 2 warning
-s
-error: could not compile `aud
-itflow` (bin "auditflow") due
- to 1 previous error; 2 warni
-ngs emitted
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:121:21
+    |
+121 |             params![findings_count, risk_score, &project_type]
+    |                     ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `risk_score` in this scope
+   --> src\commands.rs:121:37
+    |
+121 |             params![findings_count, risk_score, &project_type]
+    |                                     ^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:130:106
+    |
+130 |                 format!("AI Forensic Analysis complete for [{}]. {} findings identified.", project_type, findings_count)
+    |                                                                                                          ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:136:59
+    |
+136 |         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"), findings_count);
+    |                                                           ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `findings_count` in this scope
+   --> src\commands.rs:145:93
+    |
+145 |     Ok(json!({ "status": "Success", "analyzed_files": target_files.len(), "findings_count": findings_count, "risk_score": risk_score }))
+    |                                                                                             ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `risk_score` in this scope
+   --> src\commands.rs:145:123
+    |
+145 |     Ok(json!({ "status": "Success", "analyzed_files": target_files.len(), "findings_count": findings_count, "risk_score": risk_score }))
+    |                                                                                                                           ^^^^^^^^^^ not found in this scope
+
+warning: unused import: `Transaction`
+ --> src\scenarios_seeder.rs:1:36
+  |
+1 | use rusqlite::{params, Connection, Transaction};
+  |                                    ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `full_match`
+   --> src\file_utils.rs:185:13
+    |
+185 |         let full_match = m.as_str();
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_match`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `default_model`
+  --> src\ai.rs:46:43
+   |
+46 | fn sanitize_model_or_default(input: &str, default_model: &str) -> String {
+   |                                           ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_default_model`
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `auditflow` (bin "auditflow") generated 3 warnings
+error: could not compile `auditflow` (bin "auditflow") due to 9 previous errors; 3 warnings emitted

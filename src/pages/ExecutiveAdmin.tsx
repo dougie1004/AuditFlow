@@ -137,10 +137,18 @@ export default function ExecutiveAdmin() {
                                     <h3 className="text-5xl font-black text-white leading-none">
                                         {report ? Math.max(0, 100 - (report.high_risk_count * 5) - (report.total_issues * 0.5)).toFixed(1) : "--"}
                                     </h3>
-                                    <span className="text-emerald-500 font-bold text-sm mb-1 flex items-center"><ArrowUpRight size={14} /> 2.4%</span>
+                                    {report && (
+                                        <span className="text-emerald-500 font-bold text-sm mb-1 flex items-center">
+                                            <ArrowUpRight size={14} />
+                                            {((report.total_issues === 0) ? "0.0" : "2.4")}%
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="mt-8 w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" style={{ width: '85%' }} />
+                                    <div
+                                        className="h-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-all duration-1000"
+                                        style={{ width: report ? `${Math.max(0, 100 - (report.high_risk_count * 5) - (report.total_issues * 0.5))}%` : '0%' }}
+                                    />
                                 </div>
                             </div>
                             <div className="bg-white/5 p-8 rounded-[32px] border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/10">

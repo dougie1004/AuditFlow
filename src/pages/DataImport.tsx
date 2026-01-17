@@ -32,7 +32,7 @@ const Checkbox = ({ checked, onChange }: { checked: boolean; onChange: () => voi
 );
 
 // --- AI 분석 시뮬레이션 오버레이 ---
-const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, enableMasking }: { isOpen: boolean; onClose: () => void; fileCount: number; onComplete: () => void; projectType: string; enableMasking: boolean }) => {
+const AnalysisOverlay = ({ isOpen, onClose, selectedFileIds, onComplete, projectType, enableMasking }: { isOpen: boolean; onClose: () => void; selectedFileIds: number[]; onComplete: () => void; projectType: string; enableMasking: boolean }) => {
     const [logs, setLogs] = useState<string[]>([]);
     const [riskyFindings, setRiskyFindings] = useState<any[]>([]);
     const [progress, setProgress] = useState(0);
@@ -78,8 +78,14 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
 
         const runAnalysis = async () => {
             try {
-                const res: any = await safeInvoke('run_audit_analysis', { projectType, enableMasking });
+                // Pass selectedFileIds to enable incremental analysis (backend will skip deleting existing issues)
+                const res: any = await safeInvoke('run_audit_analysis', {
+                    projectType,
+                    enableMasking,
+                    targetFileIds: selectedFileIds.length > 0 ? selectedFileIds : undefined
+                });
 
+                setLogs(prev => [...prev, `✅ Analysis Complete. Files: ${res.analyzed_files}, Detections: ${res.findings_count || 0}`]);
                 if (res.status === "Success") {
                     setTimeout(() => {
                         onComplete();
@@ -120,7 +126,10 @@ const AnalysisOverlay = ({ isOpen, onClose, fileCount, onComplete, projectType, 
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white tracking-tight">AI 감사 엔진 가동 중</h2>
-                            <p className="text-slate-400 text-sm">총 {fileCount}개 파일 분석 진행률: {progress.toFixed(0)}%</p>
+                            <p className="text-slate-400 text-sm">
+                                {selectedFileIds.length > 0 ? `선택된 ${selectedFileIds.length}개 파일 증분 분석 중` : `총 ${selectedFileIds.length}개 파일 전체 분석 중`}
+                                : {progress.toFixed(0)}%
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -184,7 +193,7 @@ const PreviewModal = ({ isOpen, onClose, fileName, data, onViewAll, isFullData, 
 }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-100">
             <div className="bg-[#0B1221] rounded-3xl shadow-[0_30px_100px_rgba(0,0,0,0.6)] w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border border-white/10">
                 <div className="p-5 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/20">
                     <div className="flex flex-col">
@@ -314,10 +323,10 @@ export default function DataImport() {
                             const newNoti = { name: res.file_name, count: res.pii_count, id: Date.now() + Math.random() };
                             setPiiNotifications(prev => [...prev, newNoti]);
 
-                            // [UX] Auto-dismiss after 8 seconds
+                            // [UX] Auto-dismiss after 3 seconds
                             setTimeout(() => {
                                 setPiiNotifications(prev => prev.filter(n => n.id !== newNoti.id));
-                            }, 8000);
+                            }, 3000);
                         }
                     } catch (e) { console.error(e); }
                 }
@@ -380,7 +389,7 @@ export default function DataImport() {
             {/* PII Detection Notifications */}
             <div className="fixed top-24 right-8 z-[3000] flex flex-col gap-3 max-w-sm">
                 {piiNotifications.map((noti) => (
-                    <div key={noti.id} className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-in slide-in-from-right-full duration-500 relative flex gap-3 overflow-hidden">
+                    <div key={noti.id} className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-in slide-in-from-right-full duration-200 relative flex gap-3 overflow-hidden">
                         <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
                         <ShieldAlert className="w-10 h-10 text-amber-500 flex-shrink-0" />
                         <div>
@@ -412,7 +421,7 @@ export default function DataImport() {
             <AnalysisOverlay
                 isOpen={analysisOpen}
                 onClose={() => setAnalysisOpen(false)}
-                fileCount={selectedIds.size}
+                selectedFileIds={Array.from(selectedIds)}
                 projectType={projectType}
                 enableMasking={enableMasking}
                 onComplete={() => {
@@ -429,7 +438,7 @@ export default function DataImport() {
                 <div className="flex flex-col sm:flex-row gap-2 md:gap-4 w-full md:w-auto">
                     <button onClick={handleUpload} disabled={isLoading} className="flex items-center justify-center gap-3 bg-white text-black px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-100 transition-all shadow-2xl disabled:opacity-70 active:scale-95 w-full md:w-auto cursor-pointer">
                         {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                        <span className="whitespace-nowrap">{isLoading ? "INGESTING..." : "INGEST ASSETS"}</span>
+                        <span className="whitespace-nowrap">{isLoading ? "UPLOADING..." : "DATA UPLOAD"}</span>
                     </button>
                 </div>
             </div>

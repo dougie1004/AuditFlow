@@ -1,0 +1,119 @@
+﻿cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\scratch\auditf
+low\src-tauri)
+위치 줄:1 문자:1
++ cargo check 2> build_errors
+.txt
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+error: cannot find macro `jso
+n` in this scope
+   --> src\database.rs:200:12
+    |
+200 |         Ok(json!({
+    |            ^^^^
+    |
+help: consider importing this
+ macro
+    |
+  1 + use serde_json::json;
+    |
+
+warning: unused imports: `Des
+erialize` and `Serialize`
+ --> src\ai.rs:1:13
+  |
+1 | use serde::{Deserialize, 
+Serialize};
+  |             ^^^^^^^^^^^  
+^^^^^^^^^
+  |
+  = note: `#[warn(unused_impo
+rts)]` (part of `#[warn(unuse
+d)]`) on by default
+
+warning: unused import: `Tran
+saction`
+ --> src\scenarios_seeder.rs:
+1:36
+  |
+1 | use rusqlite::{params, Co
+nnection, Transaction};
+  |                          
+          ^^^^^^^^^^^
+
+warning: unused import: `serd
+e_json::json`
+ --> src\scenarios_seeder.rs:
+2:5
+  |
+2 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+
+error: this function depends 
+on never type fallback being 
+`()`
+   --> src\database.rs:197:1
+    |
+197 | pub fn export_scenario_
+manifest(conn: &Connection, a
+pp_handle: &AppHandle) -> Res
+ult<(), String> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
+    |
+    = warning: this was previ
+ously accepted by the compile
+r but is being phased out; it
+ will become a hard error in 
+Rust 2024 and in a future rel
+ease in all editions!
+    = note: for more informat
+ion, see <https://doc.rust-la
+ng.org/edition-guide/rust-202
+4/never-type-fallback.html>
+    = help: specify the types
+ explicitly
+note: in edition 2024, the re
+quirement `!: Serialize` will
+ fail
+   --> src\database.rs:218:48
+    |
+218 |     let content = serde
+_json::to_string_pretty(&mani
+fest).map_err(|e| e.to_string
+())?;
+    |                        
+                        ^^^^^
+^^^^
+    = note: `#[deny(dependenc
+y_on_unit_never_type_fallback
+)]` (part of `#[deny(rust_202
+4_compatibility)]`) on by def
+ault
+help: use `()` annotations to
+ avoid fallback changes
+    |
+199 |     let rows = stmt.que
+ry_map::<(), _, _>([], |r| {
+    |                        
+      ++++++++++++
+
+warning: `auditflow` (bin "au
+ditflow") generated 3 warning
+s
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 3 previous errors; 3 warn
+ings emitted

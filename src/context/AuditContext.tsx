@@ -1,17 +1,25 @@
 import React, { createContext, useState, useContext } from 'react';
 import { safeInvoke } from '../lib/tauri-bridge';
+import { AuditIssue, AuditProject } from '../types';
 
 interface AuditState {
     department: string;
     files: any[];
-    findings: any[];
+    findings: AuditIssue[];
     isInitialized: boolean;
     currentProjectId: string | null;
     cardData: any[]; // [CRITICAL] Corporate card transaction data session
     dataType: 'general' | 'card' | 'mixed'; // Track data source type
 }
 
-const AuditContext = createContext<any>(null);
+interface AuditContextType {
+    state: AuditState;
+    setState: React.Dispatch<React.SetStateAction<AuditState>>;
+    startNewAudit: (dept: string) => string;
+    hydrateProject: (projectId: string) => Promise<boolean>;
+}
+
+const AuditContext = createContext<AuditContextType | undefined>(undefined);
 
 export const AuditProvider = ({ children }: { children: React.ReactNode }) => {
     const [state, setState] = useState<AuditState>({

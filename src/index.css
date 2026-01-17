@@ -1,46 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind 4 Source Scanning */
+@source "./**/*.{ts,tsx}";
 
 @layer base {
   :root {
     --background: 222 50% 9%;
-    /* #0B1221 */
     --foreground: 210 40% 98%;
-
     --card: 222 50% 12%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222 50% 9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 217 91% 60%;
-    /* Vibrant Blue */
     --primary-foreground: 210 40% 98%;
-
     --secondary: 217 32% 17%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217 32% 17%;
     --muted-foreground: 215 20% 65%;
-
     --accent: 217 32% 17%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62% 30%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217 32% 17%;
     --input: 217 32% 17%;
     --ring: 224 76% 48%;
-
     --radius: 0.75rem;
   }
-}
 
-@layer base {
   * {
     border-color: hsl(var(--border));
   }
@@ -54,13 +40,37 @@
     overflow: hidden;
   }
 
+  /* Global Input & Button Reset to ensure they don't use browser defaults */
+  input,
+  button {
+    appearance: none;
+    -webkit-appearance: none;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+    margin: 0;
+  }
+
   ::selection {
     background-color: rgba(59, 130, 246, 0.3);
     color: white;
   }
+
+  /* Autofill styling */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #0e1525 inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
-/* Custom Scrollbar for Dark Theme */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -94,7 +104,7 @@
   }
 }
 
-/* Glassmorphism Classes */
+/* Glassmorphism */
 .glass {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(12px);

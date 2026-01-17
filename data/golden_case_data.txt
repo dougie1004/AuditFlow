@@ -1,0 +1,7 @@
+Date,User,Vendor,Amount,Category,Description
+2026-02-10,Lee Min-ho,Star Media Studio,2800000,Marketing,Video Production Batch 1
+2026-02-10,Lee Min-ho,Star Media Studio,2700000,Marketing,Video Production Batch 2
+2026-02-11,Park Seo-jun,ABC Printing,450000,Office,Business Cards
+2026-02-12,Lee Min-ho,Corner Coffee,15000,Meals,Team Coffee
+2026-02-15,Kim Da-mi,Global Consulting,4800000,Consulting,Monthly Retainer
+2026-01-20,Choi Woo-shik,Home Plus,85000,Office,Kitchen Supplies

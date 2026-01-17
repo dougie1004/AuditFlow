@@ -1,0 +1,643 @@
+﻿cargo :    Compiling auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\scratch\auditf
+low\src-tauri)
+위치 줄:1 문자:1
++ cargo run > run_output_3.tx
+t 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (   Comp  
+  iling au...flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+warning: unused imports: `Des
+erialize` and `Serialize`
+ --> src\ai.rs:1:13
+  |
+1 | use serde::{Deserialize, 
+Serialize};
+  |             ^^^^^^^^^^^  
+^^^^^^^^^
+  |
+  = note: `#[warn(unused_impo
+rts)]` (part of `#[warn(unuse
+d)]`) on by default
+
+warning: unused import: `Tran
+saction`
+ --> src\scenarios_seeder.rs:
+1:36
+  |
+1 | use rusqlite::{params, Co
+nnection, Transaction};
+  |                          
+          ^^^^^^^^^^^
+
+warning: unused import: `serd
+e_json::json`
+ --> src\scenarios_seeder.rs:
+2:5
+  |
+2 | use serde_json::json;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: struct `AnalysisResu
+lt` is never constructed
+   --> src\models.rs:134:12
+    |
+134 | pub struct AnalysisResu
+lt {
+    |            ^^^^^^^^^^^^
+^^
+    |
+    = note: `#[warn(dead_code
+)]` (part of `#[warn(unused)]
+`) on by default
+
+warning: struct `AuditScenari
+o` is never constructed
+   --> src\models.rs:167:12
+    |
+167 | pub struct AuditScenari
+o {
+    |            ^^^^^^^^^^^^
+^
+
+warning: struct `AuditUnivers
+eSeeder` is never constructed
+   --> src\database.rs:232:12
+    |
+232 | pub struct AuditUnivers
+eSeeder;
+    |            ^^^^^^^^^^^^
+^^^^^^^
+
+warning: associated function 
+`seed` is never used
+   --> src\database.rs:235:12
+    |
+234 | impl AuditUniverseSeede
+r {
+    | -----------------------
+- associated function in this
+ implementation
+235 |     pub fn seed(conn: &
+mut Connection) -> Result<(),
+ String> {
+    |            ^^^^
+
+warning: function `calculate_
+row_pii_weight` is never used
+   --> src\file_utils.rs:316:
+8
+    |
+316 | pub fn calculate_row_pi
+i_weight(row_text: &str) -> f
+32 {
+    |        ^^^^^^^^^^^^^^^^
+^^^^^^^^
+
+warning: function `analyze_ba
+tch_pii` is never used
+   --> src\file_utils.rs:364:
+8
+    |
+364 | pub fn analyze_batch_pi
+i(rows: &[String], threshold:
+ f32) -> Vec<bool> {
+    |        ^^^^^^^^^^^^^^^^
+^
+
+warning: variant `Chat` is ne
+ver constructed
+  --> src\ai.rs:10:5
+   |
+ 7 | pub enum TaskType {
+   |          -------- varian
+t in this enum
+...
+10 |     Chat,
+   |     ^^^^
+   |
+   = note: `TaskType` has der
+ived impls for the traits `De
+bug` and `Clone`, but these a
+re intentionally ignored duri
+ng dead code analysis
+
+warning: `auditflow` (bin "au
+ditflow") generated 10 warnin
+gs (run `cargo fix --bin "aud
+itflow" -p auditflow` to appl
+y 3 suggestions)
+    Finished `dev` profile [u
+noptimized + debuginfo] targe
+t(s) in 9.25s
+     Running `target_v3_final
+\debug\auditflow.exe`
+>>> [PERMANENT CONFIG] Creating default config...
+>>> [SEEDER] Attempting to commit 172 scenarios...
+>>> [SEEDER ERR] Failed to insert scenario PR-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PR-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario SA-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IN-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario HR-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario FA-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario EX-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PQ-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario IT-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CL-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario CC-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-12: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AB-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario AML-12: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario RV-12: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario PC-12: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ITX-12: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-01: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-02: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-03: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-04: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-05: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-06: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-07: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-08: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-09: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-10: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-11: datatype mismatch
+>>> [SEEDER ERR] Failed to insert scenario ES-12: datatype mismatch
+>>> [SEEDER] Successfully seeded 0 scenarios.
+
+thread 'main' (38816) panicke
+d at C:\Users\user\.cargo\reg
+istry\src\index.crates.io-194
+9cf8c6b5b557f\tauri-2.9.5\src
+\app.rs:1301:11:
+Failed to setup app: error en
+countered during setup hook: 
+Scenario Load Guard Failed: O
+nly 6 scenarios loaded (Sampl
+es: []). Expected minimum 100
+. Please check seed_master_sc
+enarios logs.
+stack backtrace:
+   0: std::panicking::panic_h
+andler
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234/library\std\src\panicki
+ng.rs:698
+   1: core::panicking::panic_
+fmt
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234/library\core\src\panick
+ing.rs:80
+   2: tauri::app::impl$16::ma
+ke_run_event_loop_callback::c
+losure$0<tauri_runtime_wry::W
+ry<enum2$<tauri::EventLoopMes
+sage> >,tauri::app::impl$19::
+run::closure_env$0<tauri_runt
+ime_wry::Wry<enum2$<tauri::Ev
+entLoopMessage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-2.9.5\src\app.rs:1301
+   3: tauri_runtime_wry::hand
+le_event_loop<enum2$<tauri::E
+ventLoopMessage> >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-runtime-wry-2.9.3\src\lib.r
+s:3997
+   4: tauri_runtime_wry::make
+_event_handler::closure$0<enu
+m2$<tauri::EventLoopMessage>,
+tauri::app::impl$16::make_run
+_event_loop_callback::closure
+_env$0<tauri_runtime_wry::Wry
+<enum2$<tauri::EventLoopMessa
+ge> >,tauri::app::impl$19::ru
+n::closure_env$0<tauri_runtim
+e
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-runtime-wry-2.9.3\src\lib.r
+s:3143
+   5: tao::platform_impl::pla
+tform::event_loop::impl$3::ru
+n_return::closure$0<enum2$<ta
+uri_runtime_wry::Message<enum
+2$<tauri::EventLoopMessage> >
+ >,tauri_runtime_wry::make_ev
+ent_handler::closure_env$0<en
+um2$<tauri::EventLoopMessage>
+,tauri::app::impl$16::make_ru
+n
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop.rs:246
+   6: alloc::boxed::impl$30::
+call_mut<tuple$<enum2$<tao::e
+vent::Event<enum2$<tauri_runt
+ime_wry::Message<enum2$<tauri
+::EventLoopMessage> > > > >,r
+ef_mut$<enum2$<tao::event_loo
+p::ControlFlow> > >,dyn$<core
+::ops::function::FnMut<tuple$
+<enum2$<tao::event::Event<enu
+m
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\alloc\src\boxed
+.rs:2012
+   7: tao::platform_impl::pla
+tform::event_loop::runner::im
+pl$3::call_event_handler::clo
+sure$0<enum2$<tauri_runtime_w
+ry::Message<enum2$<tauri::Eve
+ntLoopMessage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:250
+   8: core::panic::unwind_saf
+e::impl$25::call_once<tuple$<
+>,tao::platform_impl::platfor
+m::event_loop::runner::impl$3
+::call_event_handler::closure
+_env$0<enum2$<tauri_runtime_w
+ry::Message<enum2$<tauri::Eve
+ntLoopMessage> > > > >
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\core\src\panic\
+unwind_safe.rs:274
+   9: std::panicking::catch_u
+nwind::do_call<core::panic::u
+nwind_safe::AssertUnwindSafe<
+tao::platform_impl::platform:
+:event_loop::runner::impl$3::
+call_event_handler::closure_e
+nv$0<enum2$<tauri_runtime_wry
+::Message<enum2$<tauri::Event
+LoopMessage> > > > >,tuple$<>
+ 
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\std\src\panicki
+ng.rs:590
+  10: alloc::collections::btr
+ee::map::impl$34::drop<u64,ta
+uri::state::StateManager,allo
+c::alloc::Global>
+  11: std::panicking::catch_u
+nwind
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\std\src\panicki
+ng.rs:553
+  12: std::panic::catch_unwin
+d<core::panic::unwind_safe::A
+ssertUnwindSafe<tao::platform
+_impl::platform::event_loop::
+runner::impl$3::call_event_ha
+ndler::closure_env$0<enum2$<t
+auri_runtime_wry::Message<enu
+m2$<tauri::EventLoopMessage> 
+> > > >,tuple$<> >
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\std\src\panic.r
+s:359
+  13: tao::platform_impl::pla
+tform::event_loop::runner::Ev
+entLoopRunner<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >::
+catch_unwind<enum2$<tauri_run
+time_wry::Message<enum2$<taur
+i::EventLoopMessage> > >,tupl
+e$<>,tao::platform_impl::plat
+f
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:156
+  14: tao::platform_impl::pla
+tform::event_loop::runner::Ev
+entLoopRunner<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >::
+call_event_handler<enum2$<tau
+ri_runtime_wry::Message<enum2
+$<tauri::EventLoopMessage> > 
+> >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:242
+  15: tao::platform_impl::pla
+tform::event_loop::runner::Ev
+entLoopRunner<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >::
+call_new_events<enum2$<tauri_
+runtime_wry::Message<enum2$<t
+auri::EventLoopMessage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:396
+  16: tao::platform_impl::pla
+tform::event_loop::runner::Ev
+entLoopRunner<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >::
+move_state_to<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:310
+  17: tao::platform_impl::pla
+tform::event_loop::runner::Ev
+entLoopRunner<enum2$<tauri_ru
+ntime_wry::Message<enum2$<tau
+ri::EventLoopMessage> > > >::
+poll<enum2$<tauri_runtime_wry
+::Message<enum2$<tauri::Event
+LoopMessage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop\runner.rs:205
+  18: tao::platform_impl::pla
+tform::event_loop::EventLoop<
+enum2$<tauri_runtime_wry::Mes
+sage<enum2$<tauri::EventLoopM
+essage> > > >::run_return<enu
+m2$<tauri_runtime_wry::Messag
+e<enum2$<tauri::EventLoopMess
+age> > >,tauri_runtime_wry::m
+ake_event_handler::closure_en
+v
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop.rs:255
+  19: tao::platform_impl::pla
+tform::event_loop::EventLoop<
+enum2$<tauri_runtime_wry::Mes
+sage<enum2$<tauri::EventLoopM
+essage> > > >::run<enum2$<tau
+ri_runtime_wry::Message<enum2
+$<tauri::EventLoopMessage> > 
+>,tauri_runtime_wry::make_eve
+nt_handler::closure_env$0<enu
+m
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\platform_impl\wind
+ows\event_loop.rs:230
+  20: tao::event_loop::EventL
+oop<enum2$<tauri_runtime_wry:
+:Message<enum2$<tauri::EventL
+oopMessage> > > >::run<enum2$
+<tauri_runtime_wry::Message<e
+num2$<tauri::EventLoopMessage
+> > >,tauri_runtime_wry::make
+_event_handler::closure_env$0
+<enum2$<tauri::EventLoopMessa
+g
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\tao-
+0.34.5\src\event_loop.rs:214
+  21: tauri_runtime_wry::impl
+$45::run<enum2$<tauri::EventL
+oopMessage>,tauri::app::impl$
+16::make_run_event_loop_callb
+ack::closure_env$0<tauri_runt
+ime_wry::Wry<enum2$<tauri::Ev
+entLoopMessage> >,tauri::app:
+:impl$19::run::closure_env$0<
+tauri_runtime_wry::Wry<enum2$
+<
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-runtime-wry-2.9.3\src\lib.r
+s:3087
+  22: tauri::app::App<tauri_r
+untime_wry::Wry<enum2$<tauri:
+:EventLoopMessage> > >::run<t
+auri_runtime_wry::Wry<enum2$<
+tauri::EventLoopMessage> >,ta
+uri::app::impl$19::run::closu
+re_env$0<tauri_runtime_wry::W
+ry<enum2$<tauri::EventLoopMes
+sage> > > >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-2.9.5\src\app.rs:1249
+  23: tauri::app::Builder<tau
+ri_runtime_wry::Wry<enum2$<ta
+uri::EventLoopMessage> > >::r
+un<tauri_runtime_wry::Wry<enu
+m2$<tauri::EventLoopMessage> 
+> >
+             at C:\Users\user
+\.cargo\registry\src\index.cr
+ates.io-1949cf8c6b5b557f\taur
+i-2.9.5\src\app.rs:2301
+  24: auditflow::main
+             at .\src\main.rs
+:131
+  25: core::ops::function::Fn
+Once::call_once<void (*)(),tu
+ple$<> >
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\core\src\ops\fu
+nction.rs:250
+  26: core::hint::black_box
+             at /rustc/ded5c0
+6cf21d2b93bffd5d884aa6e96934e
+e4234\library\core\src\hint.r
+s:472
+note: Some details are omitte
+d, run with `RUST_BACKTRACE=f
+ull` for a verbose backtrace.
+[0112/095451.553:ERROR:ui\gfx
+\win\window_impl.cc:124] Fail
+ed to unregister class Chrome
+_WidgetWin_0. Error = 1412
+error: process didn't exit su
+ccessfully: `target_v3_final\
+debug\auditflow.exe` (exit co
+de: 101)
