@@ -31,6 +31,7 @@ const Card = ({ children, className }: { children: React.ReactNode; className?: 
 
 const SeverityBadge = ({ severity }: { severity: string }) => {
     const styles: Record<string, string> = {
+        Critical: "bg-rose-600 text-white border-rose-700",
         High: "bg-red-500 text-white border-red-600",
         Medium: "bg-amber-500 text-white border-amber-600",
         Low: "bg-blue-500 text-white border-blue-600",
@@ -74,7 +75,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
             }
 
             // Severity 정렬 (High > Medium > Low)
-            const severityOrder: Record<string, number> = { 'High': 0, 'Medium': 1, 'Low': 2 };
+            const severityOrder: Record<string, number> = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
             data.sort((a, b) => (severityOrder[a.severity] ?? 99) - (severityOrder[b.severity] ?? 99));
 
             setIssues(data);
@@ -168,8 +169,9 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
 
     const stats = useMemo(() => {
         const total = issues.length;
-        const high = issues.filter(i => i.severity === 'High').length;
-        const score = total === 0 ? 100 : Math.max(0, 100 - (high * 10) - ((total - high) * 2));
+        const high = issues.filter(i => i.severity === 'High' || i.severity === 'Critical').length;
+        const criticalCount = issues.filter(i => i.severity === 'Critical').length;
+        const score = total === 0 ? 100 : Math.max(0, 100 - (criticalCount * 20) - ((high - criticalCount) * 10) - ((total - high) * 2));
 
         const counts: any = { FSC: 0, TRE: 0, EXP: 0, STP: 0, HR: 0, SEC: 0 };
         issues.forEach(i => {
@@ -215,12 +217,12 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                 </div>
 
                 <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex gap-2">
-                    {['High', 'Medium', 'Low'].map(s => (
+                    {['Critical', 'High', 'Medium', 'Low'].map(s => (
                         <button
                             key={s}
                             onClick={() => setFilterSeverity(filterSeverity === s ? null : s)}
                             className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter border transition-all ${filterSeverity === s
-                                ? (s === 'High' ? 'bg-red-500 text-white border-red-600 shadow-sm' : s === 'Medium' ? 'bg-amber-500 text-white border-amber-600 shadow-sm' : 'bg-blue-500 text-white border-blue-600 shadow-sm')
+                                ? (s === 'Critical' ? 'bg-rose-600 text-white border-rose-700 shadow-sm' : s === 'High' ? 'bg-red-500 text-white border-red-600 shadow-sm' : s === 'Medium' ? 'bg-amber-500 text-white border-amber-600 shadow-sm' : 'bg-blue-500 text-white border-blue-600 shadow-sm')
                                 : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                 }`}
                         >

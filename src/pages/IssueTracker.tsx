@@ -27,8 +27,8 @@ export default function IssueTracker() {
                         </div>
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Command & Control</span>
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">감사 이슈 및 제보 <span className="text-blue-500">Analytics Feed</span></h1>
-                    <p className="text-slate-500 font-medium mt-3 text-lg max-w-2xl">경영진 수명 업무 수행 및 내부 제보 처리, 상시 감사 현황을 실시간 모니터링합니다.</p>
+                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">탐지 리스크 및 제보 <span className="text-blue-500">Compliance Feed</span></h1>
+                    <p className="text-slate-500 font-medium mt-3 text-lg max-w-2xl">경영진 특별 실사 지시 수행 및 내부 제보 처리, 컴플라이언스 위험 현황을 모니터링합니다.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -36,11 +36,11 @@ export default function IssueTracker() {
                     <div className="lg:col-span-7 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12"><User size={200} /></div>
                         <h3 className="text-xl font-black mb-8 text-white flex items-center gap-4 relative z-10 uppercase italic">
-                            <User size={20} className="text-blue-500" /> 경영진 특별 지시 <span className="text-slate-600 font-medium">(CEO Directive)</span>
+                            <User size={20} className="text-blue-500" /> 경영진 특별 실사 지시 <span className="text-slate-600 font-medium">(Executive Directive)</span>
                         </h3>
                         <div className="relative z-10">
                             <textarea
-                                placeholder="경영진의 지시사항을 입력하세요 (예: 최근 3월간 광고선전비 지출 내역 중 중복 지급된 건이 있는지 조사해 봐.)"
+                                placeholder="경영진의 특별 실사 지시사항을 입력하세요 (예: 최근 3월간 광고선전비 지출 내역 중 중복 지급된 건이 있는지 조사해 봐.)"
                                 className="w-full h-48 bg-black/40 p-8 rounded-3xl border border-white/5 resize-none outline-none text-base text-slate-200 font-medium transition-all focus:border-blue-500/50 focus:ring-4 ring-blue-500/5 placeholder:text-slate-700"
                             />
                             <div className="absolute right-6 bottom-6 flex gap-3">
@@ -48,7 +48,7 @@ export default function IssueTracker() {
                                     <Mic size={18} />
                                 </button>
                                 <button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-900/40 flex items-center gap-3 active:scale-95">
-                                    <Send size={16} /> AI 심층 스캔 요청
+                                    <Send size={16} /> AI 실사 분석 요청
                                 </button>
                             </div>
                         </div>
@@ -57,7 +57,7 @@ export default function IssueTracker() {
                                 <Bot size={20} className="text-blue-400" />
                             </div>
                             <p className="text-[11px] font-black text-blue-400 uppercase tracking-widest leading-relaxed">
-                                Forensic Core: 요청 시점 기준, AI가 전사 ERP 원장과 비정형 문서(전자결재, 메신저 로그)를 즉각 교차 분석합니다.
+                                Forensic Core: 요청 시점 기준, AI가 전사 ERP 원장과 비정형 문서(전자결재, 메신저 로그)를 즉각 교차 실사 분석합니다.
                             </p>
                         </div>
                     </div>
@@ -66,11 +66,11 @@ export default function IssueTracker() {
                     <div className="lg:col-span-5 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl flex flex-col h-full">
                         <div className="flex justify-between items-center mb-10">
                             <h3 className="text-xl font-black text-white flex items-center gap-4 uppercase italic">
-                                <Zap size={20} className="text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]" /> AI Live Briefing
+                                <Zap size={20} className="text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]" /> AI Live Briefing (리스크 브리핑)
                             </h3>
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Live Monitoring</span>
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">초정밀 리스크 모니터링</span>
                             </div>
                         </div>
                         <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -95,7 +95,7 @@ export default function IssueTracker() {
                             ))}
                             {issues.length === 0 && (
                                 <div className="py-24 text-center border-4 border-dashed border-white/5 rounded-[40px] text-slate-700 font-black uppercase tracking-widest">
-                                    No immediate issues <br />detected within 24h.
+                                    최근 탐지된 긴급 리스크가 <br />없습니다. (24h 기준)
                                 </div>
                             )}
                         </div>

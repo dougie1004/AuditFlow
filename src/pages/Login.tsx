@@ -95,13 +95,13 @@ export default function Login({ onLogin }: LoginProps) {
                     <div className="text-center space-y-4 mb-12">
                         <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-4">
                             <ShieldCheck className="text-blue-400 w-5 h-5" />
-                            <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.3em]">AuditFlow Strategic Management</span>
+                            <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.3em]">Compliance DD Strategic Management</span>
                         </div>
                         <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter">
-                            Next-Gen <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">AI Audit</span>
+                            Next-Gen <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">AI Compliance</span>
                         </h1>
                         <p className="text-slate-400 text-lg max-w-2xl mx-auto font-medium">
-                            {step === 1 ? "계정에 접속하여 스마트 감사를 시작하세요." : "귀하의 비즈니스 규모에 맞는 플랜을 선택하세요."}
+                            {step === 1 ? "계정에 접속하여 스마트 실사/진단을 시작하세요." : "귀하의 비즈니스 규모에 맞는 플랜을 선택하세요."}
                         </p>
                     </div>
                 )}
@@ -144,7 +144,7 @@ export default function Login({ onLogin }: LoginProps) {
                             </div>
 
                             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20">
-                                Access Dashboard <ArrowRight size={16} className="text-white" />
+                                대시보드 접속 <ArrowRight size={16} className="text-white" />
                             </button>
 
 
@@ -166,7 +166,7 @@ export default function Login({ onLogin }: LoginProps) {
                             >
                                 {tier.highlight && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg border border-blue-400/50">
-                                        Partner Focus
+                                        전문가 추천
                                     </div>
                                 )}
                                 <div className="flex justify-between items-start mb-8">
@@ -192,7 +192,7 @@ export default function Login({ onLogin }: LoginProps) {
                                     ))}
                                 </ul>
                                 <div className="w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-center transition-all bg-white/5 text-slate-400 border border-white/10 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500">
-                                    Subscribe & Continue
+                                    구독 및 시작하기
                                 </div>
                             </div>
                         ))}
@@ -204,7 +204,7 @@ export default function Login({ onLogin }: LoginProps) {
                     <div className="max-w-2xl mx-auto">
                         <div className="bg-white/10 border border-white/20 rounded-[40px] p-12 backdrop-blur-2xl shadow-2xl relative">
                             <button onClick={() => setStep(2)} className="absolute top-8 left-8 text-slate-500 hover:text-white flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-                                <ChevronLeft size={16} /> Change Plan
+                                <ChevronLeft size={16} /> 플랜 변경하기
                             </button>
 
                             <div className="text-center space-y-8 pt-6">
@@ -219,7 +219,7 @@ export default function Login({ onLogin }: LoginProps) {
                                 <div className="bg-white/5 rounded-3xl p-8 border border-white/10 text-left space-y-4">
                                     <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-slate-500 uppercase tracking-widest text-[10px]">Merchant</span>
-                                        <span className="text-white">AuditFlow Korea</span>
+                                        <span className="text-white">ComplianceFlow Korea</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-slate-500 uppercase tracking-widest text-[10px]">Product Tier</span>
@@ -240,16 +240,16 @@ export default function Login({ onLogin }: LoginProps) {
                                     >
                                         {isProcessing ? (
                                             <>
-                                                <Loader2 className="animate-spin" /> Verifying Transaction...
+                                                <Loader2 className="animate-spin" /> 거래 검증 중...
                                             </>
                                         ) : (
                                             <>
-                                                Initialize Secure Payment <Sparkles size={18} />
+                                                보안 결제 시작 <Sparkles size={18} />
                                             </>
                                         )}
                                     </button>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                        * 실제 실습용 가상 결제 화면입니다. 결제가 승인되면 모든 감사 엔진이 하드웨어에 배포됩니다.
+                                        * 실제 실습용 가상 결제 화면입니다. 결제가 승인되면 모든 실사/진단 엔진이 하드웨어에 배포됩니다.
                                     </p>
                                 </div>
                             </div>
@@ -265,7 +265,7 @@ export default function Login({ onLogin }: LoginProps) {
                         <ShieldCheck size={24} className="text-slate-500" />
                     </div>
                     <span className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.4em]">
-                        AuditFlow Strategic Engine V4.0 // Secured by AuditFlow AES-256
+                        ComplianceFlow Strategic Engine V4.0 // Secured by ComplianceFlow AES-256
                     </span>
                 </div>
             </div>

@@ -177,7 +177,7 @@ function Layout() {
 
         {/* [Scope Selector] Current Audit Project */}
         <div className="mb-10 px-2 mt-4">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 pl-1 opacity-50">Active Context</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 pl-1 opacity-50">Active Deal context</p>
           <div
             onClick={() => navigate('/portfolio')}
             className={`p-5 rounded-[22px] border cursor-pointer transition-all duration-300 ${activeProject ? 'bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border-blue-500/30 text-white shadow-xl shadow-blue-950/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
@@ -186,45 +186,45 @@ function Layout() {
               <div className={`p-2 rounded-xl ${activeProject ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}>
                 <FileText size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">Focus Project</span>
+              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">집중 관리 딜 (Focus)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black truncate max-w-[150px] tracking-tight">{activeProject || 'Select Project...'}</span>
+              <span className="text-xs font-black truncate max-w-[150px] tracking-tight">{activeProject || '실사 대상 선택...'}</span>
               <ChevronDown size={14} className="opacity-40" />
             </div>
           </div>
           {!activeProject && location.pathname !== '/tasks' && (
             <div className="flex items-center gap-2 mt-3 px-1">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <p className="text-[9px] text-blue-400 font-bold tracking-tight">Select project to reveal insights</p>
+              <p className="text-[9px] text-blue-400 font-bold tracking-tight">프로젝트를 선택하여 인사이트를 확인하세요</p>
             </div>
           )}
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Main Dashboard</p>
-          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="통합 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Deal Overview</p>
+          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="통합 실사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Audit Intelligence</p>
-          <NavItem to="/risk-heatmap" icon={<Layers size={18} />} label="리스크 히트맵" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/portfolio" icon={<FileText size={18} />} label="감사 포트폴리오 (관리)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AI 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/knowledge-base" icon={<BookOpen size={18} />} label="지식 베이스 (RAG)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Investment Intelligence</p>
+          <NavItem to="/risk-heatmap" icon={<Layers size={18} />} label="컴플라이언스 리스크 히트맵" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/portfolio" icon={<FileText size={18} />} label="진단 업무 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AI 인텔리전스 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/knowledge-base" icon={<BookOpen size={18} />} label="실사 프로토콜 (RAG)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Data & Analysis</p>
-          <NavItem to="/data-upload" icon={<Database size={18} />} label="데이터 업로드 (실행)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/ai-discovery" icon={<BrainCircuit size={18} />} label="AI 분석 리포트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/scenarios" icon={<ShieldCheck size={18} />} label="시나리오 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/mining" icon={<Activity size={18} />} label="프로세스 마이닝" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Technical Analysis</p>
+          <NavItem to="/data-upload" icon={<Database size={18} />} label="원본 데이터 통합" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/ai-discovery" icon={<BrainCircuit size={18} />} label="리스크 시그널 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/scenarios" icon={<ShieldCheck size={18} />} label="실사/진단 시나리오" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/mining" icon={<Activity size={18} />} label="진단 프로세스 마이닝" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Specialized Audit</p>
-          <NavItem to="/production" icon={<Box size={18} />} label="생산 계획 예측" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/card" icon={<CreditCard size={18} />} label="법인카드 감사" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Asset Monitoring</p>
+          <NavItem to="/production" icon={<Box size={18} />} label="자산 및 공정 예측 모니터링" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/card" icon={<CreditCard size={18} />} label="운영 비용 무결성 브리핑" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Reporting & Planning</p>
-          <NavItem to="/remediation" icon={<CheckCircle2 size={18} />} label="조치 이행 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/report" icon={<FileText size={18} />} label="최종 감사 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/executive" icon={<TrendingUp size={18} />} label="경영진 보고 및 계획" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Exit & Remediation</p>
+          <NavItem to="/remediation" icon={<CheckCircle2 size={18} />} label="리스크 경감 추적기" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/report" icon={<FileText size={18} />} label="경영진 실사 요약서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/executive" icon={<TrendingUp size={18} />} label="거버넌스 & 이사회 허브" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
         </nav>
       </aside>
 
@@ -234,9 +234,9 @@ function Layout() {
         <header className="h-[90px] bg-[#0B1221]/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 flex items-center justify-between px-12 flex-shrink-0">
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <h1 className="text-xl font-bold tracking-tighter text-blue-400">AUDITFLOW PRO <span className="text-xs text-slate-500 ml-2">v4.2</span></h1>
+              <h1 className="text-xl font-bold tracking-tighter text-blue-400">COMPLIANCE DD PRO <span className="text-xs text-slate-500 ml-2">v4.2</span></h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1.2px" }}>Live Engine</span>
+                <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1.2px" }}>초정밀 진단 엔진 가동 중</span>
               </div>
             </div>
             {activeProject && (

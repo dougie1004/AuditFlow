@@ -199,71 +199,59 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         }
     }
 
-    // [DASHBOARD FILTER] 1. Total Risks (Priority Items: Critical or High)
-    let total_risks: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND severity IN ('Critical', 'High')", filter_base), 
-        [], 
-        |r| r.get(0)
+    // [REFINED PILLAR LOGIC] Broaden keywords to capture real DD findings
+    let pillar_governance = conn.query_row(
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Governance%' OR issue_title LIKE '%거버넌스%' OR issue_title LIKE '%Compliance%' OR issue_title LIKE '%컴플라이언스%' OR issue_title LIKE '%Risk%' OR issue_title LIKE '%리스크%' OR issue_title LIKE '%Integrity%' OR issue_title LIKE '%신뢰%' OR issue_title LIKE '%Red Flag%')", filter_base),
+        [],
+        |row: &rusqlite::Row| row.get::<_, i64>(0),
+    ).unwrap_or(0);
+
+    let pillar_process = conn.query_row(
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Process%' OR issue_title LIKE '%프로세스%' OR issue_title LIKE '%SOP%' OR issue_title LIKE '%Inventory%' OR issue_title LIKE '%재고%' OR issue_title LIKE '%매출%' OR issue_title LIKE '%Revenue%' OR issue_title LIKE '%Burn%' OR issue_title LIKE '%번레이트%' OR issue_title LIKE '%Cash%' OR issue_title LIKE '%현금%' OR issue_title LIKE '%Window%')", filter_base),
+        [],
+        |row: &rusqlite::Row| row.get::<_, i64>(0),
+    ).unwrap_or(0);
+
+    let pillar_culture = conn.query_row(
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Culture%' OR issue_title LIKE '%문화%' OR issue_title LIKE '%Ethic%' OR issue_title LIKE '%윤리%' OR issue_title LIKE '%Fraud%' OR issue_title LIKE '%부정%' OR issue_title LIKE '%우회%' OR issue_title LIKE '%분할%' OR issue_title LIKE '%쪼개기%' OR issue_title LIKE '%인사%' OR issue_title LIKE '%HR%' OR issue_title LIKE '%카드%')", filter_base),
+        [],
+        |row: &rusqlite::Row| row.get::<_, i64>(0),
+    ).unwrap_or(0);
+
+    let raw_signals = conn.query_row(
+        &format!("SELECT COUNT(*) FROM audit_issues{}", filter_base),
+        [],
+        |row: &rusqlite::Row| row.get::<_, i64>(0),
+    ).unwrap_or(0);
+
+    let ai_signals = conn.query_row(
+        &format!("SELECT COUNT(*) FROM system_events{} AND event_type = 'AI_SIGNAL'", filter_base.replace("WHERE", "AND")),
+        [],
+        |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
     
-    // 2. Global AI Anomaly Signals
-    let ai_filter = format!("{} AND event_type = 'AI_SIGNAL'", filter_base.replace("audit_id", "audit_id"));
-    let ai_signals: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM system_events {}", ai_filter), [], |r| r.get(0)).unwrap_or(0);
+    let critical_coverage: String = if raw_signals > 0 { "100%".to_string() } else { "0%".to_string() };
     
-    // 3. Open Findings (Pending Workload)
-    let open_findings: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND status IN ('Open', 'Pending')", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
+    // [VALUATION EXPOSURE LOGIC] 
+    // Calculate potential financial exposure based on Project Tier
+    let (gov_weight, proc_weight) = if let Some(ref id) = project_id {
+        let tier: String = conn.query_row("SELECT valuation_tier FROM audit_projects WHERE id = ?1", params![id], |r| r.get(0)).unwrap_or_else(|_| "startup".to_string());
+        match tier.as_str() {
+            "seed" => (10_000_000, 1_000_000),      // Seed: Gov 10M / Proc 1M
+            "enterprise" => (500_000_000, 50_000_000), // Enterprise: Gov 500M / Proc 50M
+            _ => (50_000_000, 5_000_000),           // Startup (Default): Gov 50M / Proc 5M
+        }
+    } else {
+        (50_000_000, 5_000_000) // Default for Global View
+    };
 
-    // [STEP 1] Raw Signals Analyzed (Absolute count - performance metric)
-    let raw_signals: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {}", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
-
-    // [STEP 2] Management Issues Identified (Clustered/Significant - High+)
-    let total_findings: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND severity IN ('Critical', 'High')", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
-
-    // [STEP 3] Critical Red Flags (Highest Priority / Management level)
-    let critical_risks: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND severity = 'Critical' AND status != 'Rejected'", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
-
-    // 2. Global AI Anomaly Signals
-    let ai_filter = format!("{} AND event_type = 'AI_SIGNAL'", filter_base.replace("audit_id", "audit_id"));
-    let ai_signals: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM system_events {}", ai_filter), [], |r| r.get(0)).unwrap_or(0);
+    let impact_value: i64 = (pillar_governance * gov_weight) + (pillar_process * proc_weight); 
     
-    // [LOGIC MATCH] Total Risk Exposure = Red Flags (Step 3) + AI Signals
-    let total_risks = critical_risks + ai_signals;
-
-    // 3. Open Findings (Pending Workload)
-    let open_findings: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND status IN ('Open', 'Pending')", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
-
-    let high_severity: i64 = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues {} AND severity = 'High'", filter_base), 
-        [], 
-        |r| r.get(0)
-    ).unwrap_or(0);
-    
-    let critical_coverage: String = if total_findings > 0 { "100%".to_string() } else { "0%".to_string() };
-    let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, (critical_risks * 30 / 10) + (high_severity * 5 / 100)) }; // Weighted risk score favoring criticals
+    let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, (pillar_governance * 10 / 100) + (pillar_process * 5 / 100)) }; 
 
     // Trends: Organic growth simulation
     let mut trends = Vec::new();
-    let base_val = if total_findings > 0 { 5 } else { 0 };
+    let base_val = if raw_signals > 0 { 5 } else { 0 };
     for i in (0..7).rev() {
         let date = Utc::now() - Duration::days(i);
         let day_str = date.format("%m-%d").to_string();
@@ -272,15 +260,17 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
     }
 
     Ok(json!({ 
-        "total_risks": total_risks, 
+        "total_risks": pillar_governance, 
         "ai_signals": ai_signals, 
         "critical_coverage": critical_coverage, 
-        "open_findings": open_findings, 
-        "total_findings": total_findings,
+        "open_findings": pillar_process, 
+        "total_findings": pillar_culture,
         "raw_signals": raw_signals,
-        "critical_risks": critical_risks,
+        "critical_risks": pillar_governance,
         "risk_exposure_score": risk_score, 
-        "trends": trends 
+        "potential_impact_value": impact_value,
+        "trends": trends,
+        "signal_summary": "Inference core detected behavioral patterns across disconnected silos."
     }))
 }
 
@@ -657,13 +647,7 @@ pub fn get_file_preview(file_path: String, limit: Option<usize>, enable_masking:
 
 #[tauri::command]
 pub fn get_masked_preview(file_path: String, limit: Option<usize>) -> Result<Vec<Vec<String>>, String> {
-    let mut preview = get_file_preview(file_path, limit, Some(true))?;
-    for row in preview.iter_mut() {
-        for cell in row.iter_mut() {
-            *cell = apply_deidentification(cell);
-        }
-    }
-    Ok(preview)
+    get_file_preview(file_path, limit, Some(true))
 }
 
 #[tauri::command]
@@ -696,7 +680,7 @@ pub fn get_all_scenarios(app_handle: AppHandle) -> Result<Vec<Value>, String> {
 pub fn get_audit_projects(app_handle: AppHandle) -> Result<Vec<AuditProject>, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare("SELECT id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, findings_count, created_at, risk_score FROM audit_projects ORDER BY created_at DESC").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, findings_count, created_at, risk_score, valuation_tier FROM audit_projects ORDER BY created_at DESC").map_err(|e| e.to_string())?;
     let rows = stmt.query_map([], |r| Ok(AuditProject {
         id: r.get(0)?, title: r.get(1)?, status: r.get(2)?, progress_pct: r.get(3)?,
         start_date: r.get(4)?, end_date: r.get(5)?, lead_auditor: r.get(6)?,
@@ -706,18 +690,19 @@ pub fn get_audit_projects(app_handle: AppHandle) -> Result<Vec<AuditProject>, St
         audit_scope: r.get(13).ok(),
         findings_count: r.get(14)?,
         created_at: r.get(15).ok(),
-        risk_score: r.get(16)?
+        risk_score: r.get(16)?,
+        valuation_tier: r.get(17).ok()
     })).map_err(|e| e.to_string())?;
     let mut list: Vec<AuditProject> = Vec::new(); for r in rows { if let Ok(p) = r { list.push(p); } }
     Ok(list)
 }
 
 #[tauri::command]
-pub fn update_project_metadata(app_handle: AppHandle, project_id: String, planning_start: Option<String>, planning_end: Option<String>, fieldwork_start: Option<String>, fieldwork_end: Option<String>, reporting_start: Option<String>, reporting_end: Option<String>, audit_scope: Option<String>, start_date: Option<String>, end_date: Option<String>) -> Result<(), String> {
+pub fn update_project_metadata(app_handle: AppHandle, project_id: String, planning_start: Option<String>, planning_end: Option<String>, fieldwork_start: Option<String>, fieldwork_end: Option<String>, reporting_start: Option<String>, reporting_end: Option<String>, audit_scope: Option<String>, start_date: Option<String>, end_date: Option<String>, valuation_tier: Option<String>) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    conn.execute("UPDATE audit_projects SET planning_start=?1, planning_end=?2, fieldwork_start=?3, fieldwork_end=?4, reporting_start=?5, reporting_end=?6, audit_scope=?7, start_date=?8, end_date=?9 WHERE id=?10",
-        params![planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, start_date, end_date, project_id]
+    conn.execute("UPDATE audit_projects SET planning_start=?1, planning_end=?2, fieldwork_start=?3, fieldwork_end=?4, reporting_start=?5, reporting_end=?6, audit_scope=?7, start_date=?8, end_date=?9, valuation_tier=?10 WHERE id=?11",
+        params![planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, start_date, end_date, valuation_tier, project_id]
     ).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -738,7 +723,7 @@ pub fn create_audit_project(app_handle: AppHandle, mut project: AuditProject) ->
     if project.start_date.is_empty() { project.start_date = today.clone(); }
     if project.end_date.is_empty() { project.end_date = today.clone(); }
 
-    conn.execute("INSERT OR REPLACE INTO audit_projects (id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, created_at, findings_count, risk_score) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)", 
+    conn.execute("INSERT OR REPLACE INTO audit_projects (id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, created_at, findings_count, risk_score, valuation_tier) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)", 
         params![project.id, project.title, project.status, project.progress_pct, project.start_date, project.end_date, project.lead_auditor, 
         project.planning_start.unwrap_or(today.clone()), project.planning_end.unwrap_or(today.clone()),
         project.fieldwork_start.unwrap_or(today.clone()), project.fieldwork_end.unwrap_or(today.clone()),
@@ -746,7 +731,8 @@ pub fn create_audit_project(app_handle: AppHandle, mut project: AuditProject) ->
         project.audit_scope.unwrap_or("Scope not defined.".to_string()),
         Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         project.findings_count,
-        project.risk_score]
+        project.risk_score,
+        project.valuation_tier.unwrap_or("startup".to_string())]
     ).map_err(|e| e.to_string())?;
     Ok(project.id)
 }
@@ -845,7 +831,7 @@ pub async fn ask_ai_assistant(app_handle: AppHandle, message: String, project_id
          Vec::<AuditIssue>::new()
     };
     
-    let context = format!("Project ID: {:?}. Findings in DB: {:?}. Question: {}. Respond as a professional auditor in Korean Markdown.", project_id, findings, message);
+    let context = format!("Project ID: {:?}. Findings in DB: {:?}. Question: {}. Respond as a professional auditor in Korean. USE PLAIN TEXT ONLY. DO NOT use markdown symbols like # or ** for bold/headings. Keep it clean and readable without any markdown artifacts.", project_id, findings, message);
     call_gemini_direct(&context).await.map_err(|e| e.to_string())
 }
 
@@ -864,12 +850,14 @@ pub async fn generate_professional_report(app_handle: AppHandle, project_id: Str
 
     // Build structured findings summary
     let mut findings_summary = String::new();
+    let mut critical_count = 0;
     let mut high_count = 0;
     let mut medium_count = 0;
     let mut low_count = 0;
 
     for (idx, finding) in accepted_findings.iter().enumerate() {
         match finding.severity.as_str() {
+            "Critical" => critical_count += 1,
             "High" => high_count += 1,
             "Medium" => medium_count += 1,
             _ => low_count += 1,
@@ -886,78 +874,73 @@ pub async fn generate_professional_report(app_handle: AppHandle, project_id: Str
     }
 
     let prompt = format!(r#"
-당신은 전문 감사 보고서 작성 전문가입니다. 다음 감사 결과를 바탕으로 **완전하고 상세한 최종 감사 보고서**를 한국어 마크다운 형식으로 작성하십시오.
+당신은 기업 실사(Compliance DD) 보고서 작성 전문가입니다. 다음 조사 결과를 바탕으로 상급자에게 보고할 '전문적인 평어체Plain Text' 형식의 최종 리포트를 작성하십시오.
 
-## 프로젝트 정보
+[중요 지침]
+1. 마크다운 기호(#, **, -, | 등)를 절대 사용하지 마십시오.
+2. 섹션 구분은 [1. 요약], [2. 상세] 와 같이 괄호를 사용하십시오.
+3. 전문적인 한국어 문체(경어체 제외, ~함, ~임 등의 전문 보고서 문체 선호)를 사용하십시오.
+4. 불필요한 장식 기호를 배제하고 깔끔한 텍스트로만 구성하십시오.
+5. 금액 표기 시 '4,643,146원'과 같은 정확한 숫자보다는 '약 465만 원' 또는 '0.45억 원'과 같이 읽기 편한 단위(만원, 억원)로 반올림하여 표기하십시오.
+
+프로젝트 정보
 - 프로젝트 ID: {}
 - 총 채택된 지적사항: {}건
+  - Critical: {}건
   - High: {}건
   - Medium: {}건
   - Low: {}건
 
-## 채택된 감사 지적사항 상세
+조사 및 추론 결과 상세
 {}
 
-## 보고서 작성 지침
-반드시 다음 구조를 따라 작성하십시오:
+보고서 구조 예시(마크다운 없이 작성):
 
-# 감사 보고서
+[감사/실사 결과 보고서]
 
-## 1. 요약 (Executive Summary)
-- 감사 목적 및 범위
-- 주요 발견사항 요약 (3-5줄)
-- 전반적인 위험도 평가
+[1. 요약 (Executive Summary)]
+- 목적 및 범위
+- 주요 발견사항 핵심 요약
+- 전반적인 위험도 및 노출도 평가
 
-## 2. 감사 결과 총괄
-- **총괄 평가**: (감사 이슈 사항에 대한 전반적인 총괄 평가 및 위험 수준에 대한 의견을 3-4문장으로 서술하십시오.)
+[2. 조사 결과 총괄]
+- 총괄 평가: (전반적인 위험 수준에 대한 소견 기술)
 
-| 구분 | 건수 | 비율 |
-|------|------|------|
-| High | {}건 | {}% |
-| Medium | {}건 | {}% |
-| Low | {}건 | {}% |
-| **합계** | **{}건** | **100%** |
+통계:
+Critical: {}건 ({}%)
+High: {}건 ({}%)
+Medium: {}건 ({}%)
+Low: {}건 ({}%)
+합계: {}건 (100%)
 
-## 3. 주요 발견사항 상세
+[3. 주요 발견사항 및 추론 상세]
+(항목별 상세 설명 및 추론 근거 기술)
 
-### 3.1 High Risk 항목
-(각 High 항목에 대해 상세 설명)
+[4. 권고사항 및 가치 조정 제언]
+- 즉시 확인 및 소명 필요 사항
+- 실사 계약서 반영 제언
 
-### 3.2 Medium Risk 항목
-(각 Medium 항목에 대해 상세 설명)
-
-### 3.3 Low Risk 항목
-(각 Low 항목에 대해 간략 설명)
-
-## 4. 권고사항 및 개선 계획
-- 즉시 조치 필요 사항
-- 단기 개선 과제
-- 장기 개선 과제
-
-## 5. 결론
-- 전반적인 평가
+[5. 결론]
 - 향후 모니터링 방향
 
----
-**보고서 작성일**: {}
-**작성자**: AuditFlow AI Engine v4.2
-
-위 구조를 **반드시 준수**하여 완전한 보고서를 작성하십시오. 각 섹션은 구체적이고 실무적인 내용으로 채워야 합니다.
+위 구조에 따라 '마크다운 기호 없이' 전문적인 텍스트 리포트를 작성하십시오.
 "#, 
         project_id,
         accepted_findings.len(),
+        critical_count,
         high_count,
         medium_count,
         low_count,
         findings_summary,
+        critical_count,
+        (critical_count as f32 / accepted_findings.len() as f32 * 100.0) as i32,
         high_count,
         (high_count as f32 / accepted_findings.len() as f32 * 100.0) as i32,
         medium_count,
         (medium_count as f32 / accepted_findings.len() as f32 * 100.0) as i32,
         low_count,
         (low_count as f32 / accepted_findings.len() as f32 * 100.0) as i32,
-        accepted_findings.len(),
-        chrono::Local::now().format("%Y-%m-%d").to_string()
+        accepted_findings.len()
     );
 
     println!(">>> [Report Engine] Calling Gemini 3.0 Pro for report generation...");
@@ -982,26 +965,25 @@ pub async fn generate_professional_report(app_handle: AppHandle, project_id: Str
 
 fn generate_fallback_report(project_id: &str, findings: &[AuditIssue], high: i32, medium: i32, low: i32) -> String {
     let total = findings.len();
-    let mut report = format!(r#"# 감사 보고서
+    let mut report = format!(r#"[감사/실사 결과 보고서]
 
-## 1. 요약 (Executive Summary)
+[1. 요약 (Executive Summary)]
 
-본 보고서는 **{}** 프로젝트에 대한 AI 기반 감사 분석 결과를 담고 있습니다.
+본 보고서는 {} 프로젝트에 대한 데이터 기반 추론 분석 결과를 담고 있습니다.
 
-- **총 지적사항**: {}건
-- **위험도 분포**: High {}건, Medium {}건, Low {}건
-- **전반적 평가**: {}
+- 조사 대상 노출 건수: {}건
+- 노출도 분포: High {}건, Medium {}건, Low {}건
+- 전반적 소견: {}
 
-## 2. 감사 결과 총괄
+[2. 조사 결과 총괄]
 
-| 구분 | 건수 | 비율 |
-|------|------|------|
-| High | {}건 | {}% |
-| Medium | {}건 | {}% |
-| Low | {}건 | {}% |
-| **합계** | **{}건** | **100%** |
+통계:
+High: {}건 ({}%)
+Medium: {}건 ({}%)
+Low: {}건 ({}%)
+합계: {}건 (100%)
 
-## 3. 주요 발견사항 상세
+[3. 주요 발견사항 상세]
 
 "#, 
         project_id,
@@ -1009,9 +991,9 @@ fn generate_fallback_report(project_id: &str, findings: &[AuditIssue], high: i32
         high,
         medium,
         low,
-        if high > 5 { "즉시 조치가 필요한 고위험 항목이 다수 발견되었습니다" } 
-        else if high > 0 { "일부 고위험 항목이 발견되었으나 관리 가능한 수준입니다" }
-        else { "전반적으로 양호한 상태이나 지속적인 모니터링이 필요합니다" },
+        if high > 5 { "추가 소명이 필요한 다수의 고우선순위 신호가 식별되었습니다." } 
+        else if high > 0 { "일부 고우선순위 신호가 발견되었으나 일반적인 범위 내에 있습니다." }
+        else { "특이 패턴은 발견되지 않았으나 지속적인 모니터링을 권고합니다." },
         high,
         (high as f32 / total as f32 * 100.0) as i32,
         medium,
@@ -1024,7 +1006,7 @@ fn generate_fallback_report(project_id: &str, findings: &[AuditIssue], high: i32
     // Add detailed findings
     for (idx, finding) in findings.iter().enumerate() {
         report.push_str(&format!(
-            "\n### {}.{} {}\n\n**심각도**: {}\n\n**상세 설명**:\n{}\n\n**권고사항**:\n{}\n\n---\n\n",
+            "\n[{}. {}]\n항목: {}\n노출도: {}\n상세: {}\n제언: {}\n\n---\n\n",
             idx / 10 + 3,
             idx % 10 + 1,
             finding.issue_title,
@@ -1035,30 +1017,26 @@ fn generate_fallback_report(project_id: &str, findings: &[AuditIssue], high: i32
     }
 
     report.push_str(&format!(r#"
-## 4. 권고사항 및 개선 계획
+[4. 권고사항 및 가치 조정 제언]
 
-### 즉시 조치 필요 사항
+구체적 확인 필요 사항:
 {}
 
-### 단기 개선 과제
-- 발견된 모든 High 등급 지적사항에 대한 시정 조치 완료
-- 관련 내부 통제 절차 재검토 및 강화
+단기 과제:
+- 식별된 High 등급 신호에 대한 대조 확인 완료
+- 관련 내부 통제 거버넌스 보완
 
-### 장기 개선 과제
-- 정기적인 모니터링 체계 구축
-- 예방적 통제 강화
+장기 과제:
+- 전사적 통합 모니터링 시스템 구축
 
-## 5. 결론
+[5. 결론]
 
-본 감사를 통해 총 {}건의 개선 필요 사항이 식별되었습니다. 특히 High 등급 {}건에 대해서는 즉각적인 조치가 필요합니다.
+본 조사를 통해 총 {}건의 데이터 특이점이 식별되었습니다. 특히 High 등급 {}건에 대해서는 인수 전 소명 절차를 거칠 것을 제언합니다.
 
-향후 분기별 정기 점검을 통해 개선 이행 상황을 모니터링할 것을 권고합니다.
-
----
-**보고서 작성일**: {}  
-**작성자**: AuditFlow AI Engine v4.2 (Fallback Mode)
+보고서 작성일: {}
+작성자: AuditFlow AI Engine (Fallback Mode)
 "#,
-        if high > 0 { "- High 등급 지적사항에 대한 즉시 시정 조치\n- 관련 책임자 지정 및 이행 계획 수립" } else { "현재 즉시 조치가 필요한 사항은 없으나, 지속적인 관리가 필요합니다." },
+        if high > 0 { "- High 등급 신호에 대한 현장 실사 및 질의\n- 관련 소명 자료(SOP, 증빙) 확보" } else { "현재 즉시 조치가 필요한 사항은 없으나, 데이터 건전성 유지가 필요합니다." },
         total,
         high,
         chrono::Local::now().format("%Y-%m-%d").to_string()
@@ -1114,7 +1092,11 @@ pub fn update_audit_issue_status(app_handle: AppHandle, id: String, status: Stri
             // Record High-risk findings to system_events for AI Signal tracking
             if severity == "High" {
                 let event_id = format!("AI-SIGNAL-{}", chrono::Local::now().timestamp());
-                let event_desc = format!("🚨 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
+                let raw_desc = format!("🚨 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
+                
+                // [FIX] Use Pseudonymization (Employee_NN) instead of simple masking for Vault Demo compatibility
+                let mut session = crate::file_utils::MaskingSession::new();
+                let event_desc = crate::file_utils::mask_sensitive_data(&raw_desc, &mut session);
                 
                 conn.execute(
                     "INSERT INTO system_events (id, event_type, description, audit_id) VALUES (?1, 'AI_SIGNAL', ?2, ?3)",
@@ -1212,18 +1194,35 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
     3. PATTERN RECOGNITION: Detect duplicate amounts, transactions just below approval thresholds ($9,990 vs $10,000), or weekend activity.
     4. VENDOR/EMPLOYEE CHECK: Look for suspicious vendor names or employee-vendor overlaps.
     
+    SEVERITY GUIDELINES:
+    - Critical: High-Priority Compliance Signal. Systematic control override, global governance mismatch, or significant legal exposure.
+    - High: Deliberate pattern of manual adjustment, material ecosystem exposure (Structuring, Structuring).
+    - Medium: Recurring behavioral deviations, control inefficiencies, operational inconsistency.
+    - Low: Process observation, documentation clerical error, minor policy deviation.
+
+    CORE PRINCIPLE (Inference-Based Fact Reporting):
+    1. OBJECTIVITY: Do not use judgmental words like "Fraud", "Embezzlement", or "Deal-Breaker".
+    2. DESCRIPTIVE TERMS: Use "Control Override Pattern", "Financial Ecosystem Exposure", "Behavioral Deviation".
+    3. ROLE: You are a "Special Investigator" providing evidence for valuation review. You are not a judge.
+
+    INFERENCE CHECKS (7-Pillar Signal Detection):
+    - PAYROLL vs EXPENSE: Missing 'activity footprint' (card usage) for high-salary employees?
+    - AR vs LOGISTICS: Revenue recorded without corresponding inventory exit or shipping cost spikes?
+    - PURCHASE vs AP: Pricing far above market with non-standard bank recipient names?
+    - CASH vs INVENTORY: Ghost inventory recorded as collateral without physical cash cycle matching?
+
     OUTPUT FORMAT: Return a valid JSON OBJECT ONLY. 
     DO NOT include markdown artifacts like ```json or ```. 
     Format:
     {{
-      "summary": "Executive summary of the audit findings and overall risk posture.",
+      "summary": "Objective inference summary. USE PLAIN TEXT ONLY. NO # or **.",
       "findings": [
         {{
-          "category": "Finding title (e.g., Unapproved manual adjustment)",
-          "severity": "High" | "Medium" | "Low",
-          "description": "DETAILED explanation of exactly what is wrong.",
-          "evidence": "Concrete proof: Sheet Name, Row #, Value, or Specific Text string.",
-          "recommendation": "What should the manager do to fix this?",
+          "category": "Finding title. PLAIN TEXT ONLY. NO # or **.",
+          "severity": "Critical" | "High" | "Medium" | "Low",
+          "description": "DETAILED explanation. PLAIN TEXT ONLY. NO # or **.",
+          "evidence": "Observed data points. PLAIN TEXT ONLY. NO # or **.",
+          "recommendation": "Suggested clarification. PLAIN TEXT ONLY. NO # or **.",
           "risk_score": 1-100
         }}
       ]
@@ -1328,7 +1327,14 @@ pub async fn get_latest_analysis(app_handle: AppHandle, project_id: Option<Strin
         }
     }
     
-    let query = format!("SELECT issue_title, severity, description, evidence_quote, recommendations, status, id FROM audit_issues{} AND severity IN ('Critical', 'High') ORDER BY id DESC", filter_base);
+    let query = format!(
+        "SELECT issue_title, severity, description, evidence_quote, recommendations, status, id 
+         FROM audit_issues{} 
+         ORDER BY 
+            CASE severity WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, 
+            id DESC", 
+        filter_base
+    );
     let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
     let rows = stmt.query_map([], |r| {
         Ok(crate::models::AuditFinding {

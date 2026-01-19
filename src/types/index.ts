@@ -37,6 +37,7 @@ export interface AuditProject {
     risk_score: number;
     created_at?: string | null;
     audit_type?: string | null;
+    valuation_tier?: 'seed' | 'startup' | 'enterprise' | null;
 }
 
 export interface SystemEvent {
@@ -105,6 +106,7 @@ export interface DashboardSummary {
     raw_signals: number;  // Step 1: All detected patterns (the 828 count)
     critical_risks: number; // Step 3: Aggregated management risks (the ~12 count)
     risk_exposure_score: number;
+    potential_impact_value: number; // Added: Estimated financial impact for DD
     trends: { day: string; value: number }[];
 }
 

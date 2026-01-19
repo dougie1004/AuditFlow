@@ -71,13 +71,15 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
             reporting_start TEXT,
             reporting_end TEXT,
             audit_scope TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            valuation_tier TEXT DEFAULT 'startup'
         )",
         params![]
     ).map_err(|e| e.to_string())?;
     
     // Migration: Add created_at to audit_projects if missing
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN valuation_tier TEXT DEFAULT 'startup'", params![]);
 
     // 2. Audit Findings (Structured Issue Tracking)
     conn.execute(

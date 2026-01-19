@@ -188,6 +188,13 @@ pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
     scenarios.push(("ES-05".to_string(), "ESG", "Diversity Quota Fraud", "Medium", "Categorizing contractors as full-time to meet diversity stats."));
     scenarios.push(("ES-06".to_string(), "ESG", "Safety Accident Cover-up", "High", "Medical expenses paid via petty cash to hide 'Lost Time Injury'."));
 
+    // --- Financial Integrity Master Class (FI) ---
+    scenarios.push(("FF-01".to_string(), "Financial Integrity", "Rapid Money Cycling (Ping-pong)", "Critical", "Detecting funds exiting the corporate account and returning via related parties within 24 hours."));
+    scenarios.push(("FF-02".to_string(), "Financial Integrity", "Lapping & Ledger Delay", "High", "Identifying 2+ day delays between bank inflow and ledger booking to cover previous fund gaps."));
+    scenarios.push(("FF-03".to_string(), "Financial Integrity", "Registered Vendor Mismatch", "Critical", "Booked as 'Corporate Vendor' but actual bank recipient is an individual personal account."));
+    scenarios.push(("FF-04".to_string(), "Financial Integrity", "Structured Threshold Monitor", "High", "Detecting multiple transactions of $9,900 just below the $10,000 reporting threshold."));
+    scenarios.push(("FF-05".to_string(), "Financial Integrity", "Inactive Project Account Drain", "High", "Large unexplained transfers from project accounts that have been inactive for > 12 months."));
+
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     for (id, cat, name, risk, desc) in scenarios {
         let rules = match cat {

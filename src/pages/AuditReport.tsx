@@ -76,16 +76,16 @@ export default function AuditReport() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <FileText className="text-blue-600 w-5 h-5" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Reporting System</span>
+                            <ShieldCheck className="text-blue-600 w-5 h-5" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Compliance DD Reporting</span>
                         </div>
                         <h1 className="text-3xl font-black text-white tracking-tighter mb-2">
-                            {selectedProjectId ? `${selectedProjectId} 최종 감사 보고서` : "Audit Executive Report"}
+                            {selectedProjectId ? `${selectedProjectId} Compliance DD 실사 보고서` : "Due Diligence Executive Report"}
                         </h1>
-                        <p className="text-slate-500 font-medium mt-2 text-sm">
+                        <p className="text-slate-500 font-medium mt-2 text-sm italic">
                             {selectedProjectId
-                                ? "현재 선택된 감사 프로젝트의 리스크 및 발견 사항을 AI가 종합 분석합니다."
-                                : "보고서를 생성할 감사 프로젝트를 선택해 주세요."}
+                                ? "현재 실사 대상 프로젝트의 거버넌스 및 리스크 발견 사항을 AI가 종합 분석한 보고서입니다."
+                                : "실사 보고서를 생성할 프로젝트를 선택해 주세요."}
                         </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">

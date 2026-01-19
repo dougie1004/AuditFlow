@@ -35,17 +35,15 @@ export default function AuditTask() {
 
     const [reportLoading, setReportLoading] = useState(false);
 
-    // Form State
     const [formData, setFormData] = useState({
-        audit_type: '정기감사',
+        audit_type: '정기진단',
         target_year: '2026',
         target_month: '01',
         department: '',
         target_period: '',
         execution_period: '',
         audit_scope: '',
-        main_issue: '',
-        follow_up: ''
+        valuation_tier: 'startup'
     });
     const [idSuffix, setIdSuffix] = useState("");
 
@@ -115,7 +113,8 @@ export default function AuditTask() {
             reporting_end: executionEnd || today,
             audit_scope: formData.audit_scope,
             audit_type: formData.audit_type,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            valuation_tier: formData.valuation_tier as 'seed' | 'startup' | 'enterprise'
         };
 
         try {
@@ -164,10 +163,10 @@ export default function AuditTask() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
-                        Strategic Audit Control
+                        Strategic Compliance Control
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tight">감사 업무 관리 <span className="text-slate-400 font-medium">(Audit Portfolio)</span></h1>
-                    <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 감사 프로젝트의 이력을 전문적으로 관리합니다.</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">진단 업무 관리 <span className="text-slate-400 font-medium">(DD Portfolio)</span></h1>
+                    <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 컴플라이언스 실사 및 진단 프로젝트를 관리합니다.</p>
                 </div>
 
                 {!isCreating && (
@@ -188,7 +187,7 @@ export default function AuditTask() {
                             onClick={() => setIsCreating(true)}
                             className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-black transition-all shadow-xl shadow-slate-200 active:scale-95"
                         >
-                            <Plus size={18} /> 새 감사 업무 등록
+                            <Plus size={18} /> 새 실사 업무 등록
                         </button>
                     </div>
                 )}
@@ -198,7 +197,7 @@ export default function AuditTask() {
                 <Card className="animate-in slide-in-from-bottom-4 duration-300">
                     <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
                         <h2 className="text-xl font-black text-white flex items-center gap-2">
-                            <ClipboardList className="text-blue-500" /> 신규 감사 프로젝트 설정
+                            <ClipboardList className="text-blue-500" /> 신규 실사/진단 프로젝트 설정
                         </h2>
                         <button onClick={() => setIsCreating(false)} className="text-slate-400 hover:text-slate-200 flex items-center gap-1 text-sm font-bold">
                             <ArrowLeft size={16} /> 돌아가기
@@ -207,16 +206,16 @@ export default function AuditTask() {
                     <form onSubmit={handleCreate} className="p-10 space-y-8 bg-[#0B1221]">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Audit Type</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">진단 유형 (Type)</label>
                                 <select
                                     value={formData.audit_type}
                                     onChange={e => setFormData({ ...formData, audit_type: e.target.value })}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&>option]:bg-[#0B1221] [&>option]:text-white"
                                 >
-                                    <option value="정기감사">정기감사</option>
-                                    <option value="수시감사">수시감사</option>
-                                    <option value="제보감사">제보감사</option>
-                                    <option value="특별감사">특별감사</option>
+                                    <option value="정기진단">정기진단</option>
+                                    <option value="수사진단">수사진단</option>
+                                    <option value="제보실사">제보실사</option>
+                                    <option value="특별실사">특별실사</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -236,12 +235,16 @@ export default function AuditTask() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Department / Area</label>
-                                <input
-                                    type="text" value={formData.department}
-                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none" placeholder="Marketing"
-                                />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">기업 규모 (Valuation Tier)</label>
+                                <select
+                                    value={formData.valuation_tier}
+                                    onChange={e => setFormData({ ...formData, valuation_tier: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&>option]:bg-[#0B1221] [&>option]:text-white"
+                                >
+                                    <option value="seed">Seed (초기 스타트업)</option>
+                                    <option value="startup">Startup (성장기 스타트업)</option>
+                                    <option value="enterprise">Enterprise (중견/대기업)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -249,7 +252,7 @@ export default function AuditTask() {
                             <div className="flex items-center gap-3">
                                 <Hash className="text-blue-600" />
                                 <div>
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Generated Audit ID</p>
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">컴플라이언스 진단 ID</p>
                                     <p className="text-lg font-black text-white tracking-tight flex items-center gap-2">
                                         {generateId()}
                                         {!idSuffix && (
@@ -326,7 +329,7 @@ export default function AuditTask() {
                                 </div>
                             )}
                             <button type="submit" className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl active:scale-95">
-                                SAVE & INITIALIZE AUDIT
+                                실사 프로젝트 초기화 및 저장
                             </button>
                         </div>
                     </form>
@@ -344,8 +347,8 @@ export default function AuditTask() {
                                 <ClipboardList size={48} />
                             </div>
                             <div className="text-center">
-                                <h3 className="text-xl font-black text-white">등록된 감사 업무가 없습니다.</h3>
-                                <p className="text-slate-500 font-medium mt-1">상단의 '새 감사 업무 등록' 버튼을 눌러 시작하세요.</p>
+                                <h3 className="text-xl font-black text-white">등록된 실사 업무가 없습니다.</h3>
+                                <p className="text-slate-500 font-medium mt-1">상단의 '새 실사 업무 등록' 버튼을 눌러 시작하세요.</p>
                             </div>
                         </div>
                     ) : projects.map((p) => (
@@ -431,8 +434,8 @@ export default function AuditTask() {
                         <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 bg-[#0B1221] border-white/10">
                             <div className="p-8 border-b border-white/10 flex justify-between items-center bg-[#0B1221] sticky top-0 z-10">
                                 <div>
-                                    <h2 className="text-2xl font-black text-white tracking-tight">Audit Performance Analytics</h2>
-                                    <p className="text-slate-500 text-sm font-medium">연간 감사 실적 및 탐지 통계를 심층 분석합니다.</p>
+                                    <h2 className="text-2xl font-black text-white tracking-tight">Compliance DD Analytics</h2>
+                                    <p className="text-slate-500 text-sm font-medium">연간 실사 성과 및 탐지 통계를 심층 분석합니다.</p>
                                 </div>
                                 <button onClick={() => setShowReport(false)} className="p-2 hover:bg-white/5 rounded-full transition-all">
                                     <X size={24} className="text-slate-400" />
@@ -542,7 +545,7 @@ export default function AuditTask() {
 
                                 <div className="pt-10 flex justify-between items-center border-t border-white/10">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        AuditFlow Precision Analytics Engine v4.0
+                                        ComplianceFlow Precision Analytics Engine v4.0
                                     </p>
                                     <button className="text-blue-600 font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:underline">
                                         <Download size={14} /> Export to PDF Report

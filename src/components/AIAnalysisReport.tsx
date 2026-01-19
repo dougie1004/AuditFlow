@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { safeInvoke } from '../lib/tauri-bridge';
-import { Check, X, Mail, FileText, AlertTriangle, ArrowLeft, Database } from 'lucide-react';
+import { Check, X, Mail, FileText, AlertTriangle, ArrowLeft, Database, FilterX, Lock, ShieldCheck } from 'lucide-react';
 import { useApp } from '../App';
 
 interface AuditFinding {
     id: string;
     category: string;
-    severity: 'High' | 'Medium' | 'Low';
+    severity: 'High' | 'Medium' | 'Low' | 'Critical';
     description: string;
     evidence: string;
     recommendation: string;
@@ -16,10 +16,38 @@ interface AuditFinding {
 
 const AIAnalysisReport = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { activeProject } = useApp();
     const [findings, setFindings] = useState<AuditFinding[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedFinding, setSelectedFinding] = useState<AuditFinding | null>(null);
+
+    // [DRILL-DOWN FILTER] Get filter from dashboard navigation state
+    const filterMetric = location.state?.metric;
+
+    const filteredFindings = useMemo(() => {
+        // [SCENARIO 1] Assurance Signal Coverage: Show absolutely EVERYTHING (e.g. all signals)
+        if (!filterMetric || filterMetric === "실사 데이터 커버리지" || filterMetric === "Assurance Signal Coverage") return findings;
+
+        // [SCENARIO 2] Compliance Pillars: Only show the "Risk" part (Critical/High) that matches keywords
+        const keywords: Record<string, string[]> = {
+            "고위험 컴플라이언스 신호": [
+                "Governance", "거버넌스", "Compliance", "컴플라이언스", "Risk", "리스크", "Integrity", "신뢰", "Red Flag",
+                "Advanced Integrity", "자금 순환", "Round-tripping", "명의 불일치", "Mismatch", "휴면", "Dormant", "신뢰성 검증", "Assurance", "Override", "Bypass"
+            ],
+            "재무 익스포저 분석": [
+                "Process", "프로세스", "SOP", "Inventory", "재고", "매출", "Revenue", "Burn", "번레이트", "Cash", "현금", "Window",
+                "Structuring", "쪼개기", "Lapping", "돌려막기", "Threshold", "우회", "Exposure", "Counterparty"
+            ],
+            "조직 문화 컴플라이언스": ["Culture", "문화", "Ethic", "윤리", "Fraud", "부정", "우회", "분할", "쪼개기", "인사", "HR", "카드", "Observation", "Behavior"]
+        };
+
+        const currentKeywords = keywords[filterMetric] || [];
+        return findings.filter(f =>
+            (f.severity === 'Critical' || f.severity === 'High') &&
+            currentKeywords.some(k => f.category.includes(k) || f.description.includes(k))
+        );
+    }, [findings, filterMetric]);
 
     useEffect(() => {
         loadAnalysisResults();
@@ -114,21 +142,21 @@ const AIAnalysisReport = () => {
     };
 
     const handleSendEmail = (finding: AuditFinding) => {
-        const subject = `[감사 소명 요청] ${finding.category} 건`;
+        const subject = `[Assurance Inquiry] Clarification Requested: ${finding.category}`;
         const body = `
-수신: 관련 담당자
-참조: 감사팀
+Attention: Relevant Project Partner / Department Head
+CC: Compliance DD Team
 
-귀 부서의 지출 내역 감사 중 아래와 같은 특이사항이 발견되었습니다.
+During our investment-grade due diligence process, our AI Assurance Engine identified a critical inconsistency requiring further clarification.
 
-1. 발견 항목: ${finding.category}
-2. 상세 내용: ${finding.description}
-3. 증빙 데이터: ${finding.evidence}
-4. 조치 권고: ${finding.recommendation}
+1. Signal Category: ${finding.category}
+2. Detail: ${finding.description}
+3. Evidence Trail: ${finding.evidence}
+4. Assurance Recommendation: ${finding.recommendation}
 
-위 내용에 대해 3일 이내에 소명 자료를 제출해 주시기 바랍니다.
+Please provide a formal clarification and supporting documentation regarding this signal within 48 hours for our valuation adjustment review.
 
-- AuditFlow 자동 생성됨 -
+- COMPLIANCE DD PRO (Automated Signal) -
         `;
 
         // 1. 클립보드에 복사
@@ -155,33 +183,74 @@ const AIAnalysisReport = () => {
         });
     };
 
+    // [TRUST LAYER] Helper to render text with PII protection warnings
+    const renderProtectedText = (text: string) => {
+        if (!text) return null;
+        const parts = text.split(/(Employee_\d+)/g);
+        return parts.map((part, i) => {
+            if (part.match(/Employee_\d+/)) {
+                return (
+                    <span
+                        key={i}
+                        className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded border border-blue-500/20 font-black cursor-help group/pii relative"
+                    >
+                        {part}
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 border border-white/10 rounded-lg text-[10px] text-slate-300 opacity-0 invisible group-hover/pii:opacity-100 group-hover/pii:visible transition-all font-sans z-[100] shadow-2xl">
+                            <Lock size={10} className="inline mr-1 text-blue-400" />
+                            <strong>Identity Protected</strong><br />
+                            Original name is encrypted in the local secure vault.
+                        </span>
+                    </span>
+                );
+            }
+            return part;
+        });
+    };
+
     if (loading) return <div className="p-10 text-white">AI 분석 결과를 불러오는 중입니다...</div>;
 
     return (
         <div className="flex h-full bg-[#0B1221] text-white">
             <div className="w-1/3 border-r border-gray-700 overflow-y-auto p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
-                            <ArrowLeft size={20} />
-                        </button>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                            <AlertTriangle className="text-red-400" />
-                            Red Flags ({findings.length})
-                        </h2>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
+                                <ArrowLeft size={20} />
+                            </button>
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                {filterMetric === "실사 데이터 커버리지" ? (
+                                    <Database className="text-emerald-400" />
+                                ) : (
+                                    <AlertTriangle className="text-red-400" />
+                                )}
+                                {filterMetric === "실사 데이터 커버리지" ? "All Analyzed Signals" : (filterMetric || "Red Flags")} ({filteredFindings.length})
+                            </h2>
+                        </div>
+                        {filterMetric && filterMetric !== "실사 데이터 커버리지" && (
+                            <div className="flex items-center gap-2 mt-1 pl-10">
+                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">Active Filter</span>
+                                <button
+                                    onClick={() => navigate('/ai-discovery', { state: { ...location.state, metric: null } })}
+                                    className="text-[9px] font-bold text-slate-500 hover:text-white flex items-center gap-1 transition-colors uppercase"
+                                >
+                                    <FilterX size={10} /> 전체보기
+                                </button>
+                            </div>
+                        )}
                     </div>
-                    {findings.some(f => f.status !== 'Accepted') && (
+                    {filteredFindings.some(f => f.status !== 'Accepted') && (
                         <button
                             onClick={handleAcceptAll}
                             className="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-blue-900/40 border border-blue-500/50"
                         >
-                            전체 채택
+                            CONFIRM ALL
                         </button>
                     )}
                 </div>
 
                 <div className="space-y-3">
-                    {findings.map((item) => (
+                    {filteredFindings.map((item) => (
                         <div
                             key={item.id}
                             onClick={() => setSelectedFinding(item)}
@@ -191,7 +260,9 @@ const AIAnalysisReport = () => {
                                 }`}
                         >
                             <div className="flex justify-between items-start mb-2">
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${item.severity === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${item.severity === 'Critical' ? 'bg-rose-500 text-white shadow-lg shadow-rose-900/40' :
+                                    item.severity === 'High' ? 'bg-red-500/20 text-red-400' :
+                                        'bg-yellow-500/20 text-yellow-400'
                                     }`}>
                                     {item.severity}
                                 </span>
@@ -199,7 +270,7 @@ const AIAnalysisReport = () => {
                                     item.status === 'Rejected' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                                         'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                                     }`}>
-                                    {item.status === 'Accepted' ? '채택됨' : item.status === 'Rejected' ? '기각됨' : '대기중'}
+                                    {item.status === 'Accepted' ? 'CONFIRMED' : item.status === 'Rejected' ? 'DISMISSED' : 'PENDING'}
                                 </span>
                             </div>
                             <h3 className="font-semibold text-sm mb-1">{item.category}</h3>
@@ -219,19 +290,19 @@ const AIAnalysisReport = () => {
                                     onClick={() => handleReject(selectedFinding.id)}
                                     className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm text-gray-300"
                                 >
-                                    <X size={16} /> 기각
+                                    <X size={16} /> DISMISS
                                 </button>
                                 <button
                                     onClick={() => handleAccept(selectedFinding.id)}
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold shadow-lg shadow-blue-900/50"
                                 >
-                                    <Check size={16} /> 채택 (지적사항 등록)
+                                    <Check size={16} /> CONFIRM (AS RISK)
                                 </button>
                                 <button
                                     onClick={() => handleConvertToScenario(selectedFinding)}
                                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded text-sm font-bold shadow-lg shadow-purple-900/50"
                                 >
-                                    <Database size={16} /> 시나리오 자산화
+                                    <Database size={16} /> ASSETIZE
                                 </button>
                             </div>
                         </div>
@@ -239,7 +310,7 @@ const AIAnalysisReport = () => {
                         <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 flex-1 overflow-y-auto">
                             <div className="mb-6">
                                 <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-wider">상세 내용</h3>
-                                <p className="text-lg leading-relaxed">{selectedFinding.description}</p>
+                                <p className="text-lg leading-relaxed">{renderProtectedText(selectedFinding.description)}</p>
                             </div>
 
                             <div className="mb-6">
@@ -250,11 +321,16 @@ const AIAnalysisReport = () => {
                             </div>
 
                             <div className="mb-6">
-                                <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
-                                    <FileText size={16} /> 관련 증빙 데이터
-                                </h3>
-                                <div className="bg-black/50 p-4 rounded font-mono text-xs text-green-400 overflow-x-auto">
-                                    <pre className="whitespace-pre-wrap">{selectedFinding.evidence}</pre>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-sm text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                        <FileText size={16} /> 관련 증빙 데이터
+                                    </h3>
+                                    <div className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] font-black text-emerald-400 uppercase tracking-tight">
+                                        <Check size={12} /> Source Traced to Raw Data
+                                    </div>
+                                </div>
+                                <div className="bg-black/50 p-4 rounded font-mono text-xs text-green-400 overflow-x-auto border border-white/5">
+                                    <pre className="whitespace-pre-wrap">{renderProtectedText(selectedFinding.evidence)}</pre>
                                 </div>
                             </div>
                         </div>
@@ -264,7 +340,7 @@ const AIAnalysisReport = () => {
                                 onClick={() => handleSendEmail(selectedFinding)}
                                 className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-bold"
                             >
-                                <Mail size={18} /> 담당자 소명 요청 메일 발송
+                                <Mail size={18} /> REQUEST CLARIFICATION
                             </button>
                         </div>
                     </>

@@ -125,7 +125,7 @@ const AnalysisOverlay = ({ isOpen, onClose, selectedFileIds, onComplete, project
                             <BrainCircuit className="w-8 h-8 text-blue-400 relative z-10 animate-pulse" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">AI 감사 엔진 가동 중</h2>
+                            <h2 className="text-xl font-bold text-white tracking-tight">AI 정밀 실사 엔진 가동 중</h2>
                             <p className="text-slate-400 text-sm">
                                 {selectedFileIds.length > 0 ? `선택된 ${selectedFileIds.length}개 파일 증분 분석 중` : `총 ${selectedFileIds.length}개 파일 전체 분석 중`}
                                 : {progress.toFixed(0)}%
@@ -153,7 +153,7 @@ const AnalysisOverlay = ({ isOpen, onClose, selectedFileIds, onComplete, project
                         <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs border border-slate-800 h-48 flex flex-col relative">
                             <div className="flex items-center gap-2 text-slate-500 border-b border-slate-800 pb-2 mb-2">
                                 <Terminal className="w-3 h-3" />
-                                <span>AuditFlow Core Logs</span>
+                                <span>ComplianceFlow 분석 로그</span>
                             </div>
                             <div ref={scrollRef} className="overflow-y-auto flex-1 space-y-1 text-slate-300">
                                 {riskyFindings.length > 0 && (
@@ -432,13 +432,13 @@ export default function DataImport() {
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 md:p-10 bg-white/5 rounded-[40px] shadow-2xl border border-white/10">
                 <div className="space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">감사 데이터 업로드 <span className="text-blue-500">.</span></h1>
+                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">실사 데이터 업로드 <span className="text-blue-500">.</span></h1>
                     <p className="text-sm md:text-base text-slate-400 font-medium">데이터 무결성 검증 및 Google Gemini 3.0 Pro AI 파이프라인 연결</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 md:gap-4 w-full md:w-auto">
                     <button onClick={handleUpload} disabled={isLoading} className="flex items-center justify-center gap-3 bg-white text-black px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-100 transition-all shadow-2xl disabled:opacity-70 active:scale-95 w-full md:w-auto cursor-pointer">
                         {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                        <span className="whitespace-nowrap">{isLoading ? "UPLOADING..." : "DATA UPLOAD"}</span>
+                        <span className="whitespace-nowrap">{isLoading ? "업로드 중..." : "데이터 업로드"}</span>
                     </button>
                 </div>
             </div>
@@ -448,12 +448,12 @@ export default function DataImport() {
                     <div className="flex items-center gap-3">
                         <Checkbox checked={files.length > 0 && selectedIds.size === files.length} onChange={toggleSelectAll} />
                         <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                            현황: {files.length} ASSETS / {selectedIds.size} SELECTED
+                            현황: {files.length} 자산 / {selectedIds.size} 선택됨
                         </h2>
                     </div>
                     {selectedIds.size > 0 && (
                         <button onClick={handleDeleteSelected} className="text-rose-500 hover:text-rose-400 hover:bg-rose-500/5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ml-auto">
-                            <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Delete Selected</span>
+                            <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">선택 삭제</span>
                         </button>
                     )}
                 </div>
@@ -532,7 +532,7 @@ export default function DataImport() {
                     </div>
                     <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-3">
-                            <span className="font-black text-white uppercase tracking-tight text-lg italic">Neural De-identification Pipeline</span>
+                            <span className="font-black text-white uppercase tracking-tight text-lg italic">신신경망 보안 비식별화 파이프라인</span>
                             {enableMasking ? <Badge variant="blue">Secured</Badge> : <Badge variant="default">Exposed</Badge>}
                         </div>
                         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">GCP Vertex AI 전송 전 PII(주민번호/연락처) 물리적 치환 프로세스 가동</p>
@@ -553,7 +553,7 @@ export default function DataImport() {
                     className="flex items-center justify-center gap-4 bg-white text-black text-2xl font-black italic uppercase px-16 py-8 rounded-[40px] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:shadow-[0_30px_80px_rgba(255,255,255,0.15)] hover:scale-[1.03] transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed active:scale-95 w-full md:max-w-4xl cursor-pointer"
                 >
                     <BrainCircuit className="w-8 h-8 text-blue-600" />
-                    <span>Activate AI Discovery Core ({selectedIds.size})</span>
+                    <span>AI 실사 분석 코어 활성화 ({selectedIds.size})</span>
                 </button>
             </div>
         </div>

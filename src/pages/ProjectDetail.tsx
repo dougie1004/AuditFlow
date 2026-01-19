@@ -19,7 +19,8 @@ export default function ProjectDetail() {
         reporting_start: "", reporting_end: "",
         audit_scope: "",
         start_date: "",
-        end_date: ""
+        end_date: "",
+        valuation_tier: "startup"
     });
 
     useEffect(() => {
@@ -35,7 +36,8 @@ export default function ProjectDetail() {
                         reporting_start: found.reporting_start || "", reporting_end: found.reporting_end || "",
                         audit_scope: found.audit_scope || "",
                         start_date: found.start_date || "",
-                        end_date: found.end_date || ""
+                        end_date: found.end_date || "",
+                        valuation_tier: found.valuation_tier || "startup"
                     });
                 }
             });
@@ -68,7 +70,7 @@ export default function ProjectDetail() {
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-blue-600">
                             <Briefcase size={16} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Project Management</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">프로젝트 실사 관리 (DD Management)</span>
                         </div>
                         <h1 className="text-4xl font-black text-white tracking-tighter leading-none">
                             {project.title}
@@ -77,7 +79,7 @@ export default function ProjectDetail() {
                             <span className="bg-slate-900 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{project.id}</span>
                             <span className="flex items-center gap-3 text-slate-500 text-xs font-bold bg-white/5 px-3 py-1 rounded-lg border border-white/5">
                                 <Calendar size={14} className="text-blue-500" />
-                                <span className="uppercase tracking-tighter opacity-70 mr-1">Audited Period:</span>
+                                <span className="uppercase tracking-tighter opacity-70 mr-1">실사 대상 기간:</span>
                                 {project.start_date} ~ {project.end_date}
                             </span>
                             <span className="flex items-center gap-1.5 text-slate-500 text-sm font-bold">
@@ -90,7 +92,7 @@ export default function ProjectDetail() {
                             onClick={() => navigate(`/data-upload/${id}`)}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-200 flex items-center gap-3 active:scale-95"
                         >
-                            <ShieldCheck size={18} /> Run Execution Workspace
+                            <ShieldCheck size={18} /> 실사 작업 환경 실행 (Execution)
                         </button>
                     </div>
                 </div>
@@ -102,7 +104,7 @@ export default function ProjectDetail() {
                         <div className="bg-white/5 backdrop-blur-2xl rounded-[32px] border border-white/10 p-8 shadow-sm space-y-6">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                    <Target className="text-blue-600" size={24} /> Audit Scope Definition
+                                    <Target className="text-blue-600" size={24} /> 실사 범위 (Scope) 정의
                                 </h3>
                                 {!isEditing ? (
                                     <button onClick={() => setIsEditing(true)} className="text-blue-600 font-bold text-xs uppercase tracking-widest hover:bg-blue-50 px-3 py-1 rounded-lg">Edit Scope</button>
@@ -118,6 +120,18 @@ export default function ProjectDetail() {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-4 p-4 bg-slate-900/50 rounded-2xl border border-white/10">
                                         <div className="flex flex-col gap-1.5 flex-1">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Briefcase size={12} className="text-blue-500" /> Valuation Tier</span>
+                                            <select
+                                                value={editData.valuation_tier}
+                                                onChange={(e) => setEditData({ ...editData, valuation_tier: e.target.value })}
+                                                className="bg-slate-900 text-white border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none"
+                                            >
+                                                <option value="seed">Seed (초기 스타트업)</option>
+                                                <option value="startup">Startup (성장기 스타트업)</option>
+                                                <option value="enterprise">Enterprise (중견/대기업)</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5 flex-1">
                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Calendar size={12} className="text-blue-500" /> Audited Start Date</span>
                                             <input type="date" value={editData.start_date} onChange={(e) => setEditData({ ...editData, start_date: e.target.value })} className="bg-slate-900 text-white border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium" />
                                         </div>
@@ -129,12 +143,15 @@ export default function ProjectDetail() {
                                     <textarea
                                         value={editData.audit_scope}
                                         onChange={(e) => setEditData({ ...editData, audit_scope: e.target.value })}
-                                        className="w-full h-32 p-4 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 relative z-10"
+                                        className="w-full h-32 p-4 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 relative z-10"
                                         placeholder="Enter detailed audit scope..."
                                     />
                                 </div>
                             ) : (
                                 <div className="space-y-4">
+                                    <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+                                        Target: {project.valuation_tier === 'seed' ? 'Seed' : project.valuation_tier === 'enterprise' ? 'Enterprise' : 'Startup'}
+                                    </div>
                                     <p className="text-slate-500 leading-relaxed font-medium whitespace-pre-wrap">
                                         {project.audit_scope || "No specific scope defined for this project."}
                                     </p>
@@ -145,7 +162,7 @@ export default function ProjectDetail() {
                         {/* Gantt Timeline Simulation */}
                         <div className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm space-y-6">
                             <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                <Calendar className="text-blue-600" size={24} /> Fieldwork Timeline
+                                <Calendar className="text-blue-600" size={24} /> 실사업무 수행 일정 (Fieldwork)
                             </h3>
                             <div className="space-y-6">
                                 {['Planning', 'Fieldwork', 'Reporting'].map((phase: string) => {
@@ -157,7 +174,7 @@ export default function ProjectDetail() {
                                     return (
                                         <div key={phase} className="space-y-2">
                                             <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
-                                                <span className="text-slate-900">{phase} Phase</span>
+                                                <span className="text-slate-900">{phase === 'Planning' ? '기획/검토' : phase === 'Fieldwork' ? '실무 수행' : '보고서 작성'} 단계</span>
                                                 {isEditing ? (
                                                     <div className="flex items-center gap-2">
                                                         <input type="date" value={pStart} onChange={(e) => setEditData({ ...editData, [keyStart]: e.target.value })} className="border border-slate-200 rounded px-2 py-1 text-[10px]" />
@@ -186,7 +203,7 @@ export default function ProjectDetail() {
                         {/* Fieldwork Team */}
                         <div className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm space-y-6">
                             <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                <Users className="text-blue-600" size={24} /> Audit Team
+                                <Users className="text-blue-600" size={24} /> 전문 실사 태스크포스(TF)
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -195,13 +212,13 @@ export default function ProjectDetail() {
                                     </div>
                                     <div>
                                         <p className="font-black text-slate-900 leading-none">{project.lead_auditor || "Lead Auditor"}</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Assigned Auditor</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">담당 조사관 (Investigator)</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl">
                                     <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-black">AI</div>
                                     <div>
-                                        <p className="font-black text-slate-900 leading-none">AuditFlow Cognitive Engine</p>
+                                        <p className="font-black text-slate-900 leading-none">ComplianceFlow 인텔리전스 엔진</p>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Forensic Analysis Layer</p>
                                     </div>
                                 </div>

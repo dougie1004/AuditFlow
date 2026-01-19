@@ -18,12 +18,12 @@ import {
 const menuItems = [
     { path: "/", label: "대시보드", icon: LayoutDashboard },
     { path: "/upload", label: "데이터 업로드", icon: Upload },
-    { path: "/tasks", label: "감사 업무 관리", icon: Briefcase }, // 복구
-    { path: "/issues", label: "감사 이슈/제보", icon: ShieldAlert }, // 복구
-    { path: "/scenarios", label: "시나리오 관리", icon: Activity }, // 복구
-    { path: "/process", label: "프로세스 마이닝", icon: Activity },
-    { path: "/production", label: "생산 계획 예측", icon: Box },
-    { path: "/corp-card", label: "법인카드 감사", icon: CreditCard },
+    { path: "/tasks", label: "진단 업무 관리", icon: Briefcase }, 
+    { path: "/issues", label: "탐지 리스크 관리", icon: ShieldAlert }, 
+    { path: "/scenarios", label: "진단 시나리오", icon: Activity }, 
+    { path: "/process", label: "프로세스 진단", icon: Activity },
+    { path: "/production", label: "공정 운영 예측", icon: Box },
+    { path: "/corp-card", label: "법인카드 오남용", icon: CreditCard },
     { path: "/ai-assistant", label: "AI 어시스턴트", icon: Bot },
     { path: "/knowledge-base", label: "지식 베이스 (RAG)", icon: BookOpen },
     { path: "/audit-report", label: "최종 보고서", icon: FileText },
@@ -35,7 +35,7 @@ export default function Sidebar() {
     return (
         <div style={{ width: "260px", background: "#1e293b", color: "white", height: "100vh", display: "flex", flexDirection: "column", padding: "20px 0", flexShrink: 0 }}>
             <div style={{ padding: "0 24px 30px", textAlign: "center" }}>
-                <h1 style={{ fontSize: "22px", fontWeight: "900", color: "#3b82f6", margin: 0 }}>AuditFlow AI</h1>
+                <h1 style={{ fontSize: "22px", fontWeight: "900", color: "#3b82f6", margin: 0 }}>ComplianceFlow AI</h1>
             </div>
 
             <nav style={{ flex: 1, padding: "0 12px", overflowY: "auto" }}>

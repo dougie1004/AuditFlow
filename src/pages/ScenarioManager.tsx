@@ -262,18 +262,18 @@ export default function ScenarioManager() {
                             <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                                 <ShieldCheck className="text-white" />
                             </div>
-                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Audit Knowledge Base</span>
+                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">DD Knowledge Base</span>
                         </div>
-                        <h1 className="text-4xl font-black text-white tracking-tighter">통합 감사 시나리오 관리</h1>
+                        <h1 className="text-4xl font-black text-white tracking-tighter">통합 진단 시나리오 관리</h1>
                         <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-2xl">
-                            AI가 탐지한 새로운 리스크와 감사인이 축적한 노하우가 결합된 지능형 감사 지식 베이스입니다.
+                            AI가 탐지한 새로운 리스크와 실사 전문가의 노하우가 결합된 지능형 준법 실사 지식 베이스입니다.
                         </p>
                     </div>
                     <button
                         onClick={() => setIsModalOpen(true)}
                         className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-blue-500 transition-all active:scale-95 shadow-2xl shadow-blue-900/50"
                     >
-                        <Plus size={16} /> NEW SCENARIO
+                        <Plus size={16} /> 새 시나리오 등록
                     </button>
                 </div>
 
@@ -285,7 +285,7 @@ export default function ScenarioManager() {
                             { id: "all", label: "전체 목록", icon: <History size={14} /> },
                             { id: "new", label: "신규 Discovery", icon: <Zap size={14} className="text-blue-500 fill-blue-500" /> },
                             { id: "category", label: "업무 영역별", icon: <Building2 size={14} /> },
-                            { id: "project", label: "감사 차수별", icon: <Calendar size={14} /> }
+                            { id: "project", label: "진단 프로젝트별", icon: <Calendar size={14} /> }
                         ].map(mode => (
                             <button
                                 key={mode.id}
@@ -338,7 +338,7 @@ export default function ScenarioManager() {
                             <h2 className="text-2xl font-black text-white">Global Enterprise Master Scenarios</h2>
                         </div>
                         <p className="text-slate-400 font-medium leading-relaxed">
-                            AuditFlow의 지능형 엔진은 150개 이상의 글로벌 표준 감사 시나리오를 탑재하고 있습니다.
+                            ComplianceFlow의 지능형 엔진은 150개 이상의 글로벌 표준 실사 시나리오를 탑재하고 있습니다.
                             이 시나리오들은 Anti-Bribery, AML, ESG 등 엔터프라이즈급 규정 준수를 지원하며,
                             각 탐지 로직은 법인카드(CC), 구매(PR), 매출(SA) 등 전 도메인을 포괄합니다.
                         </p>
@@ -429,17 +429,17 @@ export default function ScenarioManager() {
                     <div className="bg-[#0B1221] w-full max-w-2xl rounded-3xl shadow-2xl relative border border-white/10 overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
                             <div>
-                                <h2 className="text-xl font-black text-white tracking-tight">신규 감사 시나리오 등록</h2>
+                                <h2 className="text-xl font-black text-white tracking-tight">신규 진단 시나리오 등록</h2>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Manual Scenario Inclusion</p>
                             </div>
                             <div className="flex items-center gap-4">
                                 <button
                                     type="button"
                                     onClick={handleImportFromFindings}
-                                    title="최근 지적 사항에서 가져오기"
+                                    title="최근 의심 사례에서 가져오기"
                                     className="flex items-center gap-2 px-3 py-2 bg-purple-600/20 text-purple-400 border border-purple-600/30 rounded-xl text-[10px] font-black uppercase tracking-tight hover:bg-purple-600/30 transition-all"
                                 >
-                                    <Download size={14} /> Import from Findings
+                                    <Download size={14} /> 의심 사례(Findings)에서 가져오기
                                 </button>
                                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-200 transition-colors">
                                     <Plus size={24} className="rotate-45" />

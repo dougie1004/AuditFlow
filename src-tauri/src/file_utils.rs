@@ -52,7 +52,8 @@ fn is_word_boundary(text: &str, idx: usize) -> bool {
     false
 }
 
-fn score_candidate(text: &str, name: &str, start: usize, end: usize) -> i32 {
+
+pub fn score_candidate(text: &str, name: &str, start: usize, end: usize) -> i32 {
     let mut score = 0;
     let char_count = name.chars().count();
     
@@ -65,6 +66,9 @@ fn score_candidate(text: &str, name: &str, start: usize, end: usize) -> i32 {
 
     if is_word_boundary(text, start) { score += 1; }
     if is_word_boundary(text, end) { score += 1; }
+
+    // Standalone word in a data grid cell
+    if text.trim() == name { score += 5; }
 
     // Safe Suffix Check
     let tail_sample: String = text[end..].chars().take(12).collect();
@@ -198,9 +202,9 @@ pub fn apply_deidentification(input: &str) -> String {
         // [POLICY CHANGE] Higher Thresholds for Risk Analysis Efficiency
         // We prefer False Negatives (Missing a name) over False Positives (Masking 'Marketing')
         let threshold = match name.chars().count() {
-            4 => 6,  // Needs strong context
-            3 => 7,  // Needs very strong context (Default 3-char names are ambiguous)
-            2 => 10, // Almost impossible without Title
+            4 => 5,  // Slightly lowered (was 6)
+            3 => 3,  // Lowered for data grid support (was 7)
+            2 => 8,  // Lowered (was 10)
             _ => 15,
         };
         
@@ -270,10 +274,17 @@ impl MaskingSession {
         }
         let count = self.counters.entry(category.to_string()).or_insert(0);
         *count += 1;
-        let masked = format!("{}_{:02}", category, count);
-        self.map.insert(original.to_string(), masked.clone());
-        self.reverse_map.insert(masked.clone(), original.to_string());
-        masked
+        
+        // [FIX] Align with Frontend Identity Vault demo (Employee_NN instead of Name_01)
+        let mask = if category == "Name" {
+            format!("Employee_{}", count)
+        } else {
+            format!("{}_{:02}", category, count)
+        };
+        
+        self.map.insert(original.to_string(), mask.clone());
+        self.reverse_map.insert(mask.clone(), original.to_string());
+        mask
     }
 
     pub fn unmask_string(&self, text: &str) -> String {
