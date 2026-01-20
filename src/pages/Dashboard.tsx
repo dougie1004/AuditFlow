@@ -99,11 +99,10 @@ const Dashboard = () => {
 
 
             const getRiskColor = (score: number) => {
-                if (score >= 15) return '#FF4444'; // Bright Red (Critical)
-                if (score >= 8) return '#FF8C00';  // Bright Orange (High)
-                if (score >= 3) return '#FFD700';  // Gold (Medium)
-                if (score > 0) return '#32CD32';   // Lime Green (Low)
-                return '#4169E1';                  // Royal Blue (Clean)
+                if (score >= 25) return '#F43F5E'; // Rose 500 (Critical)
+                if (score >= 15) return '#F59E0B'; // Amber 500 (High)
+                if (score >= 5) return '#3B82F6';  // Blue 500 (Medium)
+                return '#10B981';                  // Emerald 500 (Clean)
             };
 
             const treemapNodes = projectsWithScores.map((p: any) => {
@@ -224,7 +223,7 @@ const Dashboard = () => {
                             color: "text-rose-500",
                             areaColor: "#f43f5e",
                             path: "/ai-discovery",
-                            formula: "Count(Override_Patterns) WHERE System_Bypass_Attempts IDENTIFIED"
+                            formula: "시스템 권한 남용 및 우회 접근 로그를 기반으로 산출된 이상 행위 지수"
                         },
                         {
                             label: "재무 익스포저 분석",
@@ -235,7 +234,7 @@ const Dashboard = () => {
                             color: "text-amber-500",
                             areaColor: "#f59e0b",
                             path: "/ai-discovery",
-                            formula: "Sum(Transaction_Volumes) WHERE High_Risk_Counterparty = TRUE"
+                            formula: "고위험 거래처 대상의 미결제 잔액 및 잠재적 손실 위험 가중 합계"
                         },
                         {
                             label: "조직 문화 컴플라이언스",
@@ -246,7 +245,7 @@ const Dashboard = () => {
                             color: "text-blue-400",
                             areaColor: "#3b82f6",
                             path: "/ai-discovery",
-                            formula: "Count(Observations) WHERE Policy_Deviation_Frequency > Threshold"
+                            formula: "사내 운영 정책 이탈 사례의 발생 빈도와 조직 내 영향 편차 분석"
                         },
                         {
                             label: "실사 데이터 커버리지",
@@ -257,7 +256,7 @@ const Dashboard = () => {
                             color: "text-emerald-400",
                             areaColor: "#10b981",
                             path: "/ai-discovery",
-                            formula: "Data_Verification_Density :: Population(Verified) / Population(Total)"
+                            formula: "전체 데이터 중 AI 전수 조사를 통해 신뢰성이 확보된 검증 도달 범위"
                         },
                     ].map((m, i) => (
                         <div
@@ -319,7 +318,7 @@ const Dashboard = () => {
                                     {m.formula}
                                 </p>
                                 <div className="mt-2 flex items-center gap-1.5 text-[8px] font-bold text-emerald-500">
-                                    <CheckCircle2 size={10} /> Verified Against Audit Database
+                                    <CheckCircle2 size={10} /> 감사 데이터베이스 대조 및 내부 통제 검증 완료
                                 </div>
                                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-900"></div>
                             </div>
@@ -403,7 +402,7 @@ const Dashboard = () => {
                                         dataKey="size"
                                         aspectRatio={4 / 3}
                                         stroke="#0f172a"
-                                        fill="#8884d8"
+                                        fill="#2563eb"
                                         isAnimationActive={false}
                                         animationDuration={0}
                                         content={((props: any) => {
@@ -435,44 +434,44 @@ const Dashboard = () => {
                                                                 y={y + height / 2 - 12}
                                                                 textAnchor="middle"
                                                                 fill="white"
-                                                                fontSize="13"
+                                                                fontSize={width < 150 ? "11" : "16"}
                                                                 fontWeight="900"
-                                                                className="uppercase tracking-wider"
+                                                                className="uppercase tracking-tighter"
                                                                 style={{
-                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                                                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))'
+                                                                    textShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                                                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))'
                                                                 }}
                                                             >
-                                                                {name && name.length > 15 ? name.substring(0, 15) + '...' : name || "N/A"}
+                                                                {name && name.length > 20 ? name.substring(0, 20) + '...' : name || "N/A"}
                                                             </text>
 
                                                             <text
                                                                 x={x + width / 2}
-                                                                y={y + height / 2 + 6}
+                                                                y={y + height / 2 + 12}
                                                                 textAnchor="middle"
                                                                 fill="white"
-                                                                fontSize="12"
+                                                                fontSize={width < 150 ? "10" : "14"}
                                                                 fontWeight="800"
                                                                 style={{
-                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                                                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))'
+                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                                                    opacity: 0.9
                                                                 }}
                                                             >
-                                                                위험도: {riskScore || 0}
+                                                                위험 점수: {riskScore || 0}
                                                             </text>
                                                             <text
                                                                 x={x + width / 2}
-                                                                y={y + height / 2 + 22}
+                                                                y={y + height / 2 + 32}
                                                                 textAnchor="middle"
                                                                 fill="white"
-                                                                fontSize="11"
+                                                                fontSize={width < 150 ? "9" : "12"}
                                                                 fontWeight="700"
                                                                 style={{
-                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                                                                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))'
+                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                                                    opacity: 0.8
                                                                 }}
                                                             >
-                                                                {findingsCount || 0}건
+                                                                탐지 건수: {findingsCount || 0}건
                                                             </text>
                                                         </>
                                                     )}
