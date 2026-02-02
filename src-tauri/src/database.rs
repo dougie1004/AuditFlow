@@ -51,6 +51,9 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN due_date TEXT", params![]);
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN remediation_plan TEXT", params![]);
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN manager_comment TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN verdict_mode TEXT DEFAULT 'MANUAL_REVIEW'", params![]);
+    let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN logic_chain TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN grade TEXT DEFAULT 'B'", params![]);
 
     // 1. Audit Projects (Renovated for Command Center)
     conn.execute(
@@ -77,7 +80,16 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
     
-    // Migration: Add created_at to audit_projects if missing
+    // Migration: Add extended fields to audit_projects if missing
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN risk_score INTEGER DEFAULT 0", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN findings_count INTEGER DEFAULT 0", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN planning_start TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN planning_end TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN fieldwork_start TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN fieldwork_end TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN reporting_start TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN reporting_end TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN audit_scope TEXT", params![]);
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP", params![]);
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN valuation_tier TEXT DEFAULT 'startup'", params![]);
 
@@ -111,6 +123,68 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     let _ = conn.execute("ALTER TABLE system_events ADD COLUMN audit_id TEXT", params![]);
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS suspicion_inbox (
+            signal_id TEXT PRIMARY KEY,
+            detected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            observation TEXT NOT NULL,       -- Factual description: '4 txs in 15 mins'
+            anomaly_score REAL NOT NULL,     -- 0.0 ~ 1.0 (Stat deviation)
+            source TEXT NOT NULL,            -- 'AI_DETECTOR' | 'STAT_ENGINE' | 'RULE_ENGINE'
+            scope TEXT NOT NULL,             -- 'Transaction' | 'Vendor' | 'Pattern'
+            related_tx_ids TEXT,             -- JSON Array of Row IDs
+            metadata TEXT,                   -- [PHASE 3-3.5] Machine-readable facts
+            status TEXT DEFAULT 'Pending'    -- Pending | Processing | Concluded
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // Migration: Add missing columns to suspicion_inbox if they were added in later versions
+    let _ = conn.execute("ALTER TABLE suspicion_inbox ADD COLUMN source TEXT DEFAULT 'RULE_ENGINE'", params![]);
+    let _ = conn.execute("ALTER TABLE suspicion_inbox ADD COLUMN scope TEXT DEFAULT 'Transaction'", params![]);
+    let _ = conn.execute("ALTER TABLE suspicion_inbox ADD COLUMN related_tx_ids TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE suspicion_inbox ADD COLUMN metadata TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE suspicion_inbox ADD COLUMN status TEXT DEFAULT 'Pending'", params![]);
+
+    // [PHASE 3] Scenario Detective Catalog
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS scenario_catalog (
+            scenario_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,          -- DETERMINISTIC | HEURISTIC | LEGACY
+            expected_strength REAL NOT NULL, -- 0.0 ~ 1.0 (Initial Anomaly Score)
+            description TEXT,
+            enabled INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [AuditFlow V2] Adjudication Log (The Judge's Reasoning)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS adjudication_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            signal_id TEXT NOT NULL,
+            rule_id TEXT NOT NULL,           -- 'SPLIT_PAYMENT' | 'HR_MISUSE' | etc.
+            criterion TEXT NOT NULL,         -- 'Sum > 100k within 1 hour'
+            result TEXT NOT NULL,            -- 'Match' | 'No Match' | 'Inconclusive'
+            reasoning TEXT,                  -- 'Factual evidence meets the internal threshold'
+            evaluated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(signal_id) REFERENCES suspicion_inbox(signal_id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [AuditFlow V2] Engine Health Metrics (The Vital Signs)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS engine_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            metric_key TEXT NOT NULL,        -- 'CONVERSION_RATE' | 'FP_RATE'
+            metric_value REAL NOT NULL
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
 
     // Seed Initial Anchor Projects - DISABLED for ZERO-BASE
     /* 

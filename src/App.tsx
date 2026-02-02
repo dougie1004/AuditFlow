@@ -3,7 +3,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import {
   Menu, X, LayoutDashboard, Database, ShieldCheck,
   Activity, CreditCard, MessageSquare, FileText, BrainCircuit,
-  LogOut, CheckCircle2, ChevronDown, TrendingUp, Layers, Box, BookOpen
+  LogOut, CheckCircle2, ChevronDown, TrendingUp, Layers, Box, BookOpen, ListChecks, Cpu
 } from "lucide-react";
 
 import { AuditProvider } from "./context/AuditContext";
@@ -28,7 +28,12 @@ import RemediationDashboard from "./pages/RemediationDashboard";
 import ExecutiveAdmin from "./pages/ExecutiveAdmin";
 import RiskHeatmap from "./pages/RiskHeatmap";
 import ProjectDetail from "./pages/ProjectDetail";
+import StagingArea from "./pages/StagingArea";
 import AIAnalysisReport from "./components/AIAnalysisReport";
+import ExpertConsole from "./pages/ExpertConsole";
+
+// Debug Pages
+import AuditLifecycle from "./pages/debug/AuditLifecycle";
 
 import { AppConfig } from "./types";
 import { isTauri } from "./lib/tauri-bridge";
@@ -59,12 +64,17 @@ export const useApp = () => {
 };
 
 export default function App() {
-  const [user, setUser] = useState<{ tier: string } | null>(null);
+  const [user, setUser] = useState<{ tier: string } | null>({ tier: 'Enterprise' });
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
 
   // 로컬 스토리지에서 설정 로드 (데스크톱/웹 공통 영속성)
   useEffect(() => {
+    // Phase 4 Testing Mode: Auto-login
+    if (!user) {
+      setUser({ tier: 'Enterprise' });
+    }
+
     try {
       const saved = localStorage.getItem('auditflow_config');
       if (saved) {
@@ -96,7 +106,11 @@ export default function App() {
     setUser({ tier });
     updateConfig({ userTier: tier as any });
   };
-  const logout = () => { setUser(null); setActiveProject(null); };
+  const logout = () => {
+    console.log("Logout disabled in Phase 4 mode.");
+    // setUser(null); 
+    // setActiveProject(null); 
+  };
 
   return (
     <AppContext.Provider value={{ user, activeProject, setActiveProject, logout, config, updateConfig }}>
@@ -202,29 +216,29 @@ function Layout() {
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Deal Overview</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Command & Control</p>
           <NavItem to="/" icon={<LayoutDashboard size={18} />} label="통합 실사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Investment Intelligence</p>
-          <NavItem to="/risk-heatmap" icon={<Layers size={18} />} label="컴플라이언스 리스크 히트맵" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/portfolio" icon={<FileText size={18} />} label="진단 업무 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AI 인텔리전스 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/knowledge-base" icon={<BookOpen size={18} />} label="실사 프로토콜 (RAG)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Data Pipeline</p>
+          <NavItem to="/import" icon={<Database size={18} />} label="데이터 업로드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/staging" icon={<ListChecks size={18} />} label="AI 매핑 & 검토 (Staging)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Technical Analysis</p>
-          <NavItem to="/data-upload" icon={<Database size={18} />} label="원본 데이터 통합" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Analysis Factory</p>
+          <NavItem to="/expert-console" icon={<Cpu size={18} />} label="리스크 판정 커맨드 센터" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
           <NavItem to="/ai-discovery" icon={<BrainCircuit size={18} />} label="리스크 시그널 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/scenarios" icon={<ShieldCheck size={18} />} label="실사/진단 시나리오" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/mining" icon={<Activity size={18} />} label="진단 프로세스 마이닝" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AI 인텔리전스 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/scenarios" icon={<ShieldCheck size={18} />} label="실사 시나리오 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Asset Monitoring</p>
-          <NavItem to="/production" icon={<Box size={18} />} label="자산 및 공정 예측 모니터링" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/card" icon={<CreditCard size={18} />} label="운영 비용 무결성 브리핑" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Exit & Remediation</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Monitoring & Remediation</p>
+          <NavItem to="/portfolio" icon={<FileText size={18} />} label="전체 진단 업무 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
           <NavItem to="/remediation" icon={<CheckCircle2 size={18} />} label="리스크 경감 추적기" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
           <NavItem to="/report" icon={<FileText size={18} />} label="경영진 실사 요약서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/executive" icon={<TrendingUp size={18} />} label="거버넌스 & 이사회 허브" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+
+          <div className="mt-8 pt-4 border-t border-slate-800">
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">Utility & Debug</p>
+            <NavItem to="/knowledge-base" icon={<BookOpen size={18} />} label="실사 프로토콜 (RAG)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+            <NavItem to="/debug/audit-lifecycle" icon={<Activity size={18} />} label="엔진 심전도 (Debug)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          </div>
         </nav>
       </aside>
 
@@ -234,7 +248,7 @@ function Layout() {
         <header className="h-[90px] bg-[#0B1221]/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 flex items-center justify-between px-12 flex-shrink-0">
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <h1 className="text-xl font-bold tracking-tighter text-blue-400">COMPLIANCE DD PRO <span className="text-xs text-slate-500 ml-2">v4.2</span></h1>
+              <h1 className="text-xl font-bold tracking-tighter text-blue-400">AUDITFLOW <span className="text-xs text-slate-500 ml-2">v4.2</span></h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1.2px" }}>초정밀 진단 엔진 가동 중</span>
               </div>
@@ -276,8 +290,13 @@ function Layout() {
             <Route path="/risk-heatmap" element={<RiskHeatmap />} />
             <Route path="/data-upload" element={<DataImport />} />
             <Route path="/data-upload/:id" element={<DataImport />} />
+            <Route path="/staging" element={<StagingArea />} />
             <Route path="/ai-discovery" element={<AIAnalysisReport />} />
+            <Route path="/expert-console" element={<ExpertConsole />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
+
+            {/* Debug Routes (Hidden) */}
+            <Route path="/debug/audit-lifecycle" element={<AuditLifecycle />} />
           </Routes>
         </div>
       </main>
@@ -287,6 +306,7 @@ function Layout() {
 
 function NavItem({ to, icon, label, onClick, currentPath, disabled }: any) {
   const isActive = currentPath === to;
+
   if (disabled) {
     return (
       <div style={{
@@ -298,6 +318,7 @@ function NavItem({ to, icon, label, onClick, currentPath, disabled }: any) {
       </div>
     );
   }
+
   return (
     <Link to={to} onClick={onClick} style={{
       display: "flex", alignItems: "center", gap: "14px", padding: "12px 16px",

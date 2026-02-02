@@ -35,12 +35,12 @@ export default function AuditReport() {
         setReport("");
 
         try {
-            // [CRITICAL] Validate that there are accepted findings before generating report
+            // [CRITICAL] Validate that there are valid findings before generating report
             const issues: any[] = await safeInvoke("get_audit_issues", { projectType: selectedProjectId });
-            const acceptedFindings = issues.filter(f => f.status === "Accepted");
+            const validFindings = issues.filter(f => f.status !== "Dismissed");
 
-            if (acceptedFindings.length === 0) {
-                setError("채택된 감사 지적 사항이 없습니다. 실무 검토 후 '채택' 버튼을 눌러주세요.");
+            if (validFindings.length === 0) {
+                setError("보고서를 생성할 지적 사항이 없습니다. (모든 항목이 기각되었거나 데이터가 없음)");
                 setIsLoading(false);
                 return;
             }
@@ -77,10 +77,10 @@ export default function AuditReport() {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <ShieldCheck className="text-blue-600 w-5 h-5" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Compliance DD Reporting</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">AuditFlow Reporting</span>
                         </div>
                         <h1 className="text-3xl font-black text-white tracking-tighter mb-2">
-                            {selectedProjectId ? `${selectedProjectId} Compliance DD 실사 보고서` : "Due Diligence Executive Report"}
+                            {selectedProjectId ? `${selectedProjectId} AuditFlow 실사 보고서` : "Due Diligence Executive Report"}
                         </h1>
                         <p className="text-slate-500 font-medium mt-2 text-sm italic">
                             {selectedProjectId

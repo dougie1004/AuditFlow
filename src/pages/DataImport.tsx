@@ -153,7 +153,7 @@ const AnalysisOverlay = ({ isOpen, onClose, selectedFileIds, onComplete, project
                         <div className="bg-slate-900 rounded-lg p-4 font-mono text-xs border border-slate-800 h-48 flex flex-col relative">
                             <div className="flex items-center gap-2 text-slate-500 border-b border-slate-800 pb-2 mb-2">
                                 <Terminal className="w-3 h-3" />
-                                <span>ComplianceFlow 분석 로그</span>
+                                <span>AuditFlow 분석 로그</span>
                             </div>
                             <div ref={scrollRef} className="overflow-y-auto flex-1 space-y-1 text-slate-300">
                                 {riskyFindings.length > 0 && (
@@ -532,10 +532,10 @@ export default function DataImport() {
                     </div>
                     <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-3">
-                            <span className="font-black text-white uppercase tracking-tight text-lg italic">신신경망 보안 비식별화 파이프라인</span>
+                            <span className="font-black text-white uppercase tracking-tight text-lg italic">개인정보 보호 및 데이터 가명화</span>
                             {enableMasking ? <Badge variant="blue">Secured</Badge> : <Badge variant="default">Exposed</Badge>}
                         </div>
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">GCP Vertex AI 전송 전 PII(주민번호/연락처) 물리적 치환 프로세스 가동</p>
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">분석 전 민감 정보(주민번호/연락처 등)를 가명으로 치환하여 보안을 강화합니다.</p>
                     </div>
                     <button
                         onClick={() => setEnableMasking(!enableMasking)}

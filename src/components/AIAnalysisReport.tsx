@@ -1,358 +1,377 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from "react";
 import { safeInvoke } from '../lib/tauri-bridge';
-import { Check, X, Mail, FileText, AlertTriangle, ArrowLeft, Database, FilterX, Lock, ShieldCheck } from 'lucide-react';
-import { useApp } from '../App';
+import {
+    ShieldCheck, AlertTriangle, CheckCircle,
+    ChevronDown, ChevronUp, Search, Info,
+    BrainCircuit, Loader2, X, Copy, FileText
+} from "lucide-react";
 
-interface AuditFinding {
-    id: string;
-    category: string;
-    severity: 'High' | 'Medium' | 'Low' | 'Critical';
-    description: string;
-    evidence: string;
-    recommendation: string;
-    status: 'Pending' | 'Accepted' | 'Rejected';
+interface RiskStats {
+    total_scanned: number;
+    dismissed_count: number;
+    confirmed_count: number;
+    confirmed_issues: ConfirmedIssue[];
+    all_signals: SignalDetail[];
 }
 
-const AIAnalysisReport = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { activeProject } = useApp();
-    const [findings, setFindings] = useState<AuditFinding[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedFinding, setSelectedFinding] = useState<AuditFinding | null>(null);
+interface ConfirmedIssue {
+    title: string;
+    severity: string;
+    evidence: string;
+    regulation: string;
+    detected_at: string;
+}
 
-    // [DRILL-DOWN FILTER] Get filter from dashboard navigation state
-    const filterMetric = location.state?.metric;
+interface SignalDetail {
+    signal_id: string;
+    observation: string;
+    status: string;
+    anomaly_score: number;
+    detected_at: string;
+    reasoning: AdjudicationStep[];
+    metadata: any;
+}
 
-    const filteredFindings = useMemo(() => {
-        // [SCENARIO 1] Assurance Signal Coverage: Show absolutely EVERYTHING (e.g. all signals)
-        if (!filterMetric || filterMetric === "실사 데이터 커버리지" || filterMetric === "Assurance Signal Coverage") return findings;
+interface AdjudicationStep {
+    rule_id: string;
+    criterion: string;
+    result: string;
+    reasoning: string;
+}
 
-        // [SCENARIO 2] Compliance Pillars: Only show the "Risk" part (Critical/High) that matches keywords
-        const keywords: Record<string, string[]> = {
-            "고위험 컴플라이언스 신호": [
-                "Governance", "거버넌스", "Compliance", "컴플라이언스", "Risk", "리스크", "Integrity", "신뢰", "Red Flag",
-                "Advanced Integrity", "자금 순환", "Round-tripping", "명의 불일치", "Mismatch", "휴면", "Dormant", "신뢰성 검증", "Assurance", "Override", "Bypass"
-            ],
-            "재무 익스포저 분석": [
-                "Process", "프로세스", "SOP", "Inventory", "재고", "매출", "Revenue", "Burn", "번레이트", "Cash", "현금", "Window",
-                "Structuring", "쪼개기", "Lapping", "돌려막기", "Threshold", "우회", "Exposure", "Counterparty"
-            ],
-            "조직 문화 컴플라이언스": ["Culture", "문화", "Ethic", "윤리", "Fraud", "부정", "우회", "분할", "쪼개기", "인사", "HR", "카드", "Observation", "Behavior"]
-        };
+export default function AIAnalysisReport() {
+    const [stats, setStats] = useState<RiskStats | any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [openIssueValues, setOpenIssueValues] = useState<string[]>([]);
+    const [activeFilter, setActiveFilter] = useState<'ALL' | 'SAFE' | 'VIOLATION'>('ALL');
 
-        const currentKeywords = keywords[filterMetric] || [];
-        return findings.filter(f =>
-            (f.severity === 'Critical' || f.severity === 'High') &&
-            currentKeywords.some(k => f.category.includes(k) || f.description.includes(k))
-        );
-    }, [findings, filterMetric]);
+    // AI Summary State
+    const [aiSummary, setAiSummary] = useState<string | null>(null);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [generatingSummary, setGeneratingSummary] = useState(false);
 
     useEffect(() => {
-        loadAnalysisResults();
+        loadData();
     }, []);
 
-    const loadAnalysisResults = async () => {
+    const loadData = async () => {
         try {
-            setLoading(true);
-            const result: any = await safeInvoke('get_latest_analysis', { projectId: activeProject });
-            console.log(">>> [DEBUG] loadAnalysisResults: findings count =", result?.findings?.length);
-            handleAnalysisUpdate(result);
-        } catch (error) {
-            console.error("분석 결과 로드 실패:", error);
+            setIsLoading(true);
+            const data: RiskStats = await safeInvoke("get_risk_report_data");
+            setStats(data);
+        } catch (e) {
+            console.error("Failed to load risk report", e);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    const handleAnalysisUpdate = (data: any) => {
+    const handleGenerateSummary = async () => {
+        setGeneratingSummary(true);
         try {
-            // Antigravity의 JSON 클리닝 로직을 보완하는 프론트엔드 방어 코드
-            const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-            if (parsedData && parsedData.findings) {
-                setFindings(parsedData.findings);
-                // Summary가 있으면 업데이트 (선택 사항)
-            }
+            const summary: string = await safeInvoke('generate_risk_summary');
+            setAiSummary(summary);
+            setShowSummaryModal(true);
         } catch (e) {
-            console.error("데이터 파싱 실패: 형식이 올바르지 않은 분석 데이터입니다.", e);
+            alert("요약 생성 실패: " + e);
+        } finally {
+            setGeneratingSummary(false);
         }
     };
 
-    const handleAcceptAll = async () => {
-        if (!window.confirm(`현재 대기 중인 ${findings.filter(f => f.status !== 'Accepted').length}건의 항목을 모두 채택하시겠습니까?`)) return;
-
-        try {
-            const pendingFindings = findings.filter(f => f.status !== 'Accepted');
-            if (pendingFindings.length === 0) return;
-
-            // Batch processing
-            await Promise.all(pendingFindings.map(f =>
-                safeInvoke('update_audit_issue_status', { id: f.id, status: 'Accepted' })
-            ));
-
-            setFindings(prev => prev.map(f => ({ ...f, status: 'Accepted' })));
-
-            // Trigger Topology Refresh
-            try {
-                await safeInvoke('get_audit_universe', { projectId: activeProject });
-                window.dispatchEvent(new CustomEvent('topology-updated', {
-                    detail: { projectId: activeProject, issueId: 'ALL' }
-                }));
-            } catch (e) { console.warn(e); }
-
-            alert("모든 항목이 성공적으로 채택되었습니다.");
-        } catch (e) {
-            console.error(e);
-            alert("일괄 처리 중 오류가 발생했습니다.");
+    const toggleAccordion = (idx: string) => {
+        if (openIssueValues.includes(idx)) {
+            setOpenIssueValues(openIssueValues.filter(i => i !== idx));
+        } else {
+            setOpenIssueValues([...openIssueValues, idx]);
         }
     };
 
-    const handleAccept = async (id: string) => {
-        try {
-            await safeInvoke('update_audit_issue_status', { id, status: 'Accepted' });
-            setFindings(prev => prev.map(f => f.id === id ? { ...f, status: 'Accepted' } : f));
+    const filteredSignals = stats?.all_signals?.filter((s: SignalDetail) => {
+        if (activeFilter === 'ALL') return true;
+        if (activeFilter === 'SAFE') return s.status.includes('Dismissed');
+        if (activeFilter === 'VIOLATION') return s.status.includes('Confirmed') || s.status.includes('Review');
+        return true;
+    }) || [];
 
-            // [CRITICAL] Trigger real-time topology update
-            // Force refresh of audit_universe data to reflect the new risk scores
-            try {
-                await safeInvoke('get_audit_universe', { projectId: activeProject });
-                // Emit custom event to notify Dashboard/RiskHeatmap to refresh
-                window.dispatchEvent(new CustomEvent('topology-updated', {
-                    detail: { projectId: activeProject, issueId: id }
-                }));
-            } catch (e) {
-                console.warn("Topology refresh failed:", e);
-            }
+    if (isLoading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+            </div>
+        );
+    }
 
-            alert("발견 사항이 '감사 지적사항'으로 채택되었습니다. 리스크 토폴로지가 업데이트되었습니다.");
-        } catch (e) {
-            console.error(e);
-            alert("채택 처리 중 오류가 발생했습니다.");
-        }
-    };
+    if (!stats) return <div className="p-10 text-slate-500">No Data Available</div>;
 
-    const handleReject = async (id: string) => {
-        try {
-            await safeInvoke('update_audit_issue_status', { id, status: 'Rejected' });
-            setFindings(prev => prev.map(f => f.id === id ? { ...f, status: 'Rejected' } : f));
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const handleSendEmail = (finding: AuditFinding) => {
-        const subject = `[Assurance Inquiry] Clarification Requested: ${finding.category}`;
-        const body = `
-Attention: Relevant Project Partner / Department Head
-CC: Compliance DD Team
-
-During our investment-grade due diligence process, our AI Assurance Engine identified a critical inconsistency requiring further clarification.
-
-1. Signal Category: ${finding.category}
-2. Detail: ${finding.description}
-3. Evidence Trail: ${finding.evidence}
-4. Assurance Recommendation: ${finding.recommendation}
-
-Please provide a formal clarification and supporting documentation regarding this signal within 48 hours for our valuation adjustment review.
-
-- COMPLIANCE DD PRO (Automated Signal) -
-        `;
-
-        // 1. 클립보드에 복사
-        navigator.clipboard.writeText(body).then(() => {
-            alert("이메일 본문이 클립보드에 복사되었습니다.\n메일 작성 창에 붙여넣기(Ctrl+V) 하세요.");
-        });
-
-        // 2. 사용자 PC의 기본 메일 앱 띄우기
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    };
-
-    const handleConvertToScenario = (finding: AuditFinding) => {
-        navigate('/scenarios', {
-            state: {
-                prefill: {
-                    name: `[${finding.category}] 의심 패턴 탐지`,
-                    category: finding.category,
-                    risk_level: finding.severity,
-                    description: `[AI 분석 내용]\n${finding.description}\n\n[증거 데이터]\n${finding.evidence}`,
-                    source: activeProject || "Current Project",
-                    isAI: true
-                }
-            }
-        });
-    };
-
-    // [TRUST LAYER] Helper to render text with PII protection warnings
-    const renderProtectedText = (text: string) => {
-        if (!text) return null;
-        const parts = text.split(/(Employee_\d+)/g);
-        return parts.map((part, i) => {
-            if (part.match(/Employee_\d+/)) {
-                return (
-                    <span
-                        key={i}
-                        className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded border border-blue-500/20 font-black cursor-help group/pii relative"
-                    >
-                        {part}
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 border border-white/10 rounded-lg text-[10px] text-slate-300 opacity-0 invisible group-hover/pii:opacity-100 group-hover/pii:visible transition-all font-sans z-[100] shadow-2xl">
-                            <Lock size={10} className="inline mr-1 text-blue-400" />
-                            <strong>Identity Protected</strong><br />
-                            Original name is encrypted in the local secure vault.
-                        </span>
-                    </span>
-                );
-            }
-            return part;
-        });
-    };
-
-    if (loading) return <div className="p-10 text-white">AI 분석 결과를 불러오는 중입니다...</div>;
+    // Calculate Safe Ratio
+    const safeRatio = stats.total_scanned > 0
+        ? Math.round((stats.dismissed_count / stats.total_scanned) * 100)
+        : 100;
 
     return (
-        <div className="flex h-full bg-[#0B1221] text-white">
-            <div className="w-1/3 border-r border-gray-700 overflow-y-auto p-4 flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400">
-                                <ArrowLeft size={20} />
-                            </button>
-                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                {filterMetric === "실사 데이터 커버리지" ? (
-                                    <Database className="text-emerald-400" />
-                                ) : (
-                                    <AlertTriangle className="text-red-400" />
-                                )}
-                                {filterMetric === "실사 데이터 커버리지" ? "All Analyzed Signals" : (filterMetric || "Red Flags")} ({filteredFindings.length})
-                            </h2>
+        <div className="p-8 pb-32 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                        <ShieldCheck className="text-blue-500 w-8 h-8" />
+                        Risk Intelligence Report
+                    </h2>
+                    <p className="text-slate-400 mt-2 font-medium">검출된 리스크 시그널에 대한 정량적 분석 및 처리 현황</p>
+                </div>
+                <button
+                    onClick={handleGenerateSummary}
+                    disabled={generatingSummary}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-blue-500/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {generatingSummary ? <Loader2 className="animate-spin w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                    Executive Summary
+                </button>
+            </div>
+
+            {/* 1. The Funnel Stats (Contrast) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Total Scanned */}
+                <div
+                    onClick={() => setActiveFilter('ALL')}
+                    className={`cursor-pointer transition-all p-6 rounded-2xl border ${activeFilter === 'ALL'
+                        ? 'bg-slate-700/50 border-blue-500 ring-2 ring-blue-500/20'
+                        : 'bg-slate-800/50 border-slate-700 hover:border-slate-500'
+                        }`}
+                >
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-slate-700/50 rounded-lg text-slate-400">
+                            <Search size={20} />
                         </div>
-                        {filterMetric && filterMetric !== "실사 데이터 커버리지" && (
-                            <div className="flex items-center gap-2 mt-1 pl-10">
-                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">Active Filter</span>
-                                <button
-                                    onClick={() => navigate('/ai-discovery', { state: { ...location.state, metric: null } })}
-                                    className="text-[9px] font-bold text-slate-500 hover:text-white flex items-center gap-1 transition-colors uppercase"
-                                >
-                                    <FilterX size={10} /> 전체보기
-                                </button>
-                            </div>
-                        )}
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Observations</span>
                     </div>
-                    {filteredFindings.some(f => f.status !== 'Accepted') && (
-                        <button
-                            onClick={handleAcceptAll}
-                            className="bg-blue-600 hover:bg-blue-500 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-blue-900/40 border border-blue-500/50"
-                        >
-                            CONFIRM ALL
-                        </button>
-                    )}
+                    <div className="text-4xl font-black text-white">{stats.total_scanned}</div>
+                    <p className="text-xs text-slate-500 mt-2">AI가 관측한 모든 특이 패턴 (전체)</p>
                 </div>
 
-                <div className="space-y-3">
-                    {filteredFindings.map((item) => (
-                        <div
-                            key={item.id}
-                            onClick={() => setSelectedFinding(item)}
-                            className={`p-4 rounded-lg cursor-pointer border transition-all ${selectedFinding?.id === item.id
-                                ? 'bg-blue-900/30 border-blue-500'
-                                : 'bg-gray-800/50 border-gray-700 hover:bg-gray-800'
-                                }`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${item.severity === 'Critical' ? 'bg-rose-500 text-white shadow-lg shadow-rose-900/40' :
-                                    item.severity === 'High' ? 'bg-red-500/20 text-red-400' :
-                                        'bg-yellow-500/20 text-yellow-400'
-                                    }`}>
-                                    {item.severity}
-                                </span>
-                                <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${item.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                    item.status === 'Rejected' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
-                                        'bg-slate-500/20 text-slate-400 border border-slate-500/30'
-                                    }`}>
-                                    {item.status === 'Accepted' ? 'CONFIRMED' : item.status === 'Rejected' ? 'DISMISSED' : 'PENDING'}
-                                </span>
-                            </div>
-                            <h3 className="font-semibold text-sm mb-1">{item.category}</h3>
-                            <p className="text-xs text-gray-400 line-clamp-2">{item.description}</p>
+                {/* Auto Dismissed (Green) */}
+                <div
+                    onClick={() => setActiveFilter('SAFE')}
+                    className={`cursor-pointer transition-all p-6 rounded-2xl border relative overflow-hidden ${activeFilter === 'SAFE'
+                        ? 'bg-emerald-900/20 border-emerald-500 ring-2 ring-emerald-500/20'
+                        : 'bg-emerald-900/10 border-emerald-500/20 hover:border-emerald-500/40'
+                        }`}
+                >
+                    <div className="absolute right-0 top-0 p-20 bg-emerald-500/5 rounded-full blur-3xl -translate-y-10 translate-x-10" />
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
+                            <CheckCircle size={20} />
                         </div>
-                    ))}
+                        <span className="text-xs font-black uppercase tracking-widest text-emerald-500/70">Safe / Compliant</span>
+                    </div>
+                    <div className="text-4xl font-black text-emerald-400">{stats.dismissed_count} <span className="text-lg font-bold text-emerald-600/50 ml-1">({safeRatio}%)</span></div>
+                    <p className="text-xs text-emerald-600/70 mt-2">규정 위반 없음으로 자동 종결된 건</p>
+                </div>
+
+                {/* Confirmed Risks (Red) */}
+                <div
+                    onClick={() => setActiveFilter('VIOLATION')}
+                    className={`cursor-pointer transition-all p-6 rounded-2xl border relative overflow-hidden ${activeFilter === 'VIOLATION'
+                        ? 'bg-red-900/20 border-red-500 ring-2 ring-red-500/30'
+                        : 'bg-red-900/10 border-red-500/20 hover:border-red-500/40'
+                        }`}
+                >
+                    <div className="absolute right-0 top-0 p-20 bg-red-500/5 rounded-full blur-3xl -translate-y-10 translate-x-10 animate-pulse" />
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-red-500/20 rounded-lg text-red-400">
+                            <AlertTriangle size={20} />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest text-red-500/70">Confirmed Violations</span>
+                    </div>
+                    <div className="text-4xl font-black text-red-500">{stats.confirmed_count}</div>
+                    <p className="text-xs text-red-600/70 mt-2 font-bold">즉시 조치가 필요한 위반 사항</p>
                 </div>
             </div>
 
-            <div className="w-2/3 p-6 flex flex-col">
-                {selectedFinding ? (
-                    <>
-                        <div className="flex justify-between items-start mb-6">
-                            <h1 className="text-2xl font-bold">{selectedFinding.category}</h1>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleReject(selectedFinding.id)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm text-gray-300"
-                                >
-                                    <X size={16} /> DISMISS
-                                </button>
-                                <button
-                                    onClick={() => handleAccept(selectedFinding.id)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold shadow-lg shadow-blue-900/50"
-                                >
-                                    <Check size={16} /> CONFIRM (AS RISK)
-                                </button>
-                                <button
-                                    onClick={() => handleConvertToScenario(selectedFinding)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded text-sm font-bold shadow-lg shadow-purple-900/50"
-                                >
-                                    <Database size={16} /> ASSETIZE
-                                </button>
-                            </div>
-                        </div>
+            {/* 2. Divider */}
+            <div className="border-t border-slate-800 my-8" />
 
-                        <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 flex-1 overflow-y-auto">
-                            <div className="mb-6">
-                                <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-wider">상세 내용</h3>
-                                <p className="text-lg leading-relaxed">{renderProtectedText(selectedFinding.description)}</p>
-                            </div>
+            {/* 3. Drilling List */}
+            <div>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-slate-200">
+                        {activeFilter === 'ALL' && "🔍 전수 조사 상세 내역 (Full Audit)"}
+                        {activeFilter === 'SAFE' && "✅ 정상 판정 사례 분석 (Compliant)"}
+                        {activeFilter === 'VIOLATION' && "🚩 규정 위반 탐지 상세 (Violations)"}
+                    </h3>
+                    <span className="text-[10px] font-black bg-slate-800 px-4 py-1.5 rounded-full text-slate-400 border border-slate-700 uppercase tracking-widest">
+                        {filteredSignals.length} Entries Filtered
+                    </span>
+                </div>
 
-                            <div className="mb-6">
-                                <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-wider">AI 추천 (Recommendation)</h3>
-                                <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-800/50 text-blue-100">
-                                    {selectedFinding.recommendation}
-                                </div>
-                            </div>
-
-                            <div className="mb-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-sm text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                        <FileText size={16} /> 관련 증빙 데이터
-                                    </h3>
-                                    <div className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-[10px] font-black text-emerald-400 uppercase tracking-tight">
-                                        <Check size={12} /> Source Traced to Raw Data
-                                    </div>
-                                </div>
-                                <div className="bg-black/50 p-4 rounded font-mono text-xs text-green-400 overflow-x-auto border border-white/5">
-                                    <pre className="whitespace-pre-wrap">{renderProtectedText(selectedFinding.evidence)}</pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-gray-700 flex justify-end">
-                            <button
-                                onClick={() => handleSendEmail(selectedFinding)}
-                                className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-bold"
-                            >
-                                <Mail size={18} /> REQUEST CLARIFICATION
-                            </button>
-                        </div>
-                    </>
+                {filteredSignals.length === 0 ? (
+                    <div className="bg-slate-800/30 rounded-2xl p-12 text-center border border-slate-700/50 border-dashed">
+                        <CheckCircle className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                        <h4 className="text-slate-400 font-bold mb-1">No Data Found</h4>
+                        <p className="text-sm text-slate-600">해당 필터에 부합하는 분석 데이터가 없습니다.</p>
+                    </div>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-500">
-                        <AlertTriangle size={48} className="mb-4 opacity-20" />
-                        <p>리스트에서 항목을 선택하여 상세 검토를 진행하세요.</p>
+                    <div className="space-y-4">
+                        {filteredSignals.map((sig: SignalDetail) => {
+                            const isViolation = sig.status.includes('Confirmed') || sig.status.includes('Review');
+                            return (
+                                <div key={sig.signal_id} className={`bg-slate-800/40 border rounded-xl overflow-hidden shadow-sm hover:bg-slate-800/60 transition-all ${isViolation ? 'border-red-500/20' : 'border-emerald-500/10'}`}>
+
+                                    {/* Accordion Header */}
+                                    <div
+                                        className="p-5 flex items-center justify-between cursor-pointer select-none"
+                                        onClick={() => toggleAccordion(sig.signal_id)}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`mt-1.5 min-w-[8px] h-[8px] rounded-full ${isViolation ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-emerald-500/50'}`} />
+                                            <div>
+                                                <div className="flex items-center gap-3 mb-1">
+                                                    <span className={`font-black text-sm ${isViolation ? 'text-red-400' : 'text-slate-200'}`}>{sig.observation}</span>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${isViolation ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'}`}>
+                                                        {sig.status.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <p className="text-[10px] text-slate-500 font-mono tracking-tighter">ID: {sig.signal_id}</p>
+                                                    <p className="text-[10px] text-slate-600 font-mono">{sig.detected_at}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {openIssueValues.includes(sig.signal_id) ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
+                                    </div>
+
+                                    {/* Body */}
+                                    {openIssueValues.includes(sig.signal_id) && (
+                                        <div className="px-5 pb-6 pl-10 pt-0 animate-in slide-in-from-top-2">
+                                            <div className="bg-slate-900/50 rounded-[20px] p-6 border border-slate-700/50 space-y-6">
+
+                                                {/* Adjudication Matrix (The Reasoning) */}
+                                                <div>
+                                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 block">
+                                                        {isViolation ? "🔴 Adjudication Logic (Confirmed)" : "🟢 Compliance Logic (Cleared)"}
+                                                    </span>
+                                                    <div className="space-y-3">
+                                                        {sig.reasoning.map((step, sidx) => (
+                                                            <div key={sidx} className="flex gap-4 p-4 bg-black/30 rounded-xl border border-white/5 group hover:border-blue-500/30 transition-colors">
+                                                                <div className="flex flex-col items-center">
+                                                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${step.result === 'Match' ? 'bg-red-500' : 'bg-slate-600'}`} />
+                                                                    <div className="flex-1 w-px bg-slate-800 my-1" />
+                                                                </div>
+                                                                <div className="space-y-1 flex-1">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-[10px] font-black text-slate-400 uppercase">{step.criterion}</span>
+                                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${step.result === 'Match' ? 'bg-red-500/10 text-red-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                                            {step.result}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-300 leading-relaxed italic">"{step.reasoning}"</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {sig.reasoning.length === 0 && (
+                                                            <div className="text-xs text-slate-500 p-4 bg-black/20 rounded-xl border border-dashed border-slate-800">
+                                                                No specific rule triggers observed. Manual verification suggested if anomaly score is high.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Transaction Metadata */}
+                                                {sig.metadata && (
+                                                    <div>
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Transaction Metadata</span>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                            {Object.entries(sig.metadata).map(([key, val]: [string, any]) => (
+                                                                <div key={key} className="bg-slate-800/50 p-3 rounded-lg border border-white/5">
+                                                                    <p className="text-[8px] font-black text-slate-600 uppercase mb-1">{key}</p>
+                                                                    <p className="text-[11px] font-bold text-white truncate">{String(val)}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
+
+            {/* 경영진 요약 보고 모달 */}
+            {showSummaryModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={() => setShowSummaryModal(false)} />
+                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                        {/* 모달 헤더 - AI 홍보 문구 제거 */}
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-50 rounded-2xl">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-900 text-xl tracking-tighter">경영진 요약 보고 (Executive Summary)</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">AuditFlow Dynamic Assurance System</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowSummaryModal(false)} className="text-slate-300 hover:text-slate-900 transition-colors p-2 hover:bg-slate-50 rounded-full">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* 모달 본문 - 리포트 스타일로 변경 */}
+                        <div className="p-10 overflow-y-auto bg-slate-50/30">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm relative overflow-hidden">
+                                {/* 리포트 배경 워터마크 느낌 */}
+                                <div className="absolute top-0 right-0 p-8 opacity-[0.03] rotate-12 pointer-events-none">
+                                    <ShieldCheck size={120} />
+                                </div>
+
+                                <p className="text-slate-700 font-medium leading-[1.8] whitespace-pre-wrap text-sm relative z-10">
+                                    {aiSummary}
+                                </p>
+                            </div>
+
+                            <div className="mt-8 flex gap-6 px-2">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                    <CheckCircle size={12} className="text-emerald-500" /> 시스템 검증 완료
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                    <ShieldCheck size={12} className="text-blue-500" /> 데이터 암호화 처리됨
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 하단 액션바 */}
+                        <div className="p-6 border-t border-slate-100 bg-white flex justify-between items-center">
+                            <span className="text-[10px] text-slate-300 font-mono tracking-widest uppercase">REPORT ID: {Math.random().toString(36).substring(7).toUpperCase()}</span>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(aiSummary || "");
+                                        alert("요약 내용이 클립보드에 복사되었습니다.");
+                                    }}
+                                    className="flex items-center gap-2 text-xs font-black text-slate-700 hover:text-slate-900 px-5 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all active:scale-95"
+                                >
+                                    <Copy size={16} /> 본문 복사
+                                </button>
+                                <button
+                                    onClick={() => setShowSummaryModal(false)}
+                                    className="flex items-center gap-2 text-xs font-black text-white px-5 py-3 bg-slate-900 hover:bg-black rounded-xl transition-all active:scale-95 shadow-lg shadow-slate-200"
+                                >
+                                    확인
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
-};
-
-export default AIAnalysisReport;
+}

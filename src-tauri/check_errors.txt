@@ -1,0 +1,293 @@
+﻿cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\playground\Aud
+itFlow\src-tauri)
+위치 줄:1 문자:1
++ cargo check 2>&1 | Out-File
+ -FilePath check_errors.txt -
+Encoding utf8
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...Flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+error[E0433]: failed to resol
+ve: use of undeclared type `S
+uspicionSignal`
+   --> src\audit_engine.rs:86
+1:39
+    |
+861 |                 detecte
+d_signals.push(SuspicionSigna
+l::from_scenario(
+    |                        
+               ^^^^^^^^^^^^^^
+^ use of undeclared type `Sus
+picionSignal`
+    |
+help: consider importing this
+ struct
+    |
+  1 + use crate::ai_detection
+::SuspicionSignal;
+    |
+
+error[E0433]: failed to resol
+ve: use of undeclared type `S
+uspicionSignal`
+   --> src\audit_engine.rs:87
+3:47
+    |
+873 |                        
+ detected_signals.push(Suspic
+ionSignal::from_scenario(
+    |                        
+                       ^^^^^^
+^^^^^^^^^ use of undeclared t
+ype `SuspicionSignal`
+    |
+help: consider importing this
+ struct
+    |
+  1 + use crate::ai_detection
+::SuspicionSignal;
+    |
+
+error[E0433]: failed to resol
+ve: use of undeclared type `S
+uspicionSignal`
+   --> src\audit_engine.rs:88
+5:39
+    |
+885 |                 detecte
+d_signals.push(SuspicionSigna
+l::from_scenario(
+    |                        
+               ^^^^^^^^^^^^^^
+^ use of undeclared type `Sus
+picionSignal`
+    |
+help: consider importing this
+ struct
+    |
+  1 + use crate::ai_detection
+::SuspicionSignal;
+    |
+
+warning: unused import: `uuid
+::Uuid`
+ --> src\audit_engine.rs:6:5
+  |
+6 | use uuid::Uuid;
+  |     ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_impo
+rts)]` (part of `#[warn(unuse
+d)]`) on by default
+
+warning: unused import: `Tran
+saction`
+ --> src\scenarios_seeder.rs:
+1:36
+  |
+1 | use rusqlite::{params, Co
+nnection, Transaction};
+  |                          
+          ^^^^^^^^^^^
+
+warning: unused import: `Path
+`
+  --> src\compliance_dd_flow.
+rs:19:17
+   |
+19 | use std::path::{Path, Pa
+thBuf};
+   |                 ^^^^
+
+warning: unused import: `chro
+no::NaiveDateTime`
+  --> src\compliance_dd_flow.
+rs:20:5
+   |
+20 | use chrono::NaiveDateTim
+e;
+   |     ^^^^^^^^^^^^^^^^^^^^
+^
+
+warning: unused import: `serd
+e::Serialize`
+ --> src\debug_api.rs:4:5
+  |
+4 | use serde::Serialize; // 
+Ensure derive works
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused variable: `fu
+ll_match`
+   --> src\file_utils.rs:224:
+13
+    |
+224 |         let full_match 
+= m.as_str();
+    |             ^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_full_match`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+warning: unused variable: `ex
+ternal_context`
+  --> src\commands.rs:42:108
+   |
+42 | ...ing: Option<bool>, ex
+ternal_context: Option<String
+>, target_file_ids: Option<Ve
+c<i64>>) -> Result<Value, Str
+ing> {
+   |                       ^^
+^^^^^^^^^^^^^^ help: if this 
+is intentional, prefix it wit
+h an underscore: `_external_c
+ontext`
+
+warning: unused variable: `ma
+sking`
+  --> src\commands.rs:43:9
+   |
+43 |     let masking = enable
+_masking.unwrap_or(false);
+   |         ^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_mask
+ing`
+
+warning: variable `emp_file_p
+ath` is assigned to, but neve
+r used
+  --> src\commands.rs:64:9
+   |
+64 |     let mut emp_file_pat
+h = String::new();
+   |         ^^^^^^^^^^^^^^^^
+^
+   |
+   = note: consider using `_e
+mp_file_path` instead
+
+warning: unused variable: `ap
+i_key`
+   --> src\commands.rs:126:9
+    |
+126 |     let api_key = crate
+::ai::get_api_key();
+    |         ^^^^^^^ help: i
+f this is intentional, prefix
+ it with an underscore: `_api
+_key`
+
+warning: value assigned to `e
+mp_file_path` is never read
+  --> src\commands.rs:98:13
+   |
+98 |             emp_file_pat
+h = path;
+   |             ^^^^^^^^^^^^
+^
+   |
+   = help: maybe it is overwr
+itten before being read?
+   = note: `#[warn(unused_ass
+ignments)]` (part of `#[warn(
+unused)]`) on by default
+
+warning: value assigned to `c
+ard_file_path` is never read
+   --> src\commands.rs:111:9
+    |
+111 |         card_file_path 
+= target_files[0].0.clone();
+    |         ^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: value assigned to `f
+indings_count` is never read
+   --> src\commands.rs:114:30
+    |
+114 |     let mut findings_co
+unt = 0;
+    |                        
+      ^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: value assigned to `r
+isk_score` is never read
+   --> src\commands.rs:115:26
+    |
+115 |     let mut risk_score 
+= 0;
+    |                        
+  ^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: unused variable: `sc
+ope`
+  --> src\compliance_dd_flow.
+rs:94:27
+   |
+94 |         let (observation
+, scope, related_ids_json) = 
+signal_row;
+   |                         
+  ^^^^^ help: if this is inte
+ntional, prefix it with an un
+derscore: `_scope`
+
+warning: unused variable: `re
+lated_ids_json`
+  --> src\compliance_dd_flow.
+rs:94:34
+   |
+94 |         let (observation
+, scope, related_ids_json) = 
+signal_row;
+   |                         
+         ^^^^^^^^^^^^^^^^ hel
+p: if this is intentional, pr
+efix it with an underscore: `
+_related_ids_json`
+
+warning: unused variable: `ap
+p_handle`
+   --> src\compliance_dd_flow
+.rs:324:5
+    |
+324 |     app_handle: &tauri:
+:AppHandle
+    |     ^^^^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_app_
+handle`
+
+For more information about th
+is error, try `rustc --explai
+n E0433`.
+warning: `auditflow` (bin "au
+ditflow") generated 17 warnin
+gs
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 3 previous errors; 17 war
+nings emitted

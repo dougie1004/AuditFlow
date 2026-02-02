@@ -59,11 +59,17 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             console.log(">>> [Dashboard] Fetching Command Center Data. Context:", activeProject);
-            const [sum, evts] = await Promise.all([
+            const [sum, evts, riskReport] = await Promise.all([
                 safeInvoke<DashboardSummary>('get_dashboard_summary', { projectId: activeProject }),
                 safeInvoke<SystemEvent[]>('get_system_events', { projectId: activeProject }),
+                safeInvoke<any>('get_risk_report_data'),
             ]);
             const projs = await safeInvoke<AuditProject[]>('get_audit_projects');
+
+            // [OVERRIDE] Use real-time confirmed risk count from the Risk Engine
+            if (sum && riskReport) {
+                sum.total_risks = riskReport.confirmed_count;
+            }
 
             setSummary(sum);
             setEvents(evts);
@@ -185,7 +191,7 @@ const Dashboard = () => {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.3)] relative overflow-hidden group">
                                 <ShieldCheck className="w-6 h-6 text-white relative z-10" />
                             </div>
-                            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">Compliance DD 인텔리전스</h1>
+                            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">AuditFlow 인텔리전스</h1>
                         </div>
                         <p className="text-xs text-slate-500 font-bold tracking-[0.3em] uppercase opacity-70">가치 평가 가드레일 및 투자 등급 실사(Assurance)</p>
                     </div>
@@ -709,8 +715,8 @@ const Dashboard = () => {
                     <div className="flex items-center gap-6 px-6 py-3 bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-white/10 rounded-2xl backdrop-blur-xl">
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">엔진 인텔리전스</span>
-                            <span className="text-xs font-black text-emerald-400">{optStats?.mode || '전략적 하이브리드'}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">분석 모듈:</span>
+                            <span className="text-xs font-black text-blue-400">AuditFlow Intelligence Core</span>
                         </div>
                         <div className="w-px h-4 bg-white/10" />
                         <div className="flex items-center gap-2">

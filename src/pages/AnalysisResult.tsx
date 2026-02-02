@@ -6,7 +6,7 @@ import {
     Loader2, Search, ArrowLeft,
     AlertTriangle,
     Database, Fingerprint, Clock, BrainCircuit,
-    PlusCircle, XCircle, Info, Image as ImageIcon, Mail
+    PlusCircle, XCircle, Info, Image as ImageIcon, Mail, FileText, Copy
 } from 'lucide-react';
 
 interface AuditIssue {
@@ -56,6 +56,24 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
     const [showCatModal, setShowCatModal] = useState(false);
     const [modalData, setModalData] = useState({ category: 'EXP', custom: '', issueId: 0 });
     const [filterSeverity, setFilterSeverity] = useState<string | null>(null);
+
+    // AI Summary State
+    const [aiSummary, setAiSummary] = useState<string | null>(null);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [generatingSummary, setGeneratingSummary] = useState(false);
+
+    const handleGenerateSummary = async () => {
+        setGeneratingSummary(true);
+        try {
+            const summary = await safeInvoke('generate_risk_summary');
+            setAiSummary(summary as string);
+            setShowSummaryModal(true);
+        } catch (e) {
+            alert("요약 생성 실패: " + e);
+        } finally {
+            setGeneratingSummary(false);
+        }
+    };
     const fetchIssues = async () => {
         try {
             setLoading(true);
@@ -229,6 +247,17 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                             {s} ONLY
                         </button>
                     ))}
+                </div>
+
+                <div className="px-6 py-3 border-b border-slate-100 bg-white">
+                    <button
+                        onClick={handleGenerateSummary}
+                        disabled={generatingSummary}
+                        className="w-full py-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:from-black hover:to-slate-900 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                    >
+                        {generatingSummary ? <Loader2 className="animate-spin w-4 h-4" /> : <FileText className="w-4 h-4 text-blue-400" />}
+                        경영진 요약 보고 (Executive Summary)
+                    </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
@@ -418,6 +447,58 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                                 className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all"
                             >
                                 CONFIRM & ADD
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {showSummaryModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+                    <Card className="w-full max-w-2xl shadow-2xl border-none animate-in zoom-in-95 duration-200 bg-white relative overflow-hidden rounded-[32px]">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                            <Fingerprint size={300} />
+                        </div>
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-50 rounded-2xl">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tighter uppercase">경영진 요약 보고 (Executive Summary)</h2>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">AuditFlow Dynamic Assurance System</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowSummaryModal(false)} className="hover:bg-slate-100 p-2 rounded-full transition-colors"><XCircle size={28} className="text-slate-300 hover:text-slate-500" /></button>
+                        </div>
+                        <div className="p-10 bg-slate-50/50 min-h-[300px] relative z-10">
+                            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm font-medium text-slate-700 leading-[1.8] whitespace-pre-wrap text-sm">
+                                {aiSummary}
+                            </div>
+                            <div className="mt-8 flex gap-5 px-1">
+                                <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 시스템 검증 완료
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> 보안 감사 규정 준수
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-8 bg-white border-t border-slate-100 flex justify-end gap-3 relative z-10">
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(aiSummary || "");
+                                    alert("내용이 복사되었습니다.");
+                                }}
+                                className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all active:scale-95"
+                            >
+                                <Copy size={16} className="inline mr-2" /> 본문 복사
+                            </button>
+                            <button
+                                onClick={() => setShowSummaryModal(false)}
+                                className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-xs uppercase hover:bg-black transition-all shadow-lg shadow-slate-200 active:scale-95"
+                            >
+                                확인
                             </button>
                         </div>
                     </Card>

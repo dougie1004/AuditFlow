@@ -130,6 +130,7 @@ dependencies = [
  "lazy_static",
  "mailparse",
  "pdf-extract",
+ "rand 0.8.5",
  "regex",
  "reqwest",
  "rusqlite",
@@ -141,6 +142,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tokio",
  "urlencoding",
+ "uuid",
  "zip",
 ]
 

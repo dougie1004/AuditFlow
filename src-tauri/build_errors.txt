@@ -1,242 +1,243 @@
-﻿cargo :     Checking auditflo
-w v0.1.0 (C:\Users\user\.gemi
-ni\antigravity\scratch\auditf
-low\src-tauri)
-위치 줄:1 문자:1
-+ cargo check 2>&1 | Out-File
- -FilePath build_errors.txt -
-Encoding utf8
-+ ~~~~~~~~~~~~~~~~
-    + CategoryInfo           
-   : NotSpecified: (    Che  
-  cking au...flow\src-taur   
- i):String) [], RemoteExc    
-eption
-    + FullyQualifiedErrorId  
-   : NativeCommandError
- 
-error[E0425]: cannot find val
-ue `final_risk` in this scope
-    --> src\commands.rs:1246:
-21
-     |
-1246 |         risk_score: fi
-nal_risk,
-     |                     ^^
-^^^^^^^^ help: a local variab
-le with a similar name exists
-: `total_risk`
-
-warning: unused import: `Tran
-saction`
- --> src\scenarios_seeder.rs:
-1:36
+    Checking auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\playground\AuditFlow\src-tauri)
+warning: unused import: `Transaction`
+ --> src\scenarios_seeder.rs:1:36
   |
-1 | use rusqlite::{params, Co
-nnection, Transaction};
-  |                          
-          ^^^^^^^^^^^
+1 | use rusqlite::{params, Connection, Transaction};
+  |                                    ^^^^^^^^^^^
   |
-  = note: `#[warn(unused_impo
-rts)]` (part of `#[warn(unuse
-d)]`) on by default
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-error[E0597]: `conn` does not
- live long enough
-    --> src\commands.rs:1417:
-24
+warning: unused import: `Path`
+  --> src\compliance_dd_flow.rs:19:17
+   |
+19 | use std::path::{Path, PathBuf};
+   |                 ^^^^
+
+warning: unused import: `chrono::NaiveDateTime`
+  --> src\compliance_dd_flow.rs:20:5
+   |
+20 | use chrono::NaiveDateTime;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde::Serialize`
+ --> src\debug_api.rs:4:5
+  |
+4 | use serde::Serialize; // Ensure derive works
+  |     ^^^^^^^^^^^^^^^^
+
+error: future cannot be sent between threads safely
+    --> src\commands.rs:1507:1
      |
-1416 |           let conn = c
-rate::database::get_connectio
-n(&app_handle)?;
-     |               ---- bin
-ding `conn` declared here
-1417 |           let mut stmt
- = conn.prepare("SELECT file_
-path, file_name FROM audit_pr
-oject_files WHERE project_id 
-= ?1").map_err(|e| e.to_strin
-g...
-     |                       
-   ^^^^ borrowed value does n
-ot live long enough
-1418 | /         stmt.query_m
-ap(params![project_id], |r| O
-k((r.get::<_, String>(0)?, r.
-get::<_, String>(1)?)))
-1419 | |             .map_err
-(|e| e.to_string())?
-     | |_____________________
-___________________- a tempor
-ary with access to the borrow
- is created here ...
+1507 |   #[tauri::command]
+     |   ^^^^^^^^^^^^^^^^^ future returned by `generate_risk_summary` is not `Send`
+     |
+    ::: src\main.rs:56:25
+     |
+  56 |           .invoke_handler(tauri::generate_handler![
+     |  _________________________-
+  57 | |             commands::get_all_scenarios,
+  58 | |             commands::get_files_by_type,
+  59 | |             commands::upload_audit_file,
+...    |
+ 119 | |             debug_api::get_risk_report_data
+ 120 | |         ])
+     | |_________- in this macro invocation
+     |
+     = help: within `impl futures::Future<Output = Result<std::string::String, std::string::String>>`, the trait `std::marker::Send` is not implemented for `*mut sqlite3_stmt`
+note: future is not `Send` as this value is used across an await
+    --> src\commands.rs:1543:59
+     |
+1515 |     let mut stmt = conn.prepare("SELECT DISTINCT issue_title FROM audit_issues").map_err(|e| e.to_string())?;
+     |         -------- has type `Statement<'_>` which is not `Send`
 ...
-1422 |       };
-     |       -- ... and the b
-orrow might be used here, whe
-n that temporary is dropped a
-nd runs the destructor for ty
-pe `ControlFlow<Result<Infall
-ible, std::string::String>, M
-appedRows<'_, {closure@src\co
-mmands.rs:1418:45: 1418:48}>>
-`
-     |       |
-     |       `conn` dropped h
-ere while still borrowed
+1543 |     let response = crate::ai::call_gemini_direct(&prompt).await
+     |                                                           ^^^^^ await occurs here, with `mut stmt` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+    --> C:\Users\user\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.9.5\src\ipc\command.rs:314:42
      |
-     = note: the temporary is
- part of an expression at the
- end of a block;
-             consider forcing
- this temporary to be dropped
- sooner, before the block's l
-ocal variables are dropped
-help: for example, you could 
-save the expression's value i
-n a new local variable `x` an
-d then make `x` be the expres
-sion at the end of the block
-     |
-1418 ~         let x = stmt.q
-uery_map(params![project_id],
- |r| Ok((r.get::<_, String>(0
-)?, r.get::<_, String>(1)?)))
-1419 |             .map_err(|
-e| e.to_string())?
-1420 |             .filter_ma
-p(|r| r.ok())
-1421 ~             .collect::
-<Vec<_>>(); x
-     |
-
-error[E0597]: `stmt` does not
- live long enough
-    --> src\commands.rs:1418:
-9
-     |
-1417 |           let mut stmt
- = conn.prepare("SELECT file_
-path, file_name FROM audit_pr
-oject_files WHERE project_id 
-= ?1").map_err(|e| e.to_strin
-g...
-     |               --------
- binding `stmt` declared here
-1418 |           stmt.query_m
-ap(params![project_id], |r| O
-k((r.get::<_, String>(0)?, r.
-get::<_, String>(1)?)))
-     |           -^^^
-     |           |
-     |  _________borrowed val
-ue does not live long enough
-     | |
-1419 | |             .map_err
-(|e| e.to_string())?
-     | |_____________________
-___________________- a tempor
-ary with access to the borrow
- is created here ...
+ 310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+     |                  ------ required by a bound in this associated function
 ...
-1422 |       };
-     |       -- ... and the b
-orrow might be used here, whe
-n that temporary is dropped a
-nd runs the destructor for ty
-pe `ControlFlow<Result<Infall
-ible, std::string::String>, M
-appedRows<'_, {closure@src\co
-mmands.rs:1418:45: 1418:48}>>
-`
-     |       |
-     |       `stmt` dropped h
-ere while still borrowed
+ 314 |       F: Future<Output = Result<T, E>> + Send,
+     |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+     = note: this error originates in the macro `commands::__cmd__generate_risk_summary` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: future cannot be sent between threads safely
+    --> src\commands.rs:1507:1
      |
-     = note: the temporary is
- part of an expression at the
- end of a block;
-             consider forcing
- this temporary to be dropped
- sooner, before the block's l
-ocal variables are dropped
-help: for example, you could 
-save the expression's value i
-n a new local variable `x` an
-d then make `x` be the expres
-sion at the end of the block
+1507 |   #[tauri::command]
+     |   ^^^^^^^^^^^^^^^^^ future returned by `generate_risk_summary` is not `Send`
      |
-1418 ~         let x = stmt.q
-uery_map(params![project_id],
- |r| Ok((r.get::<_, String>(0
-)?, r.get::<_, String>(1)?)))
-1419 |             .map_err(|
-e| e.to_string())?
-1420 |             .filter_ma
-p(|r| r.ok())
-1421 ~             .collect::
-<Vec<_>>(); x
+    ::: src\main.rs:56:25
      |
+  56 |           .invoke_handler(tauri::generate_handler![
+     |  _________________________-
+  57 | |             commands::get_all_scenarios,
+  58 | |             commands::get_files_by_type,
+  59 | |             commands::upload_audit_file,
+...    |
+ 119 | |             debug_api::get_risk_report_data
+ 120 | |         ])
+     | |_________- in this macro invocation
+     |
+     = help: within `Connection`, the trait `Sync` is not implemented for `RefCell<rusqlite::inner_connection::InnerConnection>`
+     = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: future is not `Send` as this value is used across an await
+    --> src\commands.rs:1543:59
+     |
+1515 |     let mut stmt = conn.prepare("SELECT DISTINCT issue_title FROM audit_issues").map_err(|e| e.to_string())?;
+     |         -------- has type `Statement<'_>` which is not `Send`
+...
+1543 |     let response = crate::ai::call_gemini_direct(&prompt).await
+     |                                                           ^^^^^ await occurs here, with `mut stmt` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+    --> C:\Users\user\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.9.5\src\ipc\command.rs:314:42
+     |
+ 310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+     |                  ------ required by a bound in this associated function
+...
+ 314 |       F: Future<Output = Result<T, E>> + Send,
+     |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+     = note: this error originates in the macro `commands::__cmd__generate_risk_summary` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-warning: unused variable: `fu
-ll_match`
-   --> src\file_utils.rs:201:
-13
-    |
-201 |         let full_match 
-= m.as_str();
-    |             ^^^^^^^^^^ 
-help: if this is intentional,
- prefix it with an underscore
-: `_full_match`
-    |
-    = note: `#[warn(unused_va
-riables)]` (part of `#[warn(u
-nused)]`) on by default
+error: future cannot be sent between threads safely
+    --> src\commands.rs:1507:1
+     |
+1507 |   #[tauri::command]
+     |   ^^^^^^^^^^^^^^^^^ future returned by `generate_risk_summary` is not `Send`
+     |
+    ::: src\main.rs:56:25
+     |
+  56 |           .invoke_handler(tauri::generate_handler![
+     |  _________________________-
+  57 | |             commands::get_all_scenarios,
+  58 | |             commands::get_files_by_type,
+  59 | |             commands::upload_audit_file,
+...    |
+ 119 | |             debug_api::get_risk_report_data
+ 120 | |         ])
+     | |_________- in this macro invocation
+     |
+     = help: within `Connection`, the trait `Sync` is not implemented for `RefCell<hashlink::lru_cache::LruCache<Arc<str>, rusqlite::raw_statement::RawStatement>>`
+     = note: if you want to do aliasing and mutation between multiple threads, use `std::sync::RwLock` instead
+note: future is not `Send` as this value is used across an await
+    --> src\commands.rs:1543:59
+     |
+1515 |     let mut stmt = conn.prepare("SELECT DISTINCT issue_title FROM audit_issues").map_err(|e| e.to_string())?;
+     |         -------- has type `Statement<'_>` which is not `Send`
+...
+1543 |     let response = crate::ai::call_gemini_direct(&prompt).await
+     |                                                           ^^^^^ await occurs here, with `mut stmt` maybe used later
+note: required by a bound in `ResultFutureTag::future`
+    --> C:\Users\user\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-2.9.5\src\ipc\command.rs:314:42
+     |
+ 310 |     pub async fn future<T, E, F>(self, value: F) -> Result<InvokeResponseBody, InvokeError>
+     |                  ------ required by a bound in this associated function
+...
+ 314 |       F: Future<Output = Result<T, E>> + Send,
+     |                                          ^^^^ required by this bound in `ResultFutureTag::future`
+     = note: this error originates in the macro `commands::__cmd__generate_risk_summary` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-warning: unused variable: `db
-_path`
-   --> src\audit_engine.rs:74
-3:5
+warning: unused variable: `full_match`
+   --> src\file_utils.rs:224:13
     |
-743 |     db_path: &PathBuf,
-    |     ^^^^^^^ help: if th
-is is intentional, prefix it 
-with an underscore: `_db_path
-`
-
-warning: unused variable: `ap
-p_handle`
-   --> src\audit_engine.rs:74
-4:5
+224 |         let full_match = m.as_str();
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_full_match`
     |
-744 |     app_handle: &AppHan
-dle,
-    |     ^^^^^^^^^^ help: if
- this is intentional, prefix 
-it with an underscore: `_app_
-handle`
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused variable: `ap
-i_key`
-   --> src\audit_engine.rs:74
-5:5
+warning: unused variable: `external_context`
+  --> src\commands.rs:42:108
+   |
+42 | ...ing: Option<bool>, external_context: Option<String>, target_file_ids: Option<Vec<i64>>) -> Result<Value, String> {
+   |                       ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_external_context`
+
+warning: unused variable: `masking`
+  --> src\commands.rs:43:9
+   |
+43 |     let masking = enable_masking.unwrap_or(false);
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_masking`
+
+warning: variable `emp_file_path` is assigned to, but never used
+  --> src\commands.rs:64:9
+   |
+64 |     let mut emp_file_path = String::new();
+   |         ^^^^^^^^^^^^^^^^^
+   |
+   = note: consider using `_emp_file_path` instead
+
+warning: unused variable: `api_key`
+   --> src\commands.rs:126:9
     |
-745 |     api_key: &str,
-    |     ^^^^^^^ help: if th
-is is intentional, prefix it 
-with an underscore: `_api_key
-`
+126 |     let api_key = crate::ai::get_api_key();
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_api_key`
 
-Some errors have detailed exp
-lanations: E0425, E0597.
-For more information about an
- error, try `rustc --explain 
-E0425`.
-warning: `auditflow` (bin "au
-ditflow") generated 5 warning
-s
-error: could not compile `aud
-itflow` (bin "auditflow") due
- to 3 previous errors; 5 warn
-ings emitted
+warning: value assigned to `emp_file_path` is never read
+  --> src\commands.rs:98:13
+   |
+98 |             emp_file_path = path;
+   |             ^^^^^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `card_file_path` is never read
+   --> src\commands.rs:111:9
+    |
+111 |         card_file_path = target_files[0].0.clone();
+    |         ^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `findings_count` is never read
+   --> src\commands.rs:114:30
+    |
+114 |     let mut findings_count = 0;
+    |                              ^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: value assigned to `risk_score` is never read
+   --> src\commands.rs:115:26
+    |
+115 |     let mut risk_score = 0;
+    |                          ^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: variable `total_processed_signals` is assigned to, but never used
+   --> src\audit_engine.rs:802:9
+    |
+802 |     let mut total_processed_signals = 0;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_total_processed_signals` instead
+
+warning: value assigned to `total_processed_signals` is never read
+   --> src\audit_engine.rs:933:17
+    |
+933 |                 total_processed_signals += 1;
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `scope`
+  --> src\compliance_dd_flow.rs:94:27
+   |
+94 |         let (observation, scope, related_ids_json) = signal_row;
+   |                           ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+warning: unused variable: `related_ids_json`
+  --> src\compliance_dd_flow.rs:94:34
+   |
+94 |         let (observation, scope, related_ids_json) = signal_row;
+   |                                  ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_related_ids_json`
+
+warning: unused variable: `app_handle`
+   --> src\compliance_dd_flow.rs:324:5
+    |
+324 |     app_handle: &tauri::AppHandle
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_handle`
+
+warning: `auditflow` (bin "auditflow") generated 18 warnings
+error: could not compile `auditflow` (bin "auditflow") due to 6 previous errors; 18 warnings emitted

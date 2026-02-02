@@ -8,12 +8,15 @@ mod commands;
 mod audit_engine;
 mod dedup;
 mod scenarios_seeder;
+mod mapper;
+mod compliance_dd_flow;
+mod ai_detection;
+mod debug_api;
 
 use database::initialize_database;
 use std::fs;
 use serde_json::Value;
 
-// [PERMANENT] Load optimization config at startup
 fn load_permanent_config() -> Result<(), String> {
     let config_path = std::env::current_dir()
         .map_err(|e| e.to_string())?
@@ -37,7 +40,7 @@ fn load_permanent_config() -> Result<(), String> {
 }
 
 fn main() {
-    dotenvy::dotenv().ok();
+    dotenvy::dotenv_override().ok();
     
     // [CRITICAL] Load permanent config FIRST
     load_permanent_config().ok();
@@ -106,7 +109,20 @@ fn main() {
             commands::get_latest_analysis,
             commands::perform_audit_analysis,
             commands::get_latest_accepted_finding,
-            commands::get_optimization_stats
+            commands::get_optimization_stats,
+            commands::map_transaction,
+            commands::generate_risk_summary,
+            commands::generate_professional_report,
+            commands::get_expert_risk_signals,
+            commands::get_case_detail,
+            commands::get_engine_health_stats,
+            commands::run_formal_adjudication,
+            debug_api::debug_reset_inbox,
+            debug_api::debug_inject_signals,
+            debug_api::debug_get_inbox_stats,
+            debug_api::debug_process_next,
+            debug_api::get_risk_report_data,
+            debug_api::debug_run_calibration_test
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

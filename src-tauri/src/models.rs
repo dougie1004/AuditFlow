@@ -17,7 +17,10 @@ pub struct AuditIssue {
     pub assignee: Option<String>,
     pub due_date: Option<String>,
     pub remediation_plan: Option<String>,
-    pub manager_comment: Option<String>
+    pub manager_comment: Option<String>,
+    pub grade: String,
+    pub verdict_mode: String,
+    pub logic_chain: String
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

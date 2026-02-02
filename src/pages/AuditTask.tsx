@@ -163,7 +163,7 @@ export default function AuditTask() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
-                        Strategic Compliance Control
+                        AuditFlow Strategic Control
                     </div>
                     <h1 className="text-4xl font-black text-white tracking-tight">진단 업무 관리 <span className="text-slate-400 font-medium">(DD Portfolio)</span></h1>
                     <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 컴플라이언스 실사 및 진단 프로젝트를 관리합니다.</p>
@@ -204,7 +204,7 @@ export default function AuditTask() {
                         </button>
                     </div>
                     <form onSubmit={handleCreate} className="p-10 space-y-8 bg-[#0B1221]">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">진단 유형 (Type)</label>
                                 <select
@@ -217,6 +217,16 @@ export default function AuditTask() {
                                     <option value="제보실사">제보실사</option>
                                     <option value="특별실사">특별실사</option>
                                 </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">감사대상 부문 (Department)</label>
+                                <input
+                                    type="text"
+                                    placeholder="예: 재무팀, 인사팀, IT솔루션팀..."
+                                    value={formData.department}
+                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-600"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Period (Month)</label>
@@ -434,7 +444,7 @@ export default function AuditTask() {
                         <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 bg-[#0B1221] border-white/10">
                             <div className="p-8 border-b border-white/10 flex justify-between items-center bg-[#0B1221] sticky top-0 z-10">
                                 <div>
-                                    <h2 className="text-2xl font-black text-white tracking-tight">Compliance DD Analytics</h2>
+                                    <h2 className="text-2xl font-black text-white tracking-tight">AuditFlow Analytics</h2>
                                     <p className="text-slate-500 text-sm font-medium">연간 실사 성과 및 탐지 통계를 심층 분석합니다.</p>
                                 </div>
                                 <button onClick={() => setShowReport(false)} className="p-2 hover:bg-white/5 rounded-full transition-all">
@@ -545,7 +555,7 @@ export default function AuditTask() {
 
                                 <div className="pt-10 flex justify-between items-center border-t border-white/10">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        ComplianceFlow Precision Analytics Engine v4.0
+                                        AuditFlow Precision Analytics Engine v4.0
                                     </p>
                                     <button className="text-blue-600 font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:underline">
                                         <Download size={14} /> Export to PDF Report

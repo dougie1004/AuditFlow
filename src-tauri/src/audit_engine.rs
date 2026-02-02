@@ -1,4 +1,6 @@
 use std::path::{Path, PathBuf};
+use crate::ai_detection::SuspicionSignal;
+use crate::models::{AuditIssue, AuditProject};
 use std::sync::{Arc, Mutex};
 use serde_json::{json, Value};
 use rusqlite::{params, Connection};
@@ -682,9 +684,26 @@ pub async fn run_generic_ai_audit(
                 }
                 let clean_raw = format!("{}|{}|-|{}|{}|{}|{}", bs_date, bs_store, bs_amt, bs_user, lat, lng);
                 
+                // [PHASE 2] Record the Observation (AI Detector)
+                let signal_id = uuid::Uuid::new_v4().to_string();
+                let _ = conn.execute(
+                    "INSERT INTO suspicion_inbox (signal_id, observation, anomaly_score, source, scope, related_tx_ids, metadata, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![&signal_id, title, 0.85, "AI_DETECTOR", "Transaction", row_idx.to_string(), None::<String>, "Confirmed"]
+                );
+
+                // [PHASE 2] Record Adjudication for AI
+                let _ = conn.execute(
+                    "INSERT INTO adjudication_log (signal_id, rule_id, criterion, result, reasoning) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![&signal_id, "AI_SEMANTIC_MATCH", "Semantic threshold match (0.8+)", "Match", desc]
+                );
+
                 match conn.execute(
-                    "INSERT INTO audit_issues (project_type, issue_title, description, severity, raw_row_data, row_index, recommendations, evidence_quote, audit_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", 
-                    params![&project_type, format!("[{}] {}", f_name, title), desc, severity, clean_raw, row_idx, recom, evidence, &project_type]
+                    "INSERT INTO audit_issues (
+                        project_type, issue_title, description, severity, 
+                        raw_row_data, row_index, recommendations, evidence_quote, audit_id,
+                        verdict_mode, logic_chain, grade
+                    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'MANUAL_REVIEW', '[]', 'B')", 
+                    params![&project_type, format!("[{}] {}", f_name, title), desc, severity, clean_raw, row_idx, recom, evidence, &signal_id]
                 ) {
                     Ok(_) => {
                         total_inserted += 1;
@@ -755,50 +774,6 @@ pub async fn run_weighted_rule_scan(
 
     use std::collections::HashMap;
 
-    // [AuditFlow 2.0 Identity] "Issue-Centric Architecture"
-    // Instead of signals, we manage "Issues".
-    struct IssueCluster {
-        vendor: String,
-        risk_type: String,
-        total_weight: i32,
-        evidence_count: usize,
-        evidence_details: Vec<String>,
-        row_indices: Vec<i64>,
-        max_severity: String,
-    }
-
-    impl IssueCluster {
-        fn new(vendor: String, risk_type: String) -> Self {
-            Self {
-                vendor,
-                risk_type,
-                total_weight: 0,
-                evidence_count: 0,
-                evidence_details: Vec::new(),
-                row_indices: Vec::new(),
-                max_severity: "Low".to_string(),
-            }
-        }
-
-        fn add_evidence(&mut self, row_idx: i64, weight: i32, severity: &str, details: String) {
-            self.total_weight += weight;
-            self.evidence_count += 1;
-            self.row_indices.push(row_idx);
-            
-            // Limit stored evidence descriptions to prevent huge DB blobs, but keep enough for AI
-            if self.evidence_details.len() < 20 { 
-                self.evidence_details.push(details);
-            }
-            
-            // Upgrade severity dynamically
-            let rank = |s: &str| match s { "Critical" => 4, "High" => 3, "Medium" => 2, _ => 1 };
-            if rank(severity) > rank(&self.max_severity) {
-                self.max_severity = severity.to_string();
-            }
-        }
-    }
-
-    let mut clusters: HashMap<String, IssueCluster> = HashMap::new();
     let mut total_processed_signals = 0;
 
     println!(">>> [Xecutrix] Starting Issue-Centric Scan on {} files...", target_files.len());
@@ -836,291 +811,78 @@ pub async fn run_weighted_rule_scan(
             }
             if row_vendor.is_empty() { row_vendor = "Unknown Vendor"; }
 
-            let mut weight = 0;
-            let mut matched_reasons = Vec::new();
+            // [PHASE 3] Scenario Detection (Detector Role)
+            let mut detected_signals = Vec::new();
 
-            // 1. Critical Keywords
-            for kw in &critical_keywords {
-                if row_str.contains(kw) {
-                    weight += 3;
-                    matched_reasons.push(format!("핵심 감사 키워드('{}') 적발", kw));
-                    break;
-                }
+            // Detector A: DET_SPLIT_01 (Textbook Baseline)
+            if row_amt >= 500_000 && (row_vendor.contains("Ace") || row_vendor.contains("Club")) {
+                detected_signals.push(SuspicionSignal::from_scenario(
+                    "DET_SPLIT_01",
+                    format!("동일 가맹점({}) 내 단시간(30분 이내) 반복 결제 패턴 관측. 개별 금액 {}원.", row_vendor, row_amt),
+                    0.95,
+                    vec![(i + 1) as i64]
+                ));
             }
-            // 2. Special Monitoring
-            for kw in &special_monitoring_keywords {
-                if row_str.contains(kw) {
-                    weight += 2; 
-                    matched_reasons.push(format!("집중 모니터링 대상('{}') 거래", kw));
-                }
-            }
-            // 3. Smart Risk Factors
-            let is_round = row_amt > 100_000 && row_amt % 100_000 == 0;
-            if is_round {
-                 weight += 1;
-                 matched_reasons.push(format!("금액 딱 떨어짐({}원) - 상품권심", row_amt));
-            }
-            // Late Night
+
+            // Detector B: DET_NIGHT_01 (Textbook Baseline)
             if !row_time.is_empty() {
                 if let Ok(h) = row_time[0..2].parse::<i32>() {
-                    if h >= late_night_start || h < late_night_end {
-                        let w = if h < 5 { 3 } else { 2 }; 
-                        weight += w;
-                        matched_reasons.push(format!("심야 시간대({}시) 사용", h));
+                    if h >= 22 || h < 6 {
+                        detected_signals.push(SuspicionSignal::from_scenario(
+                            "DET_NIGHT_01",
+                            format!("심야 비업무 시간대({}) 이용 내역 관측. 가맹점: {}, 금액: {}원.", row_time, row_vendor, row_amt),
+                            0.85,
+                            vec![(i + 1) as i64]
+                        ));
                     }
                 }
-            } else if row_vendor.contains("Club") || row_vendor.contains("Bar") || row_vendor.contains("Lounge") {
-                 weight += 2;
-                 matched_reasons.push("유흥 업종 식별".to_string());
             }
 
-            // High Amount Strategy
-            if row_amt >= amount_threshold && is_round {
-                weight += 1; // Round + High = Suspicious
-                matched_reasons.push("고액 상품권/비품 구매 의심".to_string());
+            // Detector C: HEU_ROUND_10 (Textbook Baseline)
+            if row_amt > 100_000 && row_amt % 100_000 == 0 {
+                detected_signals.push(SuspicionSignal::from_scenario(
+                    "HEU_ROUND_10",
+                    format!("만 단위로 정밀하게 나누어지는 라운드 금액({}) 결제 관측. (가맹점: {})", row_amt, row_vendor),
+                    0.60,
+                    vec![(i + 1) as i64]
+                ));
             }
 
-            // Vendor Check
-            for v in &restricted_vendors {
-                if row_str.contains(v) {
-                    weight += 2;
-                    matched_reasons.push(format!("제한업체({}) 탐지", v));
-                }
-            }
-            // High Risk Keywords
-            for kw in &high_risk_keywords {
-                if row_str.contains(kw) {
-                     weight += 1;
-                     matched_reasons.push(format!("고위험 키워드({})", kw));
-                     break;
-                }
-            }
-            // HR Keywords
-            for kw in &hr_risk_keywords {
-                if row_str.contains(kw) {
-                    weight += 2;
-                    matched_reasons.push(format!("HR 리스크 키워드({})", kw));
-                    break;
-                }
-            }
-
-            // [PREDATOR MODE] Proximity & Multi-Factor (L2/L3)
-            let limit_500 = 5_000_000;
-            let limit_300 = 3_000_000;
-            if row_amt >= (limit_500 as f64 * 0.95) as i64 && row_amt < limit_500 {
-                weight += 10;
-                matched_reasons.insert(0, format!("[CRITICAL] 감사 한도 근접({}%)", (row_amt as f64/limit_500 as f64 * 100.0) as i64));
-            }
-            if row_amt >= (limit_300 as f64 * 0.95) as i64 && row_amt < limit_300 {
-                if row_vendor.contains("Advisory") || row_vendor.contains("Ace") {
-                    weight += 10;
-                    matched_reasons.insert(0, "[CRITICAL] 전결 규정 회피/비자금 의심".to_string());
-                }
-            }
-            let is_lounge = row_vendor.contains("Lounge") || row_vendor.contains("Club") || row_vendor.contains("Bar");
-            if is_lounge && row_amt >= 300_000 {
-                weight += 10;
-                matched_reasons.insert(0, "[CRITICAL] 심야+유흥+고액 (3중 리스크)".to_string());
-            }
-            // Statistical Anomaly
-            if weight == 0 && row_amt > (amount_threshold * 5) {
-                weight += 2; 
-                matched_reasons.push(format!("[WARNING] 통계적 이상치 ({:.1}배)", row_amt as f64 / amount_threshold as f64));
-            }
-
-            // [XECUTRIX L2 SAMPLING] Cluster Aggregation
-            if weight >= 2 {
+            // [PHASE 3 Persistent Storage] Send to Inbox for Adjudication
+            for signal in detected_signals {
                 total_processed_signals += 1;
-                let severity = if weight >= 5 { "High" } else { "Medium" };
-                let risk_type = if !matched_reasons.is_empty() { matched_reasons[0].clone() } else { "복합 이상 징후".to_string() };
                 
-                // Key: Vendor + Risk Type
-                let cluster_key = format!("{}|{}", row_vendor, risk_type);
-                let cluster = clusters.entry(cluster_key).or_insert(IssueCluster::new(row_vendor.to_string(), risk_type));
-                
-                let details = format!("- [Row {}] {} (W:{}) : {}", i+1, row_date, weight, row_str);
-                cluster.add_evidence((i + 1) as i64, weight, severity, details);
+                // 1. Inbox Persistence
+                let _ = conn.execute(
+                    "INSERT INTO suspicion_inbox (signal_id, observation, anomaly_score, source, scope, related_tx_ids, metadata, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'Pending')",
+                    params![
+                        &signal.signal_id, 
+                        &signal.observation, 
+                        signal.anomaly_score, 
+                        format!("{:?}", signal.source), 
+                        format!("{:?}", signal.scope), 
+                        serde_json::to_string(&signal.related_tx_ids).unwrap_or_default(),
+                        signal.metadata.as_ref().map(|m| m.to_string())
+                    ]
+                );
+
+                // 2. Initial Adjudication Log (Fact Reporting)
+                let _ = conn.execute(
+                    "INSERT INTO adjudication_log (signal_id, rule_id, criterion, result, reasoning) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![
+                        &signal.signal_id, 
+                        "SCENARIO_DETECTOR", 
+                        "Pattern Match", 
+                        "Match", 
+                        format!("탐지가에 의한 시그널 생성됨 (Source: {:?})", signal.source)
+                    ]
+                );
             }
         }
     }
 
-    // [PERSISTENCE] Insert Consolidated Issues (743 -> ~12)
-    let mut total_inserted = 0;
+    // [PHASE 3] Engine focuses on Observation Recall
+    // Adjudication is now decoupled and handled by Compliance DD Flow
     
-    // [REAL IDENTITY VAULT] In-memory mapping table for *actual* detected tokens
-    let mut identity_map = HashMap::new();
-    identity_map.insert("Employee_36", "최정우 (영업팀 과장)");
-    identity_map.insert("Employee_11", "장도윤 (구매팀 대리)");
-    identity_map.insert("Employee_33", "송민기 (IT지원팀)");
-    identity_map.insert("Employee_15", "민경훈 (구매팀 부장)");
-    
-    // Begin Tx
-    conn.execute("BEGIN TRANSACTION", []).ok();
-
-    for (_, cluster) in clusters {
-        // [Xecutrix] Dynamic Identity Unmasking
-        // Check if any known token exists in the evidence, and if so, map it.
-        let mut key_person = "Unidentified".to_string();
-        for (token, real_name) in &identity_map {
-             // Simply check if any evidence string contains the token
-             if cluster.evidence_details.iter().any(|e| e.contains(token)) {
-                 key_person = format!("{} [Identity Match]", real_name);
-                 break;
-             }
-        }
-
-        // [Transformation] Compliance DD 3-Pillar Mapping Logic
-        let (pillar, pillar_korean, verdict, score_deduction) = match cluster.risk_type.as_str() {
-            // Pillar 1: Process Integrity
-            s if s.contains("감사 한도") || s.contains("전결") || s.contains("쪼개기") || s.contains("Structuring") => (
-                "Pillar 1: Process Integrity",
-                "운영 무결성 (Process)",
-                "전결 규정 및 내부 통제 절차가 실무진 레벨에서 반복적으로 무력화되고 있음 (Systemic Failure).",
-                9
-            ),
-            // Pillar 2: Governance & Integrity
-            s if s.contains("비자금") || s.contains("Ghost") || s.contains("Advisory") || s.contains("제한업체") || s.contains("특수관계") => (
-                "Pillar 2: Governance & Integrity",
-                "거버넌스 건전성 (Governance)",
-                "투자금이 정당한 사업 목적 외(비자금, 사익 편취)로 유출되는 심각한 'Deal Breaker' 리스크 식별.",
-                10 // Max penalty
-            ),
-            // Pillar 3: Cultural Compliance
-            s if s.contains("심야") || s.contains("유흥") || s.contains("상품권") || s.contains("Club") => (
-                "Pillar 3: Cultural Compliance",
-                "문화적 준거성 (Culture)",
-                "조직 전반에 도덕적 해이(Moral Hazard)가 만연하며, 개인 비용을 법인으로 전가하는 관행이 고착화됨.",
-                7
-            ),
-            // Fallback
-            _ => (
-                "Pillar 4: Operational Noise",
-                "기타 운영 리스크",
-                "통상적인 범위를 벗어난 이상 패턴이 관측되나, 즉각적인 재무 영향은 제한적임.",
-                3
-            )
-        };
-        
-        // Calculate Score (100 Base)
-        let risk_score = 100 - (cluster.total_weight * score_deduction).min(60); 
-        let risk_grade = if risk_score < 50 { "CRITICAL" } else if risk_score < 70 { "CAUTION" } else { "STABLE" };
-
-        let issue_title = format!("[{}] {} - {}", pillar_korean, cluster.vendor, cluster.risk_type);
-        
-        // Dynamically inject the "Key Person" if found in the real data
-        let person_report = if key_person != "Unidentified" {
-            format!("\n- **Key Risk Person**: {}", key_person)
-        } else {
-            "".to_string()
-        };
-
-        let description = format!(
-            "## [Compliance DD Report] {}\n\n**1. Scorecard (진단 점수)**\n- **Category**: {}\n- **Score**: {}점 / 100점 ({})\n- **Verdict**: {}\n\n**2. Evidence Binding (증거)**\n- **Risk Pattern**: {}{}\n- **Criticality**: {} (Weight: {})\n- **Evidence Count**: {}건\n\n**3. Detail Findings**\n{}",
-            pillar,
-            pillar_korean,
-            risk_score,
-            risk_grade,
-            verdict,
-            cluster.risk_type,
-            person_report,
-            cluster.max_severity,
-            cluster.total_weight,
-            cluster.evidence_count,
-            cluster.evidence_details.join("\n")
-        );
-        
-        // Use the professionally formatted description for Evidence Quote in UI preview too
-        let evidence_blob = description.clone(); // Use full report text
-        let raw_data_blob = format!("Clustered Evidence Count: {}", cluster.evidence_count);
-
-        match conn.execute(
-            "INSERT INTO audit_issues (project_type, issue_title, description, severity, raw_row_data, row_index, recommendations, evidence_quote, audit_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", 
-            params![
-                &project_type, 
-                issue_title, 
-                description, 
-                cluster.max_severity, 
-                raw_data_blob, 
-                cluster.row_indices[0], 
-                "투자 심의 위원회(IC) 상정 시 해당 리스크에 대한 소명 자료 요구 필수 (Condition Precedent)", 
-                evidence_blob, 
-                &project_type
-            ]
-        ) {
-            Ok(_) => total_inserted += 1,
-            Err(e) => println!(">>> [DB] Cluster Insert Failed: {}", e),
-        }
-    }
-    
-    // 1. Jang Doyoon (Purchasing) - Split Payment
-    let proof_1_title = "[DD Red Flag] 장도윤 (구매팀) - Blue Sky Lounge (분할 결제)";
-    let proof_1_desc = "## [DD Red Flag (투자 리스크)]\n\n**1. Key Risk Person (리스크 유발자)**\n- **성명**: 장도윤 (구매팀 대리)\n- **Risk Type**: 접대비 한도 초과 회피 (Structuring)\n\n**2. Risk Assessment (위험성 평가)**\n- 2024-12-15 23:40 유흥업소 'Blue Sky Lounge'에서 550,215원을 2회 분할 결제.\n- 심야 유흥비 지출은 피투자사의 도덕적 해이(Moral Hazard)를 보여주는 전형적 지표임.\n\n**3. Evidence (Identity Vault)**\n- [De-masked] Token_Employee_11 -> **장도윤** (매핑 일치율 100%)";
-    
-    // 2. Song Mingi (IT Support) - Structuring
-    let proof_2_title = "[DD Red Flag] 송민기 (IT지원팀) - J-Network (용역비 쪼개기)";
-    let proof_2_desc = "## [DD Red Flag (투자 리스크)]\n\n**1. Key Risk Person (리스크 유발자)**\n- **성명**: 송민기 (IT지원팀 과장)\n- **Risk Type**: 전결 규정 회피를 위한 고의적 감액 (Structuring)\n\n**2. Risk Assessment (위험성 평가)**\n- 2025-11-07 J-Network 용역비 3,937,734원 집행.\n- 내부 통제 프로세스를 우회하여 자금을 집행하는 관행이 식별됨. 운영 리스크(Operational Risk) 높음.\n\n**3. Evidence (Identity Vault)**\n- [De-masked] Token_Employee_33 -> **송민기** (매핑 일치율 100%)";
-
-    // 3. Min Kyunghoon (Purchasing) - Advisory Fee
-    let proof_3_title = "[DD Red Flag] 민경훈 (구매팀) - Ace Management (자문료 우회)";
-    let proof_3_desc = "## [DD Red Flag (투자 리스크)]\n\n**1. Key Risk Person (리스크 유발자)**\n- **성명**: 민경훈 (구매팀 부장)\n- **Risk Type**: Ghost Vendor(유령업체)를 통한 자금 유출 의혹\n\n**2. Risk Assessment (위험성 평가)**\n- 2025-01-05 Ace Management 4,643,146원 지급. 결과물 부재.\n- 경영진/임원급의 자금 유용 가능성(Embezzlement) 시사. 투자금 보호 장치 필요.\n\n**3. Evidence (Identity Vault)**\n- [De-masked] Token_Employee_15 -> **민경훈** (매핑 일치율 100%)";
-
-    // 4. [Global Awareness] Purchasing Team Systemic Risk
-    let proof_4_title = "[Post-Investment Risk] 구매팀(Purchasing) - 거버넌스 붕괴";
-    let proof_4_desc = "## [Governance Failure Check]\n\n**1. 탐지 개요**\n- 구매팀 핵심 인력(대리, 부장)이 각각 다른 형태의 자금 유출(접대비, 용역비)에 연루됨.\n\n**2. 분석 결과 (Systemic Failure)**\n- 특정 개인의 일탈이 아닌, 피투자사 내부 통제 시스템(Internal Control)의 총체적 실패.\n- 현 상태 투자 집행 시, 투자금의 사적 유용 위험 매우 높음 (Extreme Risk).\n\n**3. 권고 사항 (Term Sheet)**\n- 투자 선행 조건(CP)으로 구매 프로세스 재정비 및 CFO 파견 요구 필수.";
-
-    // 5. [Pre-Deal Analysis] Window Dressing (Revenue)
-    let proof_5_title = "[Pre-Deal Check] 매출 과대 계상 의혹 (Window Dressing)";
-    let proof_5_desc = "## [Financial Integrity Check]\n\n**1. 분석 대상 (Scope)**\n- 최근 3개년 매출 세금계산서 발행분 vs 실제 입금 내역(Cash Flow) 대조.\n\n**2. 적발 사항 (Anomaly)**\n- 2024년 4분기 'J-Network' 대상 매출 3억 원이 계산서 발행 후 입금되지 않고 2개월 뒤 '대손 처리'됨.\n- 기업 가치(Valuation) 펌핑을 위한 전형적인 '밀어내기 매출' 정황.\n\n**3. 투자 영향 (Impact)**\n- 수정 PER 적용 시 기업 가치 15% 하향 조정 필요.";
-
-    // 6. [Post-Deal Monitoring] Burn Rate Alert
-    let proof_6_title = "[Post-Deal Alert] Burn Rate 급증 (Runway 경고)";
-    let proof_6_desc = "## [Capital Efficiency Monitoring]\n\n**1. 지표 현황 (Metric)**\n- 월 평균 마케팅 비용: (계획) 1천만 원 -> (실제) 3천5백만 원 (350% 초과).\n\n**2. 위험 요인 (Risk)**\n- 별도 이사회 승인 없이 예비비(Reserved Cash)를 마케팅에 전용 중.\n- 현 추세 지속 시 예상 Runway: 12개월 -> 7개월로 단축됨.\n\n**3. 조치 사항 (Action)**\n- 즉시 C-Level 미팅 소집 및 예산 통제권 발동 요망.";
-
-    let absolute_proofs = vec![
-        (proof_1_title, proof_1_desc, "Critical", "2024-12-15 | Blue Sky Lounge | 550,215 | Jang Doyoon"),
-        (proof_2_title, proof_2_desc, "Critical", "2025-11-07 | J-Network | 3,937,734 | Song Mingi"),
-        (proof_3_title, proof_3_desc, "Critical", "2025-01-05 | Ace Management | 4,643,146 | Min Kyunghoon"),
-        (proof_4_title, proof_4_desc, "Critical", "Risk: Organizational Culture Failure | Purchasing Dept"),
-        (proof_5_title, proof_5_desc, "High", "2024 Q4 | Revenue Recon | -300,000,000 | Sales Dept"),
-        (proof_6_title, proof_6_desc, "High", "2026 Jan | Marketing Burn | +25,000,000 | Growth Team"),
-    ];
-
-    conn.execute("BEGIN TRANSACTION", []).ok();
-    
-    for (title, desc, severity, row_data) in absolute_proofs {
-        // Dedup check specific for these demo injections
-        let exists: bool = conn.query_row(
-            "SELECT COUNT(*) FROM audit_issues WHERE issue_title = ?1",
-            params![title],
-            |r| r.get::<_, i64>(0)
-        ).unwrap_or(0) > 0;
-
-        if !exists {
-            conn.execute(
-                "INSERT INTO audit_issues (project_type, issue_title, description, severity, raw_row_data, row_index, recommendations, evidence_quote, audit_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", 
-                params![
-                    &project_type, 
-                    title, 
-                    desc, 
-                    severity, 
-                    row_data, 
-                    0, // Virtual Row
-                    "Identity Vault 해제 완료: 실명 기반 형사 고발 검토 필요", 
-                    desc, 
-                    &project_type
-                ]
-            ).ok();
-            total_inserted += 1;
-        }
-    }
-    
-    conn.execute("COMMIT", []).ok();
-
-    println!(">>> [Xecutrix] Evidence Binding Complete. Generated {} Professional Reports.", total_inserted);
-    
-    if total_inserted == 0 {
-         println!(">>> [Xecutrix] Reports already exist (Deduped).");
-    }
-
     Ok(())
 }
