@@ -52,7 +52,7 @@ jobs:
       run: cd src-tauri && cargo check
 
     - name: Rust Tests
-      run: cd src-tauri && cargo test --lib scenarios_seeder::tests::test_master_scenarios_integrity
+      run: cd src-tauri && cargo test --bin auditflow scenarios_seeder::tests::test_master_scenarios_integrity
 
     - name: Build
       run: npm run build

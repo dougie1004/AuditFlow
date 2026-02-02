@@ -112,7 +112,6 @@ fn main() {
             commands::get_optimization_stats,
             commands::map_transaction,
             commands::generate_risk_summary,
-            commands::generate_professional_report,
             commands::get_expert_risk_signals,
             commands::get_case_detail,
             commands::get_engine_health_stats,

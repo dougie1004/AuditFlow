@@ -1,0 +1,833 @@
+﻿cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\playground\Aud
+itFlow\src-tauri)
+위치 줄:1 문자:15
++ cd src-tauri; cargo check 2
+>&1 | Out-File -FilePath ../c
+argo_check_ou ...
++               ~~~~~~~~~~~~~
+~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...Flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+warning: unused import: `Comp
+lianceFinding`
+    --> src\commands.rs:1651:
+71
+     |
+1651 |     use crate::complia
+nce_dd_flow::{Adjudicator, Ad
+judicationOutcome, Compliance
+Finding, JudicialInabilityRea
+son};
+     |                       
+                             
+                   ^^^^^^^^^^
+^^^^^^^
+     |
+     = note: `#[warn(unused_i
+mports)]` (part of `#[warn(un
+used)]`) on by default
+
+warning: unused imports: `Aud
+itIssue` and `AuditProject`
+ --> src\audit_engine.rs:3:21
+  |
+3 | use crate::models::{Audit
+Issue, AuditProject};
+  |                     ^^^^^
+^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `std:
+:collections::HashMap`
+   --> src\audit_engine.rs:77
+5:9
+    |
+775 |     use std::collection
+s::HashMap;
+    |         ^^^^^^^^^^^^^^^
+^^^^^^^^^^
+
+warning: unused import: `Tran
+saction`
+ --> src\scenarios_seeder.rs:
+1:36
+  |
+1 | use rusqlite::{params, Co
+nnection, Transaction};
+  |                          
+          ^^^^^^^^^^^
+
+warning: unused import: `Path
+`
+  --> src\compliance_dd_flow.
+rs:19:17
+   |
+19 | use std::path::{Path, Pa
+thBuf};
+   |                 ^^^^
+
+warning: unused import: `chro
+no::NaiveDateTime`
+  --> src\compliance_dd_flow.
+rs:20:5
+   |
+20 | use chrono::NaiveDateTim
+e;
+   |     ^^^^^^^^^^^^^^^^^^^^
+^
+
+warning: unnecessary parenthe
+ses around `if` condition
+   --> src\compliance_dd_flow
+.rs:276:12
+    |
+276 |         if (is_count >=
+ 1 || ov_count >= 1 || cw_cou
+nt >= 2) {
+    |            ^           
+                             
+       ^
+    |
+    = note: `#[warn(unused_pa
+rens)]` (part of `#[warn(unus
+ed)]`) on by default
+help: remove these parenthese
+s
+    |
+276 -         if (is_count >=
+ 1 || ov_count >= 1 || cw_cou
+nt >= 2) {
+276 +         if is_count >= 
+1 || ov_count >= 1 || cw_coun
+t >= 2 {
+    |
+
+warning: unused import: `serd
+e::Serialize`
+ --> src\debug_api.rs:4:5
+  |
+4 | use serde::Serialize; // 
+Ensure derive works
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Sig
+nalScope` and `SuspicionSigna
+l`
+ --> src\debug_api.rs:6:27
+  |
+6 | use crate::ai_detection::
+{SuspicionSignal, SignalScope
+};
+  |                          
+ ^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused variable: `fu
+ll_match`
+   --> src\file_utils.rs:224:
+13
+    |
+224 |         let full_match 
+= m.as_str();
+    |             ^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_full_match`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+warning: unused variable: `ex
+ternal_context`
+  --> src\commands.rs:43:108
+   |
+43 | ...ing: Option<bool>, ex
+ternal_context: Option<String
+>, target_file_ids: Option<Ve
+c<i64>>) -> Result<Value, Str
+ing> {
+   |                       ^^
+^^^^^^^^^^^^^^ help: if this 
+is intentional, prefix it wit
+h an underscore: `_external_c
+ontext`
+
+warning: unused variable: `ma
+sking`
+  --> src\commands.rs:44:9
+   |
+44 |     let masking = enable
+_masking.unwrap_or(false);
+   |         ^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_mask
+ing`
+
+warning: variable `emp_file_p
+ath` is assigned to, but neve
+r used
+  --> src\commands.rs:65:9
+   |
+65 |     let mut emp_file_pat
+h = String::new();
+   |         ^^^^^^^^^^^^^^^^
+^
+   |
+   = note: consider using `_e
+mp_file_path` instead
+
+warning: unused variable: `ap
+i_key`
+   --> src\commands.rs:127:9
+    |
+127 |     let api_key = crate
+::ai::get_api_key();
+    |         ^^^^^^^ help: i
+f this is intentional, prefix
+ it with an underscore: `_api
+_key`
+
+warning: value assigned to `e
+mp_file_path` is never read
+  --> src\commands.rs:99:13
+   |
+99 |             emp_file_pat
+h = path;
+   |             ^^^^^^^^^^^^
+^
+   |
+   = help: maybe it is overwr
+itten before being read?
+   = note: `#[warn(unused_ass
+ignments)]` (part of `#[warn(
+unused)]`) on by default
+
+warning: value assigned to `c
+ard_file_path` is never read
+   --> src\commands.rs:112:9
+    |
+112 |         card_file_path 
+= target_files[0].0.clone();
+    |         ^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: value assigned to `f
+indings_count` is never read
+   --> src\commands.rs:115:30
+    |
+115 |     let mut findings_co
+unt = 0;
+    |                        
+      ^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: value assigned to `r
+isk_score` is never read
+   --> src\commands.rs:116:26
+    |
+116 |     let mut risk_score 
+= 0;
+    |                        
+  ^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: unused variable: `to
+tal`
+    --> src\commands.rs:1750:
+9
+     |
+1750 |     let total: i32 = c
+onn.query_row("SELECT COUNT(*
+) FROM suspicion_inbox", [], 
+|r| r.get(0)).unwrap_or(0);
+     |         ^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_tota
+l`
+
+warning: unused variable: `pr
+oject_type`
+   --> src\audit_engine.rs:73
+0:5
+    |
+730 |     project_type: &str,
+    |     ^^^^^^^^^^^^ help: 
+if this is intentional, prefi
+x it with an underscore: `_pr
+oject_type`
+
+warning: unused variable: `re
+stricted_vendors`
+   --> src\audit_engine.rs:74
+3:9
+    |
+743 |     let restricted_vend
+ors = vec![
+    |         ^^^^^^^^^^^^^^^
+^^^ help: if this is intentio
+nal, prefix it with an unders
+core: `_restricted_vendors`
+
+warning: unused variable: `cr
+itical_keywords`
+   --> src\audit_engine.rs:74
+9:9
+    |
+749 |     let critical_keywor
+ds = vec![
+    |         ^^^^^^^^^^^^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_critical_keywords`
+
+warning: unused variable: `hi
+gh_risk_keywords`
+   --> src\audit_engine.rs:75
+6:9
+    |
+756 |     let high_risk_keywo
+rds = vec![
+    |         ^^^^^^^^^^^^^^^
+^^^ help: if this is intentio
+nal, prefix it with an unders
+core: `_high_risk_keywords`
+
+warning: unused variable: `hr
+_risk_keywords`
+   --> src\audit_engine.rs:76
+3:9
+    |
+763 |     let hr_risk_keyword
+s = vec![
+    |         ^^^^^^^^^^^^^^^
+^ help: if this is intentiona
+l, prefix it with an undersco
+re: `_hr_risk_keywords`
+
+warning: unused variable: `sp
+ecial_monitoring_keywords`
+   --> src\audit_engine.rs:76
+9:9
+    |
+769 |     let special_monitor
+ing_keywords = vec!["而⑥꽕??, "
+?곌뎄??, "?섏씠留덊듃", "?꾩옄", "?먮Ц"
+, "Club", "Bar", "Lounge", "N
+ight"];
+    |         ^^^^^^^^^^^^^^^
+^^^^^^^^^^^^ help: if this is
+ intentional, prefix it with 
+an underscore: `_special_moni
+toring_keywords`
+
+warning: unused variable: `am
+ount_threshold`
+   --> src\audit_engine.rs:77
+1:9
+    |
+771 |     let amount_threshol
+d = 500_000; // Lowered to 50
+0k as requested for tighter n
+et
+    |         ^^^^^^^^^^^^^^^
+^ help: if this is intentiona
+l, prefix it with an undersco
+re: `_amount_threshold`
+
+warning: unused variable: `la
+te_night_start`
+   --> src\audit_engine.rs:77
+2:9
+    |
+772 |     let late_night_star
+t = 22;
+    |         ^^^^^^^^^^^^^^^
+^ help: if this is intentiona
+l, prefix it with an undersco
+re: `_late_night_start`
+
+warning: unused variable: `la
+te_night_end`
+   --> src\audit_engine.rs:77
+3:9
+    |
+773 |     let late_night_end 
+= 6;
+    |         ^^^^^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_late_night_end`
+
+warning: variable `total_proc
+essed_signals` is assigned to
+, but never used
+   --> src\audit_engine.rs:77
+7:9
+    |
+777 |     let mut total_proce
+ssed_signals = 0;
+    |         ^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+    |
+    = note: consider using `_
+total_processed_signals` inst
+ead
+
+warning: unused variable: `ro
+w_str`
+   --> src\audit_engine.rs:79
+3:17
+    |
+793 |             let row_str
+ = row.join(" ");
+    |                 ^^^^^^^
+ help: if this is intentional
+, prefix it with an underscor
+e: `_row_str`
+
+warning: variable `row_date` 
+is assigned to, but never use
+d
+   --> src\audit_engine.rs:79
+7:17
+    |
+797 |             let mut row
+_date = "";
+    |                 ^^^^^^^
+^^^^^
+    |
+    = note: consider using `_
+row_date` instead
+
+warning: value assigned to `t
+otal_processed_signals` is ne
+ver read
+   --> src\audit_engine.rs:85
+3:17
+    |
+853 |                 total_p
+rocessed_signals += 1;
+    |                 ^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: value assigned to `r
+ow_date` is never read
+   --> src\audit_engine.rs:80
+4:54
+    |
+804 |                 if s.co
+ntains('-') && s.len() >= 8 {
+ row_date = s; }
+    |                        
+                             
+ ^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+
+warning: unused variable: `ob
+servation`
+   --> src\compliance_dd_flow
+.rs:119:14
+    |
+119 |         let (observatio
+n, _scope, _related_ids_json,
+ metadata_json, db_anomaly_sc
+ore) = signal_row;
+    |              ^^^^^^^^^^
+^ help: if this is intentiona
+l, prefix it with an undersco
+re: `_observation`
+
+warning: unused variable: `an
+omaly_score`
+   --> src\compliance_dd_flow
+.rs:151:13
+    |
+151 |         let anomaly_sco
+re = metadata.get("anomaly_sc
+ore").and_then(|v| v.as_f64()
+).unwrap_or(db_anomaly_score)
+;
+    |             ^^^^^^^^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_anomaly_score`
+
+warning: unused variable: `is
+_count`
+   --> src\compliance_dd_flow
+.rs:215:13
+    |
+215 |         let is_count = 
+triggered_metadata.iter().fil
+ter(|(_, cat, _)| *cat == Rul
+eCategory::IntentStrong).coun
+t();
+    |             ^^^^^^^^ he
+lp: if this is intentional, p
+refix it with an underscore: 
+`_is_count`
+
+warning: unused variable: `ov
+_count`
+   --> src\compliance_dd_flow
+.rs:216:13
+    |
+216 |         let ov_count = 
+triggered_metadata.iter().fil
+ter(|(_, cat, _)| *cat == Rul
+eCategory::ObjectiveViolation
+).count();
+    |             ^^^^^^^^ he
+lp: if this is intentional, p
+refix it with an underscore: 
+`_ov_count`
+
+warning: unused variable: `cw
+_count`
+   --> src\compliance_dd_flow
+.rs:217:13
+    |
+217 |         let cw_count = 
+triggered_metadata.iter().fil
+ter(|(_, cat, _)| *cat == Rul
+eCategory::WeakSignal).count(
+);
+    |             ^^^^^^^^ he
+lp: if this is intentional, p
+refix it with an underscore: 
+`_cw_count`
+
+warning: unused variable: `ap
+p_handle`
+   --> src\compliance_dd_flow
+.rs:501:5
+    |
+501 |     app_handle: &tauri:
+:AppHandle
+    |     ^^^^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_app_
+handle`
+
+warning: variable does not ne
+ed to be mutable
+   --> src\debug_api.rs:185:9
+    |
+185 |     let mut conn = Conn
+ection::open(db_path).map_err
+(|e| e.to_string())?;
+    |         ----^^^^
+    |         |
+    |         help: remove th
+is `mut`
+    |
+    = note: `#[warn(unused_mu
+t)]` (part of `#[warn(unused)
+]`) on by default
+
+warning: struct `AuditScenari
+o` is never constructed
+   --> src\models.rs:172:12
+    |
+172 | pub struct AuditScenari
+o {
+    |            ^^^^^^^^^^^^
+^
+    |
+    = note: `#[warn(dead_code
+)]` (part of `#[warn(unused)]
+`) on by default
+
+warning: struct `AuditRunLog`
+ is never constructed
+   --> src\models.rs:187:12
+    |
+187 | pub struct AuditRunLog 
+{
+    |            ^^^^^^^^^^^
+
+warning: struct `ScanSummary`
+ is never constructed
+   --> src\models.rs:198:12
+    |
+198 | pub struct ScanSummary 
+{
+    |            ^^^^^^^^^^^
+
+warning: struct `AiOutputCard
+` is never constructed
+   --> src\models.rs:205:12
+    |
+205 | pub struct AiOutputCard
+ {
+    |            ^^^^^^^^^^^^
+
+warning: method `unmask_strin
+g` is never used
+   --> src\file_utils.rs:290:
+12
+    |
+262 | impl MaskingSession {
+    | ------------------- met
+hod in this implementation
+...
+290 |     pub fn unmask_strin
+g(&self, text: &str) -> Strin
+g {
+    |            ^^^^^^^^^^^^
+^
+
+warning: function `geocode_ad
+dress` is never used
+   --> src\file_utils.rs:492:
+14
+    |
+492 | pub async fn geocode_ad
+dress(address: &str, api_key:
+ &str) -> Option<(f64, f64, S
+tring)> {
+    |              ^^^^^^^^^^
+^^^^^
+
+warning: function `compress_e
+xcel_data` is never used
+   --> src\file_utils.rs:590:
+8
+    |
+590 | pub fn compress_excel_d
+ata(range: &Range<Data>) -> (
+String, Vec<String>) {
+    |        ^^^^^^^^^^^^^^^^
+^^^
+
+warning: function `compress_c
+sv_data` is never used
+   --> src\file_utils.rs:601:
+8
+    |
+601 | pub fn compress_csv_dat
+a(content: String) -> (String
+, Vec<String>) {
+    |        ^^^^^^^^^^^^^^^^
+^
+
+warning: function `generate_f
+allback_report` is never used
+   --> src\commands.rs:905:4
+    |
+905 | fn generate_fallback_re
+port(project_id: &str, findin
+gs: &[AuditIssue], high: i32,
+ medium: i32, low: i32) -> St
+ring {
+    |    ^^^^^^^^^^^^^^^^^^^^
+^^^^
+
+warning: function `calculate_
+distance` is never used
+  --> src\audit_engine.rs:11:
+8
+   |
+11 | pub fn calculate_distanc
+e(lat1: f64, lng1: f64, lat2:
+ f64, lng2: f64) -> f64 {
+   |        ^^^^^^^^^^^^^^^^^
+^
+
+warning: function `run_specia
+lized_card_rules` is never us
+ed
+  --> src\audit_engine.rs:59:
+14
+   |
+59 | pub async fn run_special
+ized_card_rules(
+   |              ^^^^^^^^^^^
+^^^^^^^^^^^^^^^
+
+warning: function `run_generi
+c_ai_audit` is never used
+   --> src\audit_engine.rs:21
+2:14
+    |
+212 | pub async fn run_generi
+c_ai_audit(
+    |              ^^^^^^^^^^
+^^^^^^^^^^
+
+warning: function `run_weight
+ed_rule_scan` is never used
+   --> src\audit_engine.rs:72
+8:14
+    |
+728 | pub async fn run_weight
+ed_rule_scan(
+    |              ^^^^^^^^^^
+^^^^^^^^^^^^
+
+warning: fields `row_indices`
+ and `related_data` are never
+ read
+  --> src\compliance_dd_flow.
+rs:41:9
+   |
+28 | pub struct ComplianceFin
+ding {
+   |            -------------
+---- fields in this struct
+...
+41 |     pub row_indices: Vec
+<usize>,
+   |         ^^^^^^^^^^^
+42 |     #[serde(skip)] 
+43 |     pub related_data: St
+ring, 
+   |         ^^^^^^^^^^^^
+   |
+   = note: `ComplianceFinding
+` has derived impls for the t
+raits `Clone` and `Debug`, bu
+t these are intentionally ign
+ored during dead code analysi
+s
+
+warning: struct `AICommentary
+` is never constructed
+  --> src\compliance_dd_flow.
+rs:47:12
+   |
+47 | pub struct AICommentary 
+{
+   |            ^^^^^^^^^^^^
+
+warning: struct `TransactionR
+ow` is never constructed
+  --> src\compliance_dd_flow.
+rs:54:12
+   |
+54 | pub struct TransactionRo
+w {
+   |            ^^^^^^^^^^^^^
+^
+
+warning: struct `RuleEngine` 
+is never constructed
+   --> src\compliance_dd_flow
+.rs:314:12
+    |
+314 | pub struct RuleEngine;
+    |            ^^^^^^^^^^
+
+warning: associated functions
+ `detect_split_payments`, `cr
+eate_split_finding`, and `det
+ect_restricted_vendors` are n
+ever used
+   --> src\compliance_dd_flow
+.rs:320:12
+    |
+316 | impl RuleEngine {
+    | --------------- associa
+ted functions in this impleme
+ntation
+...
+320 |     pub fn detect_split
+_payments(rows: &Vec<Transact
+ionRow>) -> Vec<ComplianceFin
+ding> {
+    |            ^^^^^^^^^^^^
+^^^^^^^^^
+...
+369 |     fn create_split_fin
+ding(owner: String, vendor: S
+tring, batch: &Vec<&Transacti
+onRow>, total: f64) -> Compli
+anceFinding {
+    |        ^^^^^^^^^^^^^^^^
+^^^^
+...
+393 |     pub fn detect_restr
+icted_vendors(rows: &Vec<Tran
+sactionRow>) -> Vec<Complianc
+eFinding> {
+    |            ^^^^^^^^^^^^
+^^^^^^^^^^^^^
+
+warning: struct `AIWitness` i
+s never constructed
+   --> src\compliance_dd_flow
+.rs:431:12
+    |
+431 | pub struct AIWitness; /
+/ "Your job is NOT to judge."
+    |            ^^^^^^^^^
+
+warning: associated function 
+`testify` is never used
+   --> src\compliance_dd_flow
+.rs:434:18
+    |
+433 | impl AIWitness {
+    | -------------- associat
+ed function in this implement
+ation
+434 |     pub async fn testif
+y(finding: &ComplianceFinding
+) -> AICommentary {
+    |                  ^^^^^^
+^
+
+warning: function `run_compli
+ance_check_flow` is never use
+d
+   --> src\compliance_dd_flow
+.rs:497:14
+    |
+497 | pub async fn run_compli
+ance_check_flow(
+    |              ^^^^^^^^^^
+^^^^^^^^^^^^^^^
+
+warning: associated function 
+`from_scenario` is never used
+  --> src\ai_detection.rs:55:
+12
+   |
+41 | impl SuspicionSignal {
+   | -------------------- ass
+ociated function in this impl
+ementation
+...
+55 |     pub fn from_scenario
+(scenario_id: &str, observati
+on: String, score: f32, relat
+ed_tx_ids: Vec<i64>) -> Self 
+{
+   |            ^^^^^^^^^^^^^
+
+warning: `auditflow` (bin "au
+ditflow") generated 62 warnin
+gs (run `cargo fix --bin "aud
+itflow" -p auditflow` to appl
+y 31 suggestions)
+    Finished `dev` profile [u
+noptimized + debuginfo] targe
+t(s) in 5.41s

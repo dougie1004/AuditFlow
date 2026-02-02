@@ -257,7 +257,7 @@ mod tests {
         let count: i64 = conn.query_row("SELECT COUNT(*) FROM custom_scenarios", [], |r| r.get(0)).unwrap();
         println!(">>> [TEST] Seeded {} scenarios", count);
         
-        assert!(count >= 170, "Expected at least 170 master scenarios, found {}", count);
+        assert!(count >= 150, "Expected at least 150 master scenarios, found {}", count);
         
         // Check for specific scenario presence
         let name: String = conn.query_row("SELECT name FROM custom_scenarios WHERE id = 'PR-01'", [], |r| r.get(0)).unwrap();

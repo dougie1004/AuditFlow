@@ -1,0 +1,12 @@
+﻿
+running 1 test
+>>> [TEST] Seeded 154 scenarios
+test scenarios_seeder::tests::test_master_scenarios_integrity ... FAILED
+
+failures:
+
+failures:
+    scenarios_seeder::tests::test_master_scenarios_integrity
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
