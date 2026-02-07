@@ -75,7 +75,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
         let f_id = f["id"].as_i64().unwrap_or(0);
 
         // Reference files are always included as context
-        if name.contains("규정") || name.contains("매뉴얼") || name.contains("regulation") || name.contains("manual") {
+        if name.contains("규정") || name.contains("매뉴얼") || name.contains("regulation") || name.contains("manual") || name.contains("master") || name.contains("마스터") {
             reference_files.push((path.clone(), name.clone()));
         } else {
             // Target files: Include only if "Select All" (empty targets) OR if specifically selected
@@ -142,7 +142,21 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
         
         for (path, _) in &target_files {
+             
              let rows = crate::audit_engine::load_file_rows(path);
+             if rows.is_empty() { continue; }
+             
+             // [CONSTITUTIONAL FILTER] 가격/금액 컬럼이 없으면 마스터 데이터로 간주하고 스킵
+             let has_amount_col = rows[0].iter().any(|h| {
+                 let hl = h.to_lowercase();
+                 hl.contains("금액") || hl.contains("가격") || hl.contains("amount") || hl.contains("price") || hl.contains("합계")
+             });
+             
+             if !has_amount_col {
+                 println!(">>> [Ingestion] Skipping non-transactional file (No Amount Column): {}", path);
+                 continue;
+             }
+
              println!(">>> [Ingestion] Loading file: {}, Total Rows: {}", path, rows.len());
              let total_available = rows.len();
              let mut row_cursor = 0;
@@ -190,6 +204,9 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
              println!(">>> [Ingestion] Success! Injected {} risk signals from 1000 rows.", injected_count);
         }
         println!(">>> [Ingestion] Complete. Check Inbox.");
+    
+    // [DETERMINISTIC SCAN] Choice 2: Recover strictly limited rules (Split/Vendor)
+    crate::compliance_dd_flow::run_compliance_check_flow(target_files.clone(), &project_type, &db_path, &app_handle).await.ok();
     }
 
     let (findings_count, risk_score) = {

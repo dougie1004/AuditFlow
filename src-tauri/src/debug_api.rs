@@ -17,14 +17,16 @@ pub fn debug_reset_inbox(app_handle: AppHandle) -> Result<String, String> {
     let db_path = get_db_path(&app_handle);
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     
-    // [FULL PURGE] Clear all Phase 2 transparency tables in correct FK order
-    conn.execute("DELETE FROM adjudication_log", []).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM suspicion_inbox", []).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM engine_metrics", []).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM audit_issues", []).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM system_events", []).map_err(|e| e.to_string())?;
+    // [FULL PURGE] Clear all Phase 2 transparency tables + Uploaded Data
+    conn.execute("DELETE FROM adjudication_log", []).ok();
+    conn.execute("DELETE FROM suspicion_inbox", []).ok();
+    conn.execute("DELETE FROM engine_metrics", []).ok();
+    conn.execute("DELETE FROM audit_issues", []).ok();
+    conn.execute("DELETE FROM system_events", []).ok();
+    conn.execute("DELETE FROM audit_data", []).ok();
+    conn.execute("DELETE FROM audit_projects", []).ok();
     
-    Ok("System State Purged (Transparency Logs + Issues Cleared)".to_string())
+    Ok("System State Purged (Transparency Logs + Uploads + Projects Cleared)".to_string())
 }
 
 #[tauri::command]
@@ -60,7 +62,7 @@ pub fn debug_inject_signals(app_handle: AppHandle, count: i32, scenario: String)
         let is_weekend = rand::random::<bool>();
         
         let observation = format!("{} 에서 {} 집행 (금액: {}원)", merchant, account, amount);
-        let anomaly_score = (amount as f64 / 2000000.0).min(1.0); // Simple statistical bias
+        let anomaly_score = ((amount as f64 / 2000000.0).min(1.0) * 100.0).round() / 100.0; // Round to 2 decimals
         
         let metadata = json!({
             "amount": amount,

@@ -71,13 +71,13 @@ impl SuspicionSignal {
 #[derive(Serialize, Deserialize, Debug)]
 struct AiObservationOutput {
     row_index: usize,
-    actor_type: String,      // [ACTOR_TYPE]
-    location_name: String,   // [LOCATION]
-    amount: i64,             // [AMOUNT]
-    date: String,            // [DATE]
-    purpose: String,         // [DECLARED_PURPOSE]
-    payment_method: String,  // [PAYMENT_METHOD]
-    anomaly_score: f32,
+    actor_type: String,     
+    location_name: String,  
+    amount: i64,            
+    date: String,           
+    purpose: String,        
+    payment_method: String, 
+    semantic_score: f32,    // [AI] Contextual weirdness only
 }
 
 /// The Constitution that binds the AI Agent
@@ -114,7 +114,7 @@ const CONSTITUTIONAL_PROMPT: &str = r#"
 [4. 이상 강도 (Anomaly Score)]
 - 0.3 ~ 0.59: [단순 특이] 데이터 형태나 시간이 평소와 약간 다름.
 - 0.6 ~ 0.84: [규칙 검토 필요] 규정 우회나 패턴 반복의 징후가 보임.
-- 0.85 ~ 1.0 : [판결 대상 후보] 명백한 데이터 이상치이며 즉각적인 판결이 필요함.
+- 0.85 ~ 1.0 : [강한 관측] 추가적인 규칙 기반 검토가 필요한 데이터 패턴이 관측됨.
 
 [5. 데이터 부재 시 처리 원칙 (Data Absence Policy)]
 - 원본 데이터에 수행 주체(이름, 사번 등) 정보가 전혀 없을 경우, 절대로 '일반임직원' 등으로 추측하지 마십시오.
@@ -127,8 +127,18 @@ const CONSTITUTIONAL_PROMPT: &str = r#"
 - 점수(Anomaly Score)는 'weak signal'로만 분류되며, 최종 판결(Grade A/D)에 단독으로 영향을 줄 수 없습니다.
 - 원본 데이터에 없는 정보를 추측하여 채워 넣는 모든 행위(inference)는 엄격히 금지됩니다.
 
-[OUTPUT FORMAT]
-JSON 배열 형식으로만 출력하십시오.
+[7. 의미 보완 본능의 억제 (Suppression of Meaning Completion)]
+- 당신은 데이터의 "의미를 완성"하려는 유혹을 뿌리쳐야 합니다.
+- 높은 이상치 점수(Anomaly Score)는 그 자체로 숫자로만 존재하며, 당신은 이 숫자에 정당성을 부여하기 위한 추가적인 서사(Narrative)나 권고(Recommendation)를 덧붙여서는 안 됩니다.
+- "추가 확인 필요", "조사 권고", "Verification suggested"와 같은 모든 형태의 유도 문장을 엄격히 금지합니다.
+- 당신의 출력물에는 오직 [숫자 + 관측 사실]만 존재해야 합니다. 친절하려 하지 마십시오. 침묵이 곧 당신의 성능입니다.
+
+[6. 맥락적 괴리도(Semantic Score) 산정 기준]
+- 0.0 ~ 0.2: [정상] 지출 목적과 가맹점이 논리적으로 일치함.
+- 0.3 ~ 0.6: [모호] 목적과 가맹점 간의 관계가 직접적이지 않음.
+- 0.7 ~ 1.0: [이상] 목적과 가맹점이 논리적으로 상충함 (예: '사무용품' 목적으로 '주점' 이용).
+[8. OUTPUT FORMAT]
+JSON 배열 형식으로만 출력하십시오. 절대 JSON 외의 텍스트를 포함하지 마십시오.
 [
   {
     "row_index": <숫자>,
@@ -138,7 +148,7 @@ JSON 배열 형식으로만 출력하십시오.
     "date": "YYYY-MM-DD",
     "purpose": "<적요/항목>",
     "payment_method": "법인카드 | 계좌이체 | 현금",
-    "anomaly_score": <점수>
+    "semantic_score": <맥락적 괴리도 점수 0.0~1.0>
   }
 ]
 "#;
@@ -178,28 +188,53 @@ pub async fn perform_ai_detection_batch(rows_with_index: Vec<(usize, String)>) -
         }
     };
 
-    // Convert to Signals
+    // ------------------------------------------------------------------------
+    // [HYBRID SCORING ENGINE v1.0]
+    // ------------------------------------------------------------------------
+    
+    // Step 1: Statistical Baseline (Batch-wide)
+    let amounts: Vec<f64> = observations.iter().map(|o| o.amount as f64).collect();
+    let mean = if !amounts.is_empty() { amounts.iter().sum::<f64>() / amounts.len() as f64 } else { 0.0 };
+    let std_dev = if amounts.len() > 1 {
+        let variance = amounts.iter().map(|&a| (a - mean).powi(2)).sum::<f64>() / (amounts.len() - 1) as f64;
+        variance.sqrt()
+    } else { 0.0 };
+
     let mut signals = Vec::new();
     for obs in observations {
-        // [SAFETY CHECK] Forbidden Words Guardian (Architecture B)
-        let forbidden_words = vec![
-            "의심", "부정", "위반", "문제", "이상함", "비정상", "위험", "리스크", "불법", "배임", "횡령",
-            "보임", "추정", "가능성", "판단됨", "의도로", "추측", "개연성",
-            "부적절", "과도", "불필요", "애매", "수상", "특이"
-        ];
-
-        let mut is_contaminated = false;
-        let sensor_text = format!("{} {}", obs.purpose, obs.location_name); 
-        for word in forbidden_words {
-            if sensor_text.contains(word) {
-                println!(">>> [AI Driver] CONTAMINATED word detected: '{}' in '{}'", word, sensor_text);
-                is_contaminated = true;
-                break;
-            }
+        // [SAFETY CHECK] Forbidden Words Guardian
+        let forbidden_words = vec!["의심", "부정", "위반", "문제", "비정상", "위험", "불법", "배임", "횡령"];
+        if forbidden_words.iter().any(|&w| format!("{} {}", obs.purpose, obs.location_name).contains(w)) {
+            continue;
         }
-        if is_contaminated { continue; }
 
-        // Construct Canonical Observation String
+        // 1) S-Score (Semantic, 40%) - Directly from AI's contextual insight
+        let s_score = obs.semantic_score;
+
+        // 2) V-Score (Value, 40%) - Statistical outlier detection
+        // Normalize Z-score to 0.0 ~ 1.0 range
+        let v_score = if std_dev > 0.0 {
+            let z = (obs.amount as f64 - mean) / std_dev;
+            (z * 0.2).max(0.0).min(1.0) as f32 // 5 sigma starts at 1.0
+        } else {
+            0.0
+        };
+
+        // 3) C-Score (Context, 20%) - Hard flags
+        let mut c_score: f32 = 0.0;
+        let restricted_keywords = vec!["Bar", "Club", "유흥", "주점", "단란"];
+        if restricted_keywords.iter().any(|&kw| obs.location_name.contains(kw) || obs.purpose.contains(kw)) {
+            c_score += 0.5_f32; // High bump for restricted terms
+        }
+        // Weekend check (Simple)
+        if obs.date.contains("Sat") || obs.date.contains("Sun") {
+            c_score += 0.2_f32;
+        }
+
+        // Final Aggregate (Weighted Average)
+        let final_score = (s_score * 0.4_f32) + (v_score * 0.4_f32) + (c_score.min(1.0) as f32 * 0.2_f32);
+        let rounded_score = (final_score * 100.0_f32).round() / 100.0_f32;
+
         let observation_text = format!(
             "[수행 주체]: {}\n[결제 가맹점]: {}\n[결제 금액]: KRW {}\n[결제 일자]: {}\n[지출 목적]: {}\n[결제 수단]: {}",
             obs.actor_type, obs.location_name, obs.amount, obs.date, obs.purpose, obs.payment_method
@@ -211,16 +246,18 @@ pub async fn perform_ai_detection_batch(rows_with_index: Vec<(usize, String)>) -
             "amount": obs.amount,
             "date": obs.date,
             "purpose": obs.purpose,
-            "payment_method": obs.payment_method,
-            "anomaly_score": obs.anomaly_score
+            "semantic_score": s_score,
+            "stats_score": v_score,
+            "context_score": c_score,
+            "final_hybrid_score": rounded_score
         });
 
         signals.push(SuspicionSignal::new(
             observation_text,
-            obs.anomaly_score,
+            rounded_score,
             vec![obs.row_index as i64],
             SignalScope::Transaction,
-            SignalSource::AI("GENERIC_AI_SENSOR".to_string()),
+            SignalSource::AI("HYBRID_ENGINE_V1".to_string()),
             Some(metadata)
         ));
     }
