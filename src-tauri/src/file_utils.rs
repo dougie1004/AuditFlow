@@ -95,7 +95,7 @@ fn mask_hangul_name(name: &str) -> String {
     let chars: Vec<char> = name.chars().collect();
     match chars.len() {
         4 => {
-            if name.starts_with("독고") || name.starts_with("남궁") || name.starts_with("제갈") || name.starts_with("사공") || name.with("황보") {
+            if name.starts_with("독고") || name.starts_with("남궁") || name.starts_with("제갈") || name.starts_with("사공") || name.starts_with("황보") {
                 format!("{}{}**", chars[0], chars[1])
             } else {
                 format!("{}**{}", chars[0], chars[3])

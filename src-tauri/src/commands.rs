@@ -144,6 +144,8 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
         for (path, _) in &target_files {
              let rows = crate::audit_engine::load_file_rows(path);
              println!(">>> [Ingestion] Loading file: {}, Total Rows: {}", path, rows.len());
+             let total_available = rows.len();
+             let mut row_cursor = 0;
 
              // [STABLE BATCHING] Sequential processing for 100% reliability
              // [CONSTITUTIONAL LIMIT] System Integrity requires deterministic scan limits to prevent OOM
