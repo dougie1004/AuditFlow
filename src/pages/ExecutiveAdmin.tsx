@@ -5,8 +5,10 @@ import {
     Zap, AlertTriangle,
     ChevronRight, Plus,
     Printer, BrainCircuit, Activity,
-    Target, Star, ArrowUpRight, Loader2, FileText
+    Target, Star, ArrowUpRight, Loader2, FileText,
+    ShieldAlert, Coins, History
 } from "lucide-react";
+import { StrategicBridge, ResilienceStressResult } from "../strategic/StrategicBridge";
 
 interface AnnualReport {
     year: number;
@@ -28,7 +30,7 @@ interface AuditPlan {
 }
 
 export default function ExecutiveAdmin() {
-    const [activeTab, setActiveTab] = useState<"REPORT" | "PLAN">("REPORT");
+    const [activeTab, setActiveTab] = useState<"REPORT" | "PLAN" | "SURVIVAL">("REPORT");
     const [selectedYear, setSelectedYear] = useState(2026);
 
     // Report States
@@ -38,6 +40,10 @@ export default function ExecutiveAdmin() {
     // Plan States
     const [plans, setPlans] = useState<AuditPlan[]>([]);
     const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+
+    // Resilience Stress States
+    const [stressData, setStressData] = useState<ResilienceStressResult[]>([]);
+    const [isSimulating, setIsSimulating] = useState(false);
 
     // New Plan Form
     const [newDomain, setNewDomain] = useState("");
@@ -50,7 +56,7 @@ export default function ExecutiveAdmin() {
     const fetchReport = async () => {
         setIsGenerating(true);
         try {
-            const res: AnnualReport = await safeInvoke("generate_annual_report", { year: selectedYear });
+            const res = await StrategicBridge.generateExecutiveReport(selectedYear);
             setReport(res);
         } catch (err) {
             console.error(err);
@@ -61,28 +67,42 @@ export default function ExecutiveAdmin() {
 
     const fetchPlans = async () => {
         try {
-            const res: AuditPlan[] = await safeInvoke("get_audit_plans", { year: selectedYear });
+            const res = await StrategicBridge.getAuditPlans(selectedYear);
             setPlans(res);
         } catch (err) {
             console.error(err);
         }
     };
 
+    const runStressTest = async () => {
+        setIsSimulating(true);
+        try {
+            const data = await StrategicBridge.simulateResilience(selectedYear);
+            setStressData(data);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSimulating(false);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === "PLAN") {
             fetchPlans();
+        } else if (activeTab === "SURVIVAL") {
+            runStressTest();
         }
     }, [activeTab, selectedYear]);
 
     const handleAddPlan = async () => {
         const riskScore = Math.round((impactScore + complexScore) / 2);
         try {
-            await safeInvoke("add_audit_plan", {
+            await StrategicBridge.addAuditPlan({
                 year: selectedYear,
-                domain: newDomain,
-                riskScore,
-                importance: newImportance,
-                days: newDays,
+                audit_domain: newDomain,
+                risk_score: riskScore,
+                strategic_importance: newImportance,
+                resource_days: newDays,
                 description: newDesc
             });
             setIsPlanModalOpen(false);
@@ -112,6 +132,12 @@ export default function ExecutiveAdmin() {
                             className={`flex items-center gap-2 text-sm font-black uppercase tracking-widest transition-all ${activeTab === "PLAN" ? 'text-blue-500 border-b-2 border-blue-500 h-20' : 'text-slate-500 hover:text-slate-300'}`}
                         >
                             <Target size={18} /> Strategic Planning
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("SURVIVAL")}
+                            className={`flex items-center gap-2 text-sm font-black uppercase tracking-widest transition-all ${activeTab === "SURVIVAL" ? 'text-rose-500 border-b-2 border-rose-500 h-20' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <ShieldAlert size={18} /> Resilience Stress Test
                         </button>
                     </div>
                     <div className="flex items-center gap-4">
@@ -236,7 +262,7 @@ export default function ExecutiveAdmin() {
                             </div>
                         </div>
                     </div>
-                ) : (
+                ) : activeTab === "PLAN" ? (
                     <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
                         {/* Planning Section */}
                         <div className="flex justify-between items-end mb-6">
@@ -300,125 +326,242 @@ export default function ExecutiveAdmin() {
                             )}
                         </div>
                     </div>
+                ) : (
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        {/* Resilience Stress Test Visualization */}
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <h1 className="text-4xl font-black text-white tracking-tighter">Enterprise Resilience Stress Test <span className="text-rose-500 italic">2026-2028</span></h1>
+                                <p className="text-slate-500 font-medium mt-2 text-lg">Stress-testing enterprise stability against extreme financial & compliance shocks (Manifesto 3.2 Compliant).</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="px-6 py-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3">
+                                    <Activity size={20} className="text-rose-500 animate-pulse" />
+                                    <span className="text-xs font-black text-rose-500 uppercase tracking-widest">Resilience Engine: Active</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {isSimulating ? (
+                            <div className="py-40 flex flex-col items-center justify-center gap-6">
+                                <Loader2 className="animate-spin text-rose-500" size={64} />
+                                <p className="text-sm font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse">Running High-Density Resilience Simulation...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {stressData.map((data, idx) => (
+                                    <div key={idx} className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[40px] p-10 hover:border-rose-500/30 transition-all group overflow-hidden relative">
+                                        <div className="absolute -top-10 -right-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <ShieldAlert size={200} />
+                                        </div>
+
+                                        <div className="flex justify-between items-start mb-10">
+                                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-rose-500/10 group-hover:border-rose-500/20 transition-all">
+                                                <History size={24} className="text-slate-500 group-hover:text-rose-500" />
+                                            </div>
+                                            <span className="text-3xl font-black text-white opacity-20">{data.year} FY</span>
+                                        </div>
+
+                                        <div className="space-y-2 mb-8">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Relatively Calculated Resilience Strength</p>
+                                            <div className="flex items-end gap-3">
+                                                <h4 className={`text-6xl font-black tracking-tighter ${data.resilience_score > 90 ? 'text-emerald-500' : data.resilience_score > 80 ? 'text-blue-500' : 'text-rose-500'}`}>
+                                                    {data.resilience_score}%
+                                                </h4>
+                                                <ArrowUpRight size={24} className="mb-2 opacity-30" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4 mb-10">
+                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Top Critical Risk Factors</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {data.risk_factors.map((f, i) => (
+                                                    <span key={i} className="px-3 py-1.5 bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase rounded-lg border border-rose-500/10">
+                                                        {f}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-black/20 rounded-3xl p-6 border border-white/5 space-y-4">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Coins size={14} className="text-amber-500" />
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Strategic Metrics</span>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between text-[11px] font-bold">
+                                                    <span className="text-slate-500">Revenue Concentraton</span>
+                                                    <span className="text-white">{(data.metrics.revenue_concentration * 100).toFixed(0)}%</span>
+                                                </div>
+                                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-blue-500" style={{ width: `${data.metrics.revenue_concentration * 100}%` }} />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between text-[11px] font-bold">
+                                                    <span className="text-slate-500">Compliance Exposure</span>
+                                                    <span className="text-white">{(data.metrics.compliance_exposure * 100).toFixed(0)}%</span>
+                                                </div>
+                                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-rose-500" style={{ width: `${data.metrics.compliance_exposure * 100}%` }} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-8 pt-8 border-t border-white/5">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <BrainCircuit size={14} className="text-blue-500" />
+                                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">CFO Strategic Commentary</span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 font-medium leading-relaxed italic">
+                                                "{data.cfo_commentary}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-12 bg-rose-500/5 border border-rose-500/10 rounded-[32px] p-10 flex gap-10 items-center">
+                            <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-3xl flex items-center justify-center shrink-0">
+                                <AlertTriangle size={40} />
+                            </div>
+                            <div className="space-y-2">
+                                <h5 className="text-xl font-black text-white uppercase italic">Critical Breach Detected in High-Stress Simulation</h5>
+                                <p className="text-slate-400 text-sm leading-relaxed max-w-4xl">
+                                    'Resilience Stress Test' 시뮬레이션 결과, 2027년 회계연도에 현금성 자산 부족으로 인한 Debt Covenant 위반 리스크가 매우 높은 것으로 나타났습니다.
+                                    특히 구매 프로세스의 통제 약화가 현금 유출의 주요 원인으로 식별되었으므로, **Strategic Audit Plan**에 구매 부문의 전수 실사를 즉시 추가할 것을 권고합니다.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-8 pt-8 border-t border-white/5 text-center">
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                                ⚠️ Disclaim: This simulation evaluates enterprise resilience based on fixed stress vectors and deterministic rules. <br />
+                                It does not guarantee future survivability or predict specific financial outcomes (Manifesto 4.0).
+                            </p>
+                        </div>
+                    </div>
                 )}
             </div>
 
             {/* Planning Modal */}
-            {isPlanModalOpen && (
-                <div className="fixed inset-0 z-[2000] bg-[#020617]/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-slate-900 border border-white/10 rounded-[40px] w-full max-w-3xl shadow-2xl animate-in zoom-in-95 duration-300">
-                        <div className="p-10 border-b border-white/5 flex justify-between items-center bg-white/5 rounded-t-[40px]">
-                            <div className="flex items-center gap-5">
-                                <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-900/40">
-                                    <Plus size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-black text-white tracking-tight">전략 감사 계획 수립</h3>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">New Strategic Roadmap Entry</p>
+            {
+                isPlanModalOpen && (
+                    <div className="fixed inset-0 z-[2000] bg-[#020617]/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-slate-900 border border-white/10 rounded-[40px] w-full max-w-3xl shadow-2xl animate-in zoom-in-95 duration-300">
+                            <div className="p-10 border-b border-white/5 flex justify-between items-center bg-white/5 rounded-t-[40px]">
+                                <div className="flex items-center gap-5">
+                                    <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-900/40">
+                                        <Plus size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-white tracking-tight">전략 감사 계획 수립</h3>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">New Strategic Roadmap Entry</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-12 space-y-10">
-                            <div className="grid grid-cols-2 gap-8">
+                            <div className="p-12 space-y-10">
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Audit Domain</label>
+                                        <select
+                                            value={newDomain}
+                                            onChange={(e) => setNewDomain(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-[15px] font-bold text-white outline-none focus:ring-4 ring-blue-500/10 transition-all appearance-none"
+                                        >
+                                            <option value="" className="bg-slate-900">도메인 선택</option>
+                                            <option value="HR" className="bg-slate-900">HR / 인사노무</option>
+                                            <option value="Procurement" className="bg-slate-900">Procurement / 구매</option>
+                                            <option value="Sales" className="bg-slate-900">Sales / 영업</option>
+                                            <option value="IT" className="bg-slate-900">IT / Security</option>
+                                            <option value="Finance" className="bg-slate-900">Finance / 재무</option>
+                                            <option value="Legal" className="bg-slate-900">Legal / 법무</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Importance</label>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['High', 'Medium', 'Low'].map(imp => (
+                                                <button
+                                                    key={imp}
+                                                    onClick={() => setNewImportance(imp)}
+                                                    className={`py-4 rounded-2xl text-[11px] font-black uppercase border transition-all ${newImportance === imp ? 'bg-blue-600 text-white border-blue-500 shadow-xl' : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'}`}
+                                                >
+                                                    {imp}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-blue-600/5 p-10 rounded-[32px] border border-blue-600/10 space-y-8">
+                                    <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                                        <Activity size={18} /> Risk Assessment Calculator
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between">
+                                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Financial Impact</label>
+                                                <span className="text-[11px] font-black text-blue-400">{impactScore} pts</span>
+                                            </div>
+                                            <input type="range" min="1" max="5" value={impactScore} onChange={e => setImpactScore(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between">
+                                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Op. Complexity</label>
+                                                <span className="text-[11px] font-black text-blue-400">{complexScore} pts</span>
+                                            </div>
+                                            <input type="range" min="1" max="5" value={complexScore} onChange={e => setComplexScore(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between">
+                                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Resource Demand</label>
+                                                <span className="text-[11px] font-black text-blue-400">{newDays} M/D</span>
+                                            </div>
+                                            <input type="range" min="1" max="100" value={newDays} onChange={e => setNewDays(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                        </div>
+                                    </div>
+                                    <div className="pt-8 border-t border-blue-600/10 flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Auto-Calculated Risk Profile</span>
+                                        <div className="flex items-center gap-2">
+                                            {[1, 2, 3, 4, 5].map(s => (
+                                                <Star key={s} size={20} className={s <= Math.round((impactScore + complexScore) / 2) ? 'text-blue-500 fill-blue-500' : 'text-slate-800'} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-4">
-                                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Audit Domain</label>
-                                    <select
-                                        value={newDomain}
-                                        onChange={(e) => setNewDomain(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-[15px] font-bold text-white outline-none focus:ring-4 ring-blue-500/10 transition-all appearance-none"
-                                    >
-                                        <option value="" className="bg-slate-900">도메인 선택</option>
-                                        <option value="HR" className="bg-slate-900">HR / 인사노무</option>
-                                        <option value="Procurement" className="bg-slate-900">Procurement / 구매</option>
-                                        <option value="Sales" className="bg-slate-900">Sales / 영업</option>
-                                        <option value="IT" className="bg-slate-900">IT / Security</option>
-                                        <option value="Finance" className="bg-slate-900">Finance / 재무</option>
-                                        <option value="Legal" className="bg-slate-900">Legal / 법무</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Importance</label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['High', 'Medium', 'Low'].map(imp => (
-                                            <button
-                                                key={imp}
-                                                onClick={() => setNewImportance(imp)}
-                                                className={`py-4 rounded-2xl text-[11px] font-black uppercase border transition-all ${newImportance === imp ? 'bg-blue-600 text-white border-blue-500 shadow-xl' : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10'}`}
-                                            >
-                                                {imp}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Audit Objectives & Scope</label>
+                                    <textarea
+                                        rows={4}
+                                        value={newDesc}
+                                        onChange={(e) => setNewDesc(e.target.value)}
+                                        placeholder="본 감사의 중점 점검 사항과 목적을 기록하세요..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-[15px] font-medium text-white outline-none focus:ring-4 ring-blue-500/10 transition-all resize-none placeholder:text-slate-700"
+                                    />
                                 </div>
                             </div>
 
-                            <div className="bg-blue-600/5 p-10 rounded-[32px] border border-blue-600/10 space-y-8">
-                                <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-3">
-                                    <Activity size={18} /> Risk Assessment Calculator
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Financial Impact</label>
-                                            <span className="text-[11px] font-black text-blue-400">{impactScore} pts</span>
-                                        </div>
-                                        <input type="range" min="1" max="5" value={impactScore} onChange={e => setImpactScore(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Op. Complexity</label>
-                                            <span className="text-[11px] font-black text-blue-400">{complexScore} pts</span>
-                                        </div>
-                                        <input type="range" min="1" max="5" value={complexScore} onChange={e => setComplexScore(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                                    </div>
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between">
-                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Resource Demand</label>
-                                            <span className="text-[11px] font-black text-blue-400">{newDays} M/D</span>
-                                        </div>
-                                        <input type="range" min="1" max="100" value={newDays} onChange={e => setNewDays(parseInt(e.target.value))} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                                    </div>
-                                </div>
-                                <div className="pt-8 border-t border-blue-600/10 flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Auto-Calculated Risk Profile</span>
-                                    <div className="flex items-center gap-2">
-                                        {[1, 2, 3, 4, 5].map(s => (
-                                            <Star key={s} size={20} className={s <= Math.round((impactScore + complexScore) / 2) ? 'text-blue-500 fill-blue-500' : 'text-slate-800'} />
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="p-10 bg-white/5 border-t border-white/5 flex justify-end gap-4 rounded-b-[40px]">
+                                <button
+                                    onClick={() => setIsPlanModalOpen(false)}
+                                    className="px-10 py-5 text-slate-500 hover:text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                                >
+                                    Discard
+                                </button>
+                                <button
+                                    onClick={handleAddPlan}
+                                    className="px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-900/40 active:scale-95"
+                                >
+                                    Confirm Strategic Plan
+                                </button>
                             </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest block pl-1">Audit Objectives & Scope</label>
-                                <textarea
-                                    rows={4}
-                                    value={newDesc}
-                                    onChange={(e) => setNewDesc(e.target.value)}
-                                    placeholder="본 감사의 중점 점검 사항과 목적을 기록하세요..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-[15px] font-medium text-white outline-none focus:ring-4 ring-blue-500/10 transition-all resize-none placeholder:text-slate-700"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-10 bg-white/5 border-t border-white/5 flex justify-end gap-4 rounded-b-[40px]">
-                            <button
-                                onClick={() => setIsPlanModalOpen(false)}
-                                className="px-10 py-5 text-slate-500 hover:text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
-                            >
-                                Discard
-                            </button>
-                            <button
-                                onClick={handleAddPlan}
-                                className="px-12 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-900/40 active:scale-95"
-                            >
-                                Confirm Strategic Plan
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

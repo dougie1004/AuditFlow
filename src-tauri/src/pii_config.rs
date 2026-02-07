@@ -27,10 +27,10 @@ impl Default for PiiDetectionConfig {
 pub struct PiiWeights;
 
 impl PiiWeights {
-    pub const RRN: f32 = 3.0;           // 二쇰?踰덊샇 - ?⑤룆?쇰줈??異⑸텇
-    pub const PHONE: f32 = 1.5;         // ?꾪솕踰덊샇
-    pub const NAME: f32 = 1.0;          // ?깅챸
-    pub const EMPLOYEE_ID: f32 = 1.5;   // ?ъ썝踰덊샇
-    pub const ADDRESS: f32 = 1.0;       // ?곸꽭二쇱냼
-    pub const DEPARTMENT: f32 = 0.5;    // 遺?쒕챸 (?⑤룆?쇰줈??PII ?꾨떂)
+    pub const RRN: f32 = 3.0;           // 주민번호 - 단독으로도 충분
+    pub const PHONE: f32 = 1.5;         // 전화번호
+    pub const NAME: f32 = 1.0;          // 성명
+    pub const EMPLOYEE_ID: f32 = 1.5;   // 사원번호
+    pub const ADDRESS: f32 = 1.0;       // 상세주소
+    pub const DEPARTMENT: f32 = 0.5;    // 부서명 (단독으로는 PII 아님)
 }

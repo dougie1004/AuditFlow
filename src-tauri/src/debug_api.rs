@@ -1,8 +1,10 @@
 use tauri::{AppHandle, Manager};
 use rusqlite::{params, Connection};
 use serde_json::json;
+#[allow(unused_imports)]
 use serde::Serialize; // Ensure derive works
 use rand;
+#[allow(unused_imports)]
 use crate::ai_detection::{SuspicionSignal, SignalScope};
 use crate::compliance_dd_flow::{Adjudicator, AdjudicationOutcome};
 
@@ -182,7 +184,7 @@ pub fn debug_process_next(app_handle: AppHandle) -> Result<String, String> {
 #[tauri::command]
 pub fn debug_run_calibration_test(app_handle: AppHandle) -> Result<serde_json::Value, String> {
     let db_path = get_db_path(&app_handle);
-    let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     // [INTELLIGENT ADJUDICATION] Check if user has already injected custom data
     let pending_count: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox WHERE status = 'Pending'", [], |r| r.get(0)).unwrap_or(0);

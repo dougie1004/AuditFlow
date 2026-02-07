@@ -41,6 +41,23 @@ Phase 4에서 AuditFlow는 다음 범위 내에서만 동작한다.
 - 처리 속도, 병별성, 비용 효율을 이유로 한 판단 단순화
 - 자동 판결 범위의 암묵적 확대
 - “AI가 판단했다”는 표현 또는 책임 전가
+- **규칙 정확도(Accuracy) 또는 탐지율(Detection Rate)에 기반한 시스템 평가**
+
+---
+
+## 4. Definition of Phase 4 Compliance Testing
+
+Phase 4의 "Compliance Testing"은 고도의 탐지 능력을 검증하는 과정이 아니다. 이는 시스템이 헌법적 가치를 기술적으로 준수하는지 확인하는 **무결성 테스트(Integrity Test)**로 한정된다.
+
+### Testing Scope (Strictly Limited to):
+1. **동일 입력 → 동일 결과 (Deterministic Check)**: 환경과 무관하게 동일한 데이터는 항상 동일한 판단 경로와 결과를 낳아야 함.
+2. **Rule 변경 시 Diff 발생 (Change Traceability)**: 규칙의 작은 변경이 판단 결과에 어떤 영향을 미치는지 명확히 추적 가능해야 함.
+3. **JudgmentTrace 누락 제로 (Trace Completeness)**: 모든 판단 단계에서 Manifesto 3.1에 따른 근거 기록이 단 하나도 누락되지 않아야 함.
+
+### Non-Goal for Phase 4:
+- 탐지 규칙의 정교화 및 정확도 향상
+- 더 많은 이상 징후의 포착 (FP/FN 최적화)
+- 분석 속도의 물리적 단축
 
 ---
 

@@ -7,8 +7,8 @@ pub fn reclassify_severity(app_handle: AppHandle) -> Result<String, String> {
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     let critical_keywords = vec![
-        "遺??, "?〓졊", "諛곗엫", "鍮꾨━", "?뚮Ъ", "由щ쿋?댄듃", "湲덊뭹?섏닔",
-        "援щℓ遺??, "?댄빀", "?좎갑", "鍮꾩옄湲?, "李⑸났", "?좎슜"
+        "부정", "횡령", "배임", "비리", "선물", "리베이트", "금품수수",
+        "구매부정", "담합", "유착", "비자금", "착복", "유용"
     ];
 
     let mut updated = 0;
@@ -40,5 +40,5 @@ pub fn reclassify_severity(app_handle: AppHandle) -> Result<String, String> {
         }
     }
 
-    Ok(format!("{}嫄댁쓽 ?댁뒋瑜?High濡??щ텇瑜섑뻽?듬땲??", updated))
+    Ok(format!("{}건의 이슈를 High로 재분류했습니다.", updated))
 }

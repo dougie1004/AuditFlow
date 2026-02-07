@@ -75,7 +75,9 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
             reporting_end TEXT,
             audit_scope TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            valuation_tier TEXT DEFAULT 'startup'
+            valuation_tier TEXT DEFAULT 'startup',
+            ruleset_status TEXT DEFAULT 'Draft',
+            ruleset_version TEXT DEFAULT 'v1.0.0-unlocked'
         )",
         params![]
     ).map_err(|e| e.to_string())?;
@@ -92,6 +94,9 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN audit_scope TEXT", params![]);
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP", params![]);
     let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN valuation_tier TEXT DEFAULT 'startup'", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN ruleset_status TEXT DEFAULT 'Draft'", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN ruleset_version TEXT DEFAULT 'v1.0.0-unlocked'", params![]);
+    let _ = conn.execute("ALTER TABLE audit_projects ADD COLUMN dataset_hash TEXT", params![]);
 
     // 2. Audit Findings (Structured Issue Tracking)
     conn.execute(

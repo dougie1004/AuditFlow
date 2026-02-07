@@ -82,7 +82,10 @@ fn choose_model(cfg: &AiConfig, task: TaskType) -> String {
 }
 
 pub fn get_api_key() -> String {
-    AiConfig::from_env().map(|c| c.api_key).unwrap_or_default()
+    AiConfig::from_env().map(|c| c.api_key).unwrap_or_else(|e| {
+        println!(">>> [CONSTITUTIONAL_ERROR] API KEY MISSING: {}", e);
+        String::new() 
+    })
 }
 
 pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value, String> {
@@ -113,7 +116,7 @@ pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value,
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.unwrap_or_default();
+        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
         return Err(format!("Gemini API Error ({}): {}", status, err_body));
     }
 
@@ -166,13 +169,16 @@ pub async fn call_gemini_direct(prompt: &str) -> Result<String, String> {
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.unwrap_or_default();
+        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
         return Err(format!("API Error ({}): {}", status, err_body));
     }
 
     let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
     increment_pro_call();
-    Ok(json_res["candidates"][0]["content"]["parts"][0]["text"].as_str().map(|s| s.to_string()).unwrap_or_default())
+    let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .ok_or_else(|| format!("AI Response Incomplete or Blocked. Raw: {}", json_res))?;
+    Ok(out_text.to_string())
 }
 
 pub async fn call_gemini_chat(message: String, system_prompt: &str) -> Result<String, String> {
@@ -199,13 +205,16 @@ pub async fn call_gemini_chat(message: String, system_prompt: &str) -> Result<St
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.unwrap_or_default();
+        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
         return Err(format!("Chat API Error ({}): {}", status, err_body));
     }
 
     let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
     increment_pro_call(); // Pro for chat seems correct based on current mapping
-    Ok(json_res["candidates"][0]["content"]["parts"][0]["text"].as_str().map(|s| s.to_string()).unwrap_or_default())
+    let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .ok_or_else(|| format!("AI Chat Response Incomplete or Blocked. Raw: {}", json_res))?;
+    Ok(out_text.to_string())
 }
 
 pub async fn call_gemini_flash(prompt: &str) -> Result<String, String> {
@@ -231,13 +240,16 @@ pub async fn call_gemini_flash(prompt: &str) -> Result<String, String> {
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.unwrap_or_default();
+        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
         return Err(format!("Flash API Error ({}): {}", status, err_body));
     }
 
     let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
     increment_flash_call();
-    Ok(json_res["candidates"][0]["content"]["parts"][0]["text"].as_str().map(|s| s.to_string()).unwrap_or_default())
+    let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .ok_or_else(|| format!("AI Flash Response Incomplete or Blocked. Raw: {}", json_res))?;
+    Ok(out_text.to_string())
 }
 
 // [PERMANENT] Cost Tracking - Thread-safe Atomic counters

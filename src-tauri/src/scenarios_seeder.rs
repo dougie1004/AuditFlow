@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Transaction};
+use rusqlite::{params, Connection};
 use serde_json::json;
 
 pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
@@ -44,7 +44,7 @@ pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
     scenarios.push(("IN-10".to_string(), "Inventory", "BOM Discrepancy", "High", "Material usage not matching Production BOM output."));
 
     // --- HR/Payroll (HR) 10 ---
-    scenarios.push(("HR-01".to_string(), "HR/Payroll", "Ghost Employee", "High", "Payments to terminated or non-existent staff."));
+    scenarios.push(("HR-01".to_string(), "HR/Payroll", "Ghost Payroll Entry", "High", "Payments to terminated or non-existent staff."));
     scenarios.push(("HR-02".to_string(), "HR/Payroll", "Overtime Fraud", "Medium", "Badge logs not matching overtime claims."));
     scenarios.push(("HR-03".to_string(), "HR/Payroll", "Benefit Scoping", "Low", "Non-eligible staff receiving specialized allowances."));
     scenarios.push(("HR-04".to_string(), "HR/Payroll", "Severance Manipulation", "High", "Backdated joining dates to boost severance pay."));

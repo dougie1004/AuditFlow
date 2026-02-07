@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+﻿use tauri::{AppHandle, Manager};
 use rusqlite::{params, Connection};
 use serde_json::{self, Value, json};
 use std::path::Path;
@@ -40,8 +40,8 @@ pub fn upload_audit_file(app_handle: AppHandle, project_type: String, file_path:
 }
 
 #[tauri::command]
-pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, enable_masking: Option<bool>, external_context: Option<String>, target_file_ids: Option<Vec<i64>>) -> Result<Value, String> {
-    let masking = enable_masking.unwrap_or(false);
+pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, enable_masking: Option<bool>, _external_context: Option<String>, target_file_ids: Option<Vec<i64>>) -> Result<Value, String> {
+    let _masking = enable_masking.unwrap_or(false);
     use tauri::Emitter;
 
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
@@ -50,7 +50,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
     let specific_targets = target_file_ids.clone().unwrap_or_default();
     let is_incremental = !specific_targets.is_empty();
     
-    app_handle.emit("analysis-progress", json!({ "progress": 5, "message": if is_incremental { "선택한 데이터에 대한 증분 분석 준비 중..." } else { "전체 데이터 재설정 및 분석 준비 중..." }, "step": 0 })).ok();
+    app_handle.emit("analysis-progress", json!({ "progress": 5, "message": if is_incremental { "선택된 데이터에 대한 증분 분석 준비 중..." } else { "전체 데이터 재설정 및 분석 준비 중..." }, "step": 0 })).ok();
 
     {
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
@@ -62,7 +62,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
     }
 
     let files = get_files_by_type(app_handle.clone(), project_type.clone())?;
-    let mut emp_file_path = String::new();
+    let mut _emp_file_path = String::new();
     let mut target_files = Vec::new();
     let mut reference_files = Vec::new();
     
@@ -96,24 +96,21 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
         }
 
         if (name.contains("인사") || name.contains("직원") || name.contains("employee")) && (name.ends_with(".csv") || name.ends_with(".xlsx")) {
-            emp_file_path = path;
+            _emp_file_path = path;
         }
     }
 
-    let mut card_file_path = String::new();
+    let mut _card_file_path = String::new();
     for (path, name) in &target_files {
         let n = name.to_lowercase();
         if n.contains("법인카드") || n.contains("card") || n.contains("거래") || n.contains("데이터") {
-            card_file_path = path.clone();
+            _card_file_path = path.clone();
         }
     }
 
-    if card_file_path.is_empty() && !target_files.is_empty() {
-        card_file_path = target_files[0].0.clone();
+    if _card_file_path.is_empty() && !target_files.is_empty() {
+        _card_file_path = target_files[0].0.clone();
     }
-
-    let mut findings_count = 0;
-    let mut risk_score = 0;
 
     // Logging to file for debugging
     let log_msg = format!("\n[{}] Starting analysis for project: {}\nTarget files: {}\n", 
@@ -124,7 +121,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
             write!(f, "{}", log_msg)
         });
 
-    let api_key = crate::ai::get_api_key();
+    let _api_key = crate::ai::get_api_key();
 
     // [AuditFlow V2 Engine Switch]
     // Migrating from Legacy Engine to Compliance DD Flow (Rule First, AI Witness)
@@ -149,9 +146,10 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
              println!(">>> [Ingestion] Loading file: {}, Total Rows: {}", path, rows.len());
 
              // [STABLE BATCHING] Sequential processing for 100% reliability
-             let mut row_cursor = 1;
-             let total_available = rows.len();
-             let scan_limit = std::cmp::min(total_available, 1001);
+             // [CONSTITUTIONAL LIMIT] System Integrity requires deterministic scan limits to prevent OOM
+             // Documented in Manifesto 짠3.2 as 'Infrastructure fixity'
+             const MAX_FORENSIC_ROWS: usize = 1001; 
+             let scan_limit = std::cmp::min(total_available, MAX_FORENSIC_ROWS);
              let mut injected_count = 0;
 
              while row_cursor < scan_limit {
@@ -192,36 +190,42 @@ pub async fn run_audit_analysis(app_handle: AppHandle, project_type: String, ena
         println!(">>> [Ingestion] Complete. Check Inbox.");
     }
 
-    {
+    let (findings_count, risk_score) = {
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
-        findings_count = conn.query_row(
+        let f_count: i64 = conn.query_row(
             "SELECT COUNT(*) FROM audit_issues WHERE project_type = ?1 OR audit_id = ?1",
             params![&project_type],
             |row| row.get(0)
         ).unwrap_or(0);
         
-        let high_count: i32 = conn.query_row(
+        let h_count: i32 = conn.query_row(
             "SELECT COUNT(*) FROM audit_issues WHERE (project_type = ?1 OR audit_id = ?1) AND severity = 'High'",
             params![&project_type],
             |row| row.get(0)
         ).unwrap_or(0);
 
-        risk_score = std::cmp::min(100, (high_count * 20) + (findings_count * 5));
+        // [MANIFESTO 4.1-4.3] Weighted Risk Score (IS: 20pt, OV: 5pt)
+        // This is a derived indicator, not a random guess.
+        let r_score = std::cmp::min(100, (h_count * 20) + (f_count as i32 * 5));
 
         conn.execute(
             "UPDATE audit_projects SET findings_count = ?1, risk_score = ?2, status = 'Reporting', progress_pct = 100 WHERE id = ?3 OR title = ?3",
-            params![findings_count, risk_score, &project_type]
+            params![f_count, r_score, &project_type]
         ).ok();
+        (f_count, r_score)
+    };
 
-        // Also add a system event for the project feed
-        conn.execute(
+    {
+        let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+        let _ = conn.execute(
             "INSERT INTO system_events (id, event_type, description) VALUES (?1, ?2, ?3)",
             params![
                 format!("EVT-{}", chrono::Local::now().timestamp_millis()),
                 "ANALYSIS_COMPLETE",
                 format!("AI Forensic Analysis complete for [{}]. {} findings identified.", project_type, findings_count)
             ]
-        ).ok();
+        );
     }
 
     let end_msg = format!("[{}] Analysis FINISHED. Detections: {}\n", 
@@ -251,19 +255,19 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
 
     // [REFINED PILLAR LOGIC] Broaden keywords to capture real DD findings
     let pillar_governance = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Governance%' OR issue_title LIKE '%거버넌스%' OR issue_title LIKE '%Compliance%' OR issue_title LIKE '%컴플라이언스%' OR issue_title LIKE '%Risk%' OR issue_title LIKE '%리스크%' OR issue_title LIKE '%Integrity%' OR issue_title LIKE '%신뢰%' OR issue_title LIKE '%Red Flag%')", filter_base),
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Governance%' OR issue_title LIKE '%거버넌스%' OR issue_title LIKE '%Compliance%' OR issue_title LIKE '%컴플라이언스%' OR issue_title LIKE '%Risk%' OR issue_title LIKE '%리스크' OR issue_title LIKE '%Integrity%' OR issue_title LIKE '%윤리%' OR issue_title LIKE '%Red Flag%')", filter_base),
         [],
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
 
     let pillar_process = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Process%' OR issue_title LIKE '%프로세스%' OR issue_title LIKE '%SOP%' OR issue_title LIKE '%Inventory%' OR issue_title LIKE '%재고%' OR issue_title LIKE '%매출%' OR issue_title LIKE '%Revenue%' OR issue_title LIKE '%Burn%' OR issue_title LIKE '%번레이트%' OR issue_title LIKE '%Cash%' OR issue_title LIKE '%현금%' OR issue_title LIKE '%Window%')", filter_base),
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Process%' OR issue_title LIKE '%?꾨줈?몄뒪%' OR issue_title LIKE '%SOP%' OR issue_title LIKE '%Inventory%' OR issue_title LIKE '%?ш퀬%' OR issue_title LIKE '%留ㅼ텧%' OR issue_title LIKE '%Revenue%' OR issue_title LIKE '%Burn%' OR issue_title LIKE '%踰덈젅?댄듃%' OR issue_title LIKE '%Cash%' OR issue_title LIKE '%?꾧툑%' OR issue_title LIKE '%Window%')", filter_base),
         [],
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
 
     let pillar_culture = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Culture%' OR issue_title LIKE '%문화%' OR issue_title LIKE '%Ethic%' OR issue_title LIKE '%윤리%' OR issue_title LIKE '%Fraud%' OR issue_title LIKE '%부정%' OR issue_title LIKE '%우회%' OR issue_title LIKE '%분할%' OR issue_title LIKE '%쪼개기%' OR issue_title LIKE '%인사%' OR issue_title LIKE '%HR%' OR issue_title LIKE '%카드%')", filter_base),
+        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Culture%' OR issue_title LIKE '%문화%' OR issue_title LIKE '%Ethic%' OR issue_title LIKE '%비리%' OR issue_title LIKE '%Fraud%' OR issue_title LIKE '%遺??' OR issue_title LIKE '%우회%' OR issue_title LIKE '%분할%' OR issue_title LIKE '%쪼개기' OR issue_title LIKE '%인사%' OR issue_title LIKE '%HR%' OR issue_title LIKE '%移대뱶%')", filter_base),
         [],
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
@@ -280,33 +284,41 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
     
-    let critical_coverage: String = if raw_signals > 0 { "100%".to_string() } else { "0%".to_string() };
+    let critical_coverage: String = if let Some(ref id) = project_id {
+        let pct: i32 = conn.query_row("SELECT progress_pct FROM audit_projects WHERE id = ?1", params![id], |row| row.get(0)).unwrap_or(0);
+        format!("{}%", pct)
+    } else {
+        "DATA_PENDING".to_string()
+    };
     
-    // [VALUATION EXPOSURE LOGIC] 
-    // Calculate potential financial exposure based on Project Tier
+    // [CONSTITUTIONAL UPGRADE] Remove implicit 'startup' tier assumption
     let (gov_weight, proc_weight) = if let Some(ref id) = project_id {
-        let tier: String = conn.query_row("SELECT valuation_tier FROM audit_projects WHERE id = ?1", params![id], |r| r.get(0)).unwrap_or_else(|_| "startup".to_string());
+        let tier: String = conn.query_row("SELECT valuation_tier FROM audit_projects WHERE id = ?1", params![id], |r| r.get(0)).unwrap_or_else(|_| "UNRANKED".to_string());
         match tier.as_str() {
-            "seed" => (10_000_000, 1_000_000),      // Seed: Gov 10M / Proc 1M
-            "enterprise" => (500_000_000, 50_000_000), // Enterprise: Gov 500M / Proc 50M
-            _ => (50_000_000, 5_000_000),           // Startup (Default): Gov 50M / Proc 5M
+            "seed" => (10_000_000, 1_000_000),      
+            "enterprise" => (500_000_000, 50_000_000), 
+            "startup" => (50_000_000, 5_000_000),
+            _ => (0, 0), // If UNRANKED, impact is 0 (Forced transparency)
         }
     } else {
-        (50_000_000, 5_000_000) // Default for Global View
+        (0, 0) // Default for Global View
     };
 
     let impact_value: i64 = (pillar_governance * gov_weight) + (pillar_process * proc_weight); 
     
     let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, (pillar_governance * 10 / 100) + (pillar_process * 5 / 100)) }; 
 
-    // Trends: Organic growth simulation
+    // [CONSTITUTIONAL UPGRADE] Replace Simulation with REAL daily counts
     let mut trends = Vec::new();
-    let base_val = if raw_signals > 0 { 5 } else { 0 };
     for i in (0..7).rev() {
         let date = Utc::now() - Duration::days(i);
-        let day_str = date.format("%m-%d").to_string();
-        let variance = if base_val > 0 { (i as i64 % 3) + (i as i64 * 2 % 5) } else { 0 };
-        trends.push(json!({ "day": day_str, "value": base_val + variance }));
+        let day_pattern = format!("{}%", date.format("%Y-%m-%d"));
+        let count: i64 = conn.query_row(
+            &format!("SELECT COUNT(*) FROM audit_issues{} AND detected_at LIKE ?1", filter_base),
+            params![day_pattern],
+            |row| row.get(0)
+        ).unwrap_or(0);
+        trends.push(json!({ "day": date.format("%m-%d").to_string(), "value": count }));
     }
 
     Ok(json!({ 
@@ -320,7 +332,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         "risk_exposure_score": risk_score, 
         "potential_impact_value": impact_value,
         "trends": trends,
-        "signal_summary": "Inference core detected behavioral patterns across disconnected silos."
+        "signal_summary": if raw_signals > 0 { format!("{} forensic signals identified in current scope.", raw_signals) } else { "No significant signals in current scope.".to_string() }
     }))
 }
 
@@ -373,13 +385,17 @@ pub fn update_issue_status(app_handle: AppHandle, id: i64, status: String, assig
 pub fn update_audit_issue_field(app_handle: AppHandle, id: i64, field: String, value: String) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    
+    // [PHASE 5 INTEGRITY] Mark as human-intervened
+    let _ = conn.execute("UPDATE audit_issues SET verdict_mode = 'HUMAN_REVIEWED' WHERE id = ?1", params![id]);
+
     match field.as_str() {
         "status" => conn.execute("UPDATE audit_issues SET status = ?1 WHERE id = ?2", params![value, id]),
         "assignee" => conn.execute("UPDATE audit_issues SET assignee = ?1 WHERE id = ?2", params![value, id]),
         "due_date" => conn.execute("UPDATE audit_issues SET due_date = ?1 WHERE id = ?2", params![value, id]),
         "remediation_plan" => conn.execute("UPDATE audit_issues SET remediation_plan = ?1 WHERE id = ?2", params![value, id]),
         "manager_comment" => conn.execute("UPDATE audit_issues SET manager_comment = ?1 WHERE id = ?2", params![value, id]),
-        _ => return Err("Invalid field".into())
+        _ => return Err("Constitutional Protection: 시스템 자본 데이터(Description/Logic)는 인간이 직접 수정할 수 없습니다.".into())
     }.map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -388,7 +404,15 @@ pub fn update_audit_issue_field(app_handle: AppHandle, id: i64, field: String, v
 pub fn dismiss_audit_issue(app_handle: AppHandle, issue_id: i64) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM audit_issues WHERE id = ?1", params![issue_id]).map_err(|e| e.to_string())?;
+    
+    // [MANIFESTO 3.3] NO PERMANENT DELETION OF TRACE
+    // Instead of DELETE, we change status to 'Dismissed'
+    conn.execute(
+        "UPDATE audit_issues SET status = 'Dismissed', verdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+        params![issue_id]
+    ).map_err(|e| e.to_string())?;
+    
+    println!(">>> [CONSTITUTIONAL ACT] Issue {} dismissed (Logical Soft-Delete). Trace preserved.", issue_id);
     Ok(())
 }
 
@@ -445,10 +469,10 @@ pub async fn generate_annual_report(app_handle: AppHandle, year: i32) -> Result<
     let system_prompt = format!(r#"
     당신은 기업의 최고 감사 책임자(Chief Audit Executive, CAE)입니다. CEO를 위한 {year}년 연간 감사 경영 요약 보고서를 작성하십시오.
     통계: 총 {total_issues}건 발견 (고위험 {high_risk_count}건). 주요 도메인: {top_domains}.
-    톤: 전략적, 전문적 (한국어 Markdown)
+    톤앤매너: 전문적 (한국어 Markdown)
     "#, year=year, total_issues=total_issues, high_risk_count=high_risk_count, top_domains=top_domains.join(", "));
 
-    let ai_insight = call_gemini_chat("위 통계를 바탕으로 연간 보고서를 작성해줘.".to_string(), &system_prompt).await.unwrap_or_else(|e| format!("AI Insight 생성 실패: {}", e));
+    let ai_insight = crate::ai::call_gemini_chat("위 통계를 바탕으로 연간 보고서를 작성해줘.".to_string(), &system_prompt).await.unwrap_or_else(|e| format!("AI Insight 생성 실패: {}", e));
     Ok(json!({ "year": year, "total_issues": total_issues, "high_risk_count": high_risk_count, "top_domains": top_domains, "ai_insight": ai_insight }))
 }
 
@@ -498,7 +522,7 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
     let mut dept_filter = String::new();
     if let Some(ref pid) = project_id {
         if !pid.is_empty() {
-             let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![pid], |r| r.get(0)).unwrap_or_default();
+             let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![pid], |r| r.get(0)).unwrap_or_else(|_| "[TITLE_NOT_FOUND]".to_string());
              let t = title.to_lowercase();
              if t.contains("marketing") || t.contains("마케팅") { dept_filter = " WHERE unit_name LIKE '%Marketing%' OR unit_name LIKE '%마케팅%'".into(); }
              else if t.contains("sales") || t.contains("영업") { dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_name LIKE '%영업%'".into(); }
@@ -561,10 +585,10 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
                 impact_score: r.get(3)?, 
                 likelihood_score: r.get(4)?, 
                 last_audit_year: r.get(5)?, 
-                budget_size: r.get(6).unwrap_or("N/A".to_string()), 
-                headcount: r.get(7).unwrap_or(0), 
-                last_audit_rating: r.get(8).unwrap_or("Not Rated".to_string()), 
-                key_systems: r.get(9).unwrap_or("None".to_string()), 
+                budget_size: r.get(6).unwrap_or("[MISSING: BUDGET_DATA]".to_string()), 
+                headcount: r.get(7).unwrap_or(-1), 
+                last_audit_rating: r.get(8).unwrap_or("[NO_HISTORICAL_RATING]".to_string()), 
+                key_systems: r.get(9).unwrap_or("[NO_SYSTEM_DATA_AVAILABLE]".to_string()), 
                 ai_analysis,
                 findings_count: r.get(11).unwrap_or(0)
             })
@@ -697,7 +721,7 @@ pub fn get_file_preview(file_path: String, limit: Option<usize>, enable_masking:
         }
         Ok(preview)
     } else {
-        Ok(vec![vec!["미리보기를 지원하지 않는 형식입니다.".into()]])
+        Ok(vec![vec!["誘몃━蹂닿린瑜?吏?먰븯吏 ?딅뒗 ?뺤떇?낅땲??".into()]])
     }
 }
 
@@ -838,7 +862,7 @@ pub async fn add_issue_to_scenarios(app_handle: AppHandle, issue_id: i64, catego
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     let issue_data = conn.query_row("SELECT issue_title, description, severity, project_type FROM audit_issues WHERE id = ?1", params![issue_id], |row| { Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, String>(3)?)) }).map_err(|e| e.to_string())?;
-    conn.execute("INSERT INTO custom_scenarios (category, name, risk_level, description, origin_audit_type, origin_department, is_ai_generated) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", params![category, issue_data.0, issue_data.2, issue_data.1, issue_data.3, if is_ai { "AI 탐지 시나리오" } else { "사용자 정의" }, is_ai as i32]).map_err(|e| e.to_string())?;
+    conn.execute("INSERT INTO custom_scenarios (category, name, risk_level, description, origin_audit_type, origin_department, is_ai_generated) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", params![category, issue_data.0, issue_data.2, issue_data.1, issue_data.3, if is_ai { "AI ?먯? ?쒕굹由ъ삤" } else { "?ъ슜???뺤쓽" }, is_ai as i32]).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -876,7 +900,7 @@ pub async fn get_annual_performance(app_handle: AppHandle, target_year: i32, yea
 
 #[tauri::command]
 pub async fn analyze_process_mining(_app_handle: AppHandle, _project_type: String) -> Result<Value, String> {
-    Ok(json!({ "official_flow": ["구매 요청", "본부장 전결", "발주", "입고", "결제"], "shadow_flow": ["자산 선구매", "임의 사용", "사후 품의"], "violation_rate": 15.5 }))
+    Ok(json!({ "official_flow": ["구매 요청", "본부 전결", "발주", "입고", "결제"], "shadow_flow": ["자산 선구매", "임의 사용", "사후 품의"], "violation_rate": 15.5 }))
 }
 
 #[tauri::command]
@@ -897,24 +921,44 @@ pub async fn ask_ai_assistant(app_handle: AppHandle, message: String, project_id
          Vec::<AuditIssue>::new()
     };
 
-    let context = format!("Project ID: {:?}. Findings in DB: {:?}. Question: {}. Respond as a professional auditor in Korean. USE PLAIN TEXT ONLY. DO NOT use markdown symbols like # or ** for bold/headings. Keep it clean and readable without any markdown artifacts.", project_id, findings, message);
+    let system_prompt = r#"
+    [CONSTITUTIONAL GUARD: NEGATIVE CAPABILITIES]
+    1. NO PREDICTION: You MUST NOT predict future financial value, bankruptcy risk, or survival probability. 
+    2. NO JUDICIAL AUTHORITY: You are a "Witness", not a "Judge". Focus only on evidence summary.
+    3. SCOPE LIMIT: If asked about future outcomes, respond: "AuditFlow Manifesto 1.0???곕씪 蹂??쒖뒪?쒖? 誘몃옒瑜??덉륫?섍굅??二쇨??곸씤 ?먮떒???대━吏 ?딆쑝硫? ?ㅼ쭅 ?뺤젙???곗씠?곗? 洹쒖튃??湲곕컲??利앷굅留뚯쓣 蹂닿퀬?⑸땲??"
+    4. LANGUAGE: Always respond in professional Korean.
+    5. FORMAT: Plain text only. No markdown symbols like # or **.
+    "#;
+
+    let context = format!("
+    System Guard: {}
+    Project: {:?}
+    Context (Findings): {:?}
+    User Question: {}
+    ", system_prompt, project_id, findings, message);
+
     call_gemini_direct(&context).await.map_err(|e| e.to_string())
 }
 
 
 fn generate_fallback_report(project_id: &str, findings: &[AuditIssue], high: i32, medium: i32, low: i32) -> String {
     let total = findings.len();
+    let total_float = total as f32;
+    let high_pct = if total > 0 { (high as f32 / total_float * 100.0) as i32 } else { 0 };
+    let medium_pct = if total > 0 { (medium as f32 / total_float * 100.0) as i32 } else { 0 };
+    let low_pct = if total > 0 { (low as f32 / total_float * 100.0) as i32 } else { 0 };
+
     let mut report = format!(r#"[감사/실사 결과 보고서]
 
 [1. 요약 (Executive Summary)]
 
 본 보고서는 {} 프로젝트에 대한 데이터 기반 추론 분석 결과를 담고 있습니다.
 
-- 조사 대상 노출 건수: {}건
-- 노출도 분포: High {}건, Medium {}건, Low {}건
+- 조사 대상 도출 건수: {}건
+- 도출된 분포: High {}건, Medium {}건, Low {}건
 - 전반적 소견: {}
 
-[2. 조사 결과 총괄]
+[2. 조사 결과 총계]
 
 통계:
 High: {}건 ({}%)
@@ -930,24 +974,24 @@ Low: {}건 ({}%)
         high,
         medium,
         low,
-        if high > 5 { "추가 소명이 필요한 다수의 고우선순위 신호가 식별되었습니다." } 
-        else if high > 0 { "일부 고우선순위 신호가 발견되었으나 일반적인 범위 내에 있습니다." }
+        if high > 5 { "추가 소명이 필요한 다수의 고위험 신호가 식별되었습니다." } 
+        else if high > 0 { "일부 고위험 신호가 발견되었으나 일반적인 범위 내에 있습니다." }
         else { "특이 패턴은 발견되지 않았으나 지속적인 모니터링을 권고합니다." },
         high,
-        (high as f32 / total as f32 * 100.0) as i32,
+        high_pct,
         medium,
-        (medium as f32 / total as f32 * 100.0) as i32,
+        medium_pct,
         low,
-        (low as f32 / total as f32 * 100.0) as i32,
+        low_pct,
         total
     );
 
     // Add detailed findings
     for (idx, finding) in findings.iter().enumerate() {
         report.push_str(&format!(
-            "\n[{}. {}]\n항목: {}\n노출도: {}\n상세: {}\n제언: {}\n\n---\n\n",
-            idx / 10 + 3,
-            idx % 10 + 1,
+            "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?몄텧: {}\n?쒖뼵: {}\n\n---\n\n",
+            (idx / 10) + 1,
+            (idx % 10) + 1,
             finding.issue_title,
             finding.severity,
             finding.description,
@@ -958,7 +1002,7 @@ Low: {}건 ({}%)
     report.push_str(&format!(r#"
 [4. 권고사항 및 가치 조정 제언]
 
-구체적 확인 필요 사항:
+구체적인 확인 필요 사항:
 {}
 
 단기 과제:
@@ -970,7 +1014,7 @@ Low: {}건 ({}%)
 
 [5. 결론]
 
-본 조사를 통해 총 {}건의 데이터 특이점이 식별되었습니다. 특히 High 등급 {}건에 대해서는 인수 전 소명 절차를 거칠 것을 제언합니다.
+본 조사를 통해 총 {}건의 데이터 특이점이 식별되었습니다. 특히 High 등급 {}건에 대해서는 인수 등 소명 절차를 거칠 것을 제언합니다.
 
 보고서 작성일: {}
 작성자: AuditFlow AI Engine (Fallback Mode)
@@ -1031,7 +1075,7 @@ pub fn update_audit_issue_status(app_handle: AppHandle, id: String, status: Stri
             // Record High-risk findings to system_events for AI Signal tracking
             if severity == "High" {
                 let event_id = format!("AI-SIGNAL-{}", chrono::Local::now().timestamp());
-                let raw_desc = format!("🚨 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
+                let raw_desc = format!("?슚 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
                 
                 // [FIX] Use Pseudonymization (Employee_NN) instead of simple masking for Vault Demo compatibility
                 let mut session = crate::file_utils::MaskingSession::new();
@@ -1116,8 +1160,8 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
     
     println!(">>> [AUDIT-GATEWAY] Masking sensitive data before AI analysis for project: {}", pid);
     
-    // 비식별화 처리: AI에 전송되기 전 모든 컨텐츠에서 개인정보를 물리적으로 마스킹
-    let content = full_content.map(|c| apply_deidentification(&c)).unwrap_or_default();
+    // 鍮꾩떇蹂꾪솕 泥섎━: AI???꾩넚?섍린 ??紐⑤뱺 而⑦뀗痢좎뿉??媛쒖씤?뺣낫瑜?臾쇰━?곸쑝濡?留덉뒪??
+    let content = full_content.map(|c| apply_deidentification(&c)).ok_or_else(|| "CONSTITUTIONAL_ERROR: Content acquisition failed. Process aborted.".to_string())?;
     
     // Construct Specialized Auditor Prompt (Extreme High Precision)
     let system_prompt = format!(r#"
@@ -1213,7 +1257,7 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
     let avg_risk = if !audit_findings.is_empty() { total_risk / audit_findings.len() as i32 } else { 0 };
     let final_risk = std::cmp::min(100, avg_risk + (audit_findings.len() as i32 * 2)); // Dynamic inflation based on volume
 
-    // [핵심] 분석 완료 후 프로젝트 메타데이터 업데이트 (지적사항 수, 리스크 점수)
+    // [?듭떖] 遺꾩꽍 ?꾨즺 ???꾨줈?앺듃 硫뷀??곗씠???낅뜲?댄듃 (吏?곸궗???? 리스크?먯닔)
     conn.execute(
         "UPDATE audit_projects SET findings_count = ?1, risk_score = ?2 WHERE id = ?3",
         params![audit_findings.len() as i32, final_risk, pid]
@@ -1293,7 +1337,7 @@ pub async fn get_latest_analysis(app_handle: AppHandle, project_id: Option<Strin
     println!(">>> [DEBUG] get_latest_analysis: found {} findings", findings.len());
     
     Ok(crate::models::AuditAnalysisResult {
-        summary: "최근 분석 결과 리포트입니다.".to_string(),
+        summary: "理쒓렐 遺꾩꽍 寃곌낵 由ы룷?몄엯?덈떎.".to_string(),
         risk_score: 0,
         findings,
     })
@@ -1301,7 +1345,7 @@ pub async fn get_latest_analysis(app_handle: AppHandle, project_id: Option<Strin
 
 #[tauri::command]
 pub async fn perform_audit_analysis(app_handle: AppHandle, file_path: String) -> Result<crate::models::AuditAnalysisResult, String> {
-    // 실시간 분석 요청 시 execute_project_analysis와 유사한 로직을 수행하되, 특정 파일 컨텍스트 위주로 분석
+    // ?ㅼ떆媛?遺꾩꽍 ?붿껌 ??execute_project_analysis? ?좎궗??濡쒖쭅???섑뻾?섎릺, ?뱀젙 ?뚯씪 而⑦뀓?ㅽ듃 ?꾩＜濡?遺꾩꽍
     execute_project_analysis(app_handle, None, "Direct Scan".to_string(), Some(file_path)).await
 }
 #[tauri::command]
@@ -1417,35 +1461,35 @@ pub async fn generate_risk_summary(app_handle: AppHandle) -> Result<String, Stri
     };
 
     let prompt = format!(
-        "당신은 '감사 결과 요약 보고서 작성기'입니다. 아래의 지침을 엄격히 준수하여 보고서를 작성하십시오.
+        "?뱀떊? '媛먯궗 寃곌낵 ?붿빟 蹂닿퀬???묒꽦湲??낅땲?? ?꾨옒??吏移⑥쓣 ?꾧꺽??以?섑븯??蹂닿퀬?쒕? 작성하십시오.
 
-        [보고서 작성 헌법]
-        1. 출력 언어는 반드시 100% 한국어여야 함.
-        2. 'AI', '모델', 'Gemini', 'LLM' 등 기술적 용어나 AI가 작성했다는 표현을 절대 금지함.
-        3. 감사 주체는 항상 '본 감사 결과' 또는 '본 실사 결과'로 표현함.
-        4. 문체는 정중하지만 단호한 내부 감사보고용 문체를 사용함 (~함, ~임, ~바람).
-        5. 영문 고유명사 사용을 지양하고 가급적 한국어 용어로 대체함 (예: Split Payment -> 분할 결제).
+        [蹂닿퀬???묒꽦 ?뚮쾿]
+        1. 출력 언어는 반드시 100% 한국어여야 합니다.
+        2. 'AI', '紐⑤뜽', 'Gemini', 'LLM' ??湲곗닠???⑹뼱??AI媛 ?묒꽦?덈떎???쒗쁽???덈? 湲덉???
+        3. 媛먯궗 二쇱껜????긽 '蹂?媛먯궗 寃곌낵' ?먮뒗 '蹂??ㅼ궗 寃곌낵'濡??쒗쁽??
+        4. 문체는 정중하되 단호하고 엄격한 감사보고서 문체를 사용 (~함, ~임, ~바람).
+        5. ?곷Ц 怨좎쑀紐낆궗 ?ъ슜??吏?묓븯怨?媛湲됱쟻 ?쒓뎅???⑹뼱濡??泥댄븿 (?? Split Payment -> 분할 寃곗젣).
 
-        [데이터]
+        [?곗씠??
         - 확인된 규정 위반 건수: {}건
-        - 검출된 리스크 유형: {}
+        - 寃異쒕맂 리스크?좏삎: {}
 
-        [보고서 템플릿]
+        [蹂닿퀬???쒗뵆由?
         [경영진 요약 보고]
 
         1. 감사 개요
-        - 본 감사 결과, {}의 항목에 대해 총 {}건의 규정 이탈 시그널이 확인되었습니다.
+        - 蹂?媛먯궗 寃곌낵, {}????ぉ?????珥?{}嫄댁쓽 洹쒖젙 ?댄깉 ?쒓렇?먯씠 ?뺤씤?섏뿀?듬땲??
 
-        2. 주요 확인 사항
-        - 위반 유형: {}
-        - 확인 건수: {}건
-        - 규정 근거: 내부 감사 규정 및 운영 정책
+        2. 二쇱슂 ?뺤씤 ?ы빆
+        - ?꾨컲 ?좏삎: {}
+        - ?뺤씤 嫄댁닔: {}嫄?
+        - 洹쒖젙 洹쇨굅: ?대? 媛먯궗 洹쒖젙 諛??댁쁺 ?뺤콉
 
-        3. 조치 필요 사항
-        - 즉시 조치: 발견된 위반 사례에 대한 즉시 소명 및 부당 집행건 환수 검토 필요
-        - 후속 권고: 재발 방지를 위한 통제 프로세스 강화 및 정기 모니터링 체계 구축 권고
+        3. 議곗튂 ?꾩슂 ?ы빆
+        - 利됱떆 議곗튂: 발견???꾨컲 ?щ??????利됱떆 ?뚮챸 諛?遺??吏묓뻾嫄??섏닔 寃???꾩슂
+        - ?꾩냽 沅뚭퀬: ?щ컻 諛⑹?瑜??꾪븳 ?듭젣 ?꾨줈?몄뒪 媛뺥솕 諛??뺢린 紐⑤땲?곕쭅 泥닿퀎 援ъ텞 沅뚭퀬
 
-        위 템플릿의 형식을 유지하되, 전체적인 문맥과 톤을 전문적인 감사 보고서 수준으로 완성하십시오. 별도의 인사말이나 서론 없이 바로 [경영진 요약 보고] 섹션부터 시작하십시오.",
+        ???쒗뵆由우쓽 ?뺤떇???좎??섎릺, ?꾩껜?곸씤 臾몃㎘怨??ㅼ쓣 ?꾨Ц?곸씤 媛먯궗 蹂닿퀬???섏??쇰줈 ?꾩꽦?섏떗?쒖삤. 蹂꾨룄??인사留먯씠???쒕줎 ?놁씠 諛붾줈 [경영진 요약 보고] ?뱀뀡遺???쒖옉?섏떗?쒖삤.",
         confirmed_count, risk_types_str, risk_types_str, confirmed_count, risk_types_str, confirmed_count
     );
 
@@ -1477,7 +1521,7 @@ pub async fn generate_professional_report(app_handle: AppHandle, project_id: Str
         let mut findings = Vec::new();
         for r in rows { if let Ok(s) = r { findings.push(s); } }
         
-        if findings.is_empty() { return Err("보고서를 생성할 지적 사항이 없습니다.".into()); }
+        if findings.is_empty() { return Err("蹂닿퀬?쒕? ?앹꽦??吏???ы빆???놁뒿?덈떎.".into()); }
         
         findings.join("\n\n")
     };
@@ -1648,13 +1692,13 @@ pub async fn get_engine_health_stats(app_handle: AppHandle) -> Result<EngineHeal
 
 #[tauri::command]
 pub async fn run_formal_adjudication(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    use crate::compliance_dd_flow::{Adjudicator, AdjudicationOutcome, ComplianceFinding, JudicialInabilityReason};
+    use crate::compliance_dd_flow::{Adjudicator, AdjudicationOutcome, JudicialInabilityReason};
 
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     // 1. Governance Entrance
-    println!(">>> [GOVERNANCE] Starting Phase 4 – Constitutional Compliance Replay (Fast Mode)");
+    println!(">>> [GOVERNANCE] Starting Phase 4 Constitutional Compliance Replay (Fast Mode)");
     
     // Fetch all pending IDs
     let target_ids: Vec<String> = {
@@ -1747,7 +1791,7 @@ pub async fn run_formal_adjudication(app_handle: tauri::AppHandle) -> Result<ser
     }
 
     // 4. Return Final Reports
-    let total: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox", [], |r| r.get(0)).unwrap_or(0);
+    let _total: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox", [], |r| r.get(0)).unwrap_or(0);
     let dismissed: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox WHERE status LIKE '%Dismissed%'", [], |r| r.get(0)).unwrap_or(0);
     let investigation: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox WHERE status LIKE '%Investigation%'", [], |r| r.get(0)).unwrap_or(0);
     let pending_evidence: i32 = conn.query_row("SELECT COUNT(*) FROM suspicion_inbox WHERE status LIKE '%Unclassified%' OR status LIKE '%NeedsEvidence%'", [], |r| r.get(0)).unwrap_or(0);
@@ -1757,7 +1801,7 @@ pub async fn run_formal_adjudication(app_handle: tauri::AppHandle) -> Result<ser
     // to avoid duplication and align with the instruction's intent for aggregation.
 
     Ok(json!({
-        "label": "Phase 4 – Constitutional Compliance Replay (Fast Mode)",
+        "label": "Phase 4 ??Constitutional Compliance Replay (Fast Mode)",
         "total": initial_count,
         "confirmed_a": confirmed_a,
         "review_b": review_b,
@@ -1769,5 +1813,113 @@ pub async fn run_formal_adjudication(app_handle: tauri::AppHandle) -> Result<ser
             "distribution_integrity": "Verified (No Heuristic Pruning)",
             "governance_attestation": "Adherence to Grade Constitution v1.1 confirmed. Pure function replay."
         }
+    }))
+}
+
+fn calculate_project_dataset_hash(app_handle: &AppHandle, project_id: &str) -> Result<String, String> {
+    let files = get_files_by_type(app_handle.clone(), project_id.to_string())?;
+    let mut combined_content = String::new();
+    
+    for f in files {
+        let path_str = f["file_path"].as_str().unwrap_or("");
+        if !path_str.is_empty() {
+            let content = std::fs::read(path_str).map_err(|e| format!("File read failed: {}", e))?;
+            combined_content.push_str(&format!("{:x}", md5::compute(content)));
+        }
+    }
+    
+    Ok(format!("{:x}", md5::compute(combined_content)))
+}
+
+#[tauri::command]
+pub fn lock_project_ruleset(app_handle: AppHandle, project_id: String) -> Result<String, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    // Create a new locked version string based on current time
+    let new_version = format!("v1.0.0-LOCKED-{}", chrono::Local::now().format("%Y%m%d%H%M"));
+
+    // [CONSTITUTIONAL UPGRADE] Phase 1-2 Evidence Fixity
+    // Calculate dataset hash at the moment of locking
+    let data_hash = calculate_project_dataset_hash(&app_handle, &project_id)?;
+
+    conn.execute(
+        "UPDATE audit_projects SET ruleset_status = 'LOCKED', ruleset_version = ?1, dataset_hash = ?2 WHERE id = ?3",
+        params![new_version, data_hash, project_id]
+    ).map_err(|e| e.to_string())?;
+
+    println!(">>> [CONSTITUTIONAL GOVERNANCE] RuleSet for {} is now LOCKED as {}.", project_id, new_version);
+    println!("    Dataset Integrity Hash: {}", data_hash);
+    Ok(new_version)
+}
+
+#[tauri::command]
+pub async fn execute_certified_audit(app_handle: AppHandle, project_id: String) -> Result<Value, String> {
+    let start_time = chrono::Local::now(); 
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    
+    let (rs_status, rs_version, saved_data_hash) = conn.query_row(
+        "SELECT ruleset_status, ruleset_version, dataset_hash FROM audit_projects WHERE id = ?1",
+        params![project_id],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
+    ).map_err(|_| "프로젝트 거버넌스 메타데이터를 찾을 수 없습니다.".to_string())?;
+
+    println!(">>> [CONSTITUTIONAL CHECK] Phase 0 - Infrastructure Check");
+    crate::constitution::validate_execution_safety(&app_handle, &project_id)?;
+    println!("    RuleSet: {} ({})", rs_version, rs_status);
+
+    if let Some(saved_hash) = saved_data_hash {
+        let current_hash = calculate_project_dataset_hash(&app_handle, &project_id)?;
+        if current_hash != saved_hash {
+            return Err("Evidence integrity compromised. (데이터 변조 감지)".to_string());
+        }
+    }
+
+    if rs_status != "LOCKED" {
+        return Err(format!("RuleSet status is '{}'. MUST BE 'LOCKED'.", rs_status));
+    }
+
+    let files = get_files_by_type(app_handle.clone(), project_id.clone())?;
+    let target_files: Vec<(String, String)> = files.iter().map(|f| (
+        f["file_path"].as_str().unwrap_or("").to_string(), 
+        f["file_name"].as_str().unwrap_or("").to_string()
+    )).collect();
+
+    let (all_txs_len, saved_count) = crate::compliance_dd_flow::run_compliance_check_flow(
+        target_files.clone(), 
+        &project_id, 
+        &db_path, 
+        &app_handle
+    ).await?;
+
+    let duration = chrono::Local::now() - start_time;
+    let exec_time = format!("{:.2}s", duration.num_milliseconds() as f64 / 1000.0);
+
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT issue_title, severity, description, recommendations, evidence_quote, logic_chain FROM audit_issues WHERE (project_type = ?1 OR audit_id = ?1) ORDER BY id DESC LIMIT ?2").map_err(|e| e.to_string())?;
+    
+    let rows = stmt.query_map(params![project_id, saved_count], |r| {
+        Ok(json!({
+            "title": r.get::<_, String>(0)?,
+            "risk_level": r.get::<_, String>(1)?,
+            "rationale": vec![r.get::<_, String>(4)?],
+            "counter_argument": r.get::<_, String>(2)?,
+            "next_action": r.get::<_, String>(3)?,
+            "logic_chain": r.get::<_, Option<String>>(5)?
+                .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
+                .unwrap_or_default()
+        }))
+    }).map_err(|e| e.to_string())?;
+
+    let mut cards = Vec::new();
+    for r in rows { if let Ok(c) = r { cards.push(c); } }
+
+    Ok(json!({
+        "status": "Success",
+        "scan_summary": { "total": all_txs_len, "saved": saved_count },
+        "execution_time": exec_time,
+        "ai_output_cards": cards
     }))
 }

@@ -1,4 +1,6 @@
-﻿use std::path::Path;
+const fs = require('fs');
+
+const content = `use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 use calamine::{Range, Data};
@@ -29,19 +31,19 @@ lazy_static! {
     };
     
     // De-identification Regexes
-    pub static ref RRN_REGEX: Regex = Regex::new(r"\d{6}-?[1-4]\d{6}").unwrap();
-    pub static ref PHONE_REGEX: Regex = Regex::new(r"(?:01[016789])[-.\s]?\d{3,4}[-.\s]?\d{4}").unwrap();
-    pub static ref CARD_REGEX: Regex = Regex::new(r"\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}").unwrap();
-    pub static ref EMAIL_REGEX: Regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
-    pub static ref NAME_REGEX: Regex = Regex::new(r"\b[가-힣]{2,4}\b").unwrap();
-    pub static ref NAME_TITLE_REGEX: Regex = Regex::new(r"([가-힣]{2,4})\s+(선생|교수|변호사|회계사|대표|사장|부사장|전무|상무|이사|본부장|실장|팀장|부장|차장|과장|대리|사원|계장|주임|CEO|CFO|COO|CTO|Manager|Director)").unwrap();
+    pub static ref RRN_REGEX: Regex = Regex::new(r"\\d{6}-?[1-4]\\d{6}").unwrap();
+    pub static ref PHONE_REGEX: Regex = Regex::new(r"(?:01[016789])[-.\\s]?\\d{3,4}[-.\\s]?\\d{4}").unwrap();
+    pub static ref CARD_REGEX: Regex = Regex::new(r"\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}").unwrap();
+    pub static ref EMAIL_REGEX: Regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}").unwrap();
+    pub static ref NAME_REGEX: Regex = Regex::new(r"\\b[가-힣]{2,4}\\b").unwrap();
+    pub static ref NAME_TITLE_REGEX: Regex = Regex::new(r"([가-힣]{2,4})\\s+(선생|교수|변호사|회계사|대표|사장|부사장|전무|상무|이사|본부장|실장|팀장|부장|차장|과장|대리|사원|계장|주임|CEO|CFO|COO|CTO|Manager|Director)").unwrap();
 }
 
 fn is_word_boundary(text: &str, idx: usize) -> bool {
     if idx == 0 || idx >= text.len() { return true; }
     if !text.is_char_boundary(idx) { return false; }
     
-    let is_boundary_char = |c: char| c.is_whitespace() || ".,:;()[]{}<>\"'!?\n\r\t".contains(c);
+    let is_boundary_char = |c: char| c.is_whitespace() || ".,:;()[]{}<>\\"'!?\\n\\r\\t".contains(c);
     
     if let Some(prev) = text[..idx].chars().last() {
         if is_boundary_char(prev) { return true; }
@@ -95,7 +97,7 @@ fn mask_hangul_name(name: &str) -> String {
     let chars: Vec<char> = name.chars().collect();
     match chars.len() {
         4 => {
-            if name.starts_with("독고") || name.starts_with("남궁") || name.starts_with("제갈") || name.starts_with("사공") || name.with("황보") {
+            if name.starts_with("독고") || name.starts_with("남궁") || name.starts_with("제갈") || name.starts_with("사공") || name.starts_with("황보") {
                 format!("{}{}**", chars[0], chars[1])
             } else {
                 format!("{}**{}", chars[0], chars[3])
@@ -111,10 +113,10 @@ fn mask_hangul_name(name: &str) -> String {
 pub fn apply_deidentification(input: &str) -> String {
     let mut result = input.to_string();
 
-    // 1. 二쇰??깅줉踰덊샇 (??7?먮━ 留덉뒪?? 900101-*******)
+    // 1. 주민등록번호 (뒤 7자리 마스킹: 900101-*******)
     result = RRN_REGEX.replace_all(&result, "$1-*******").to_string();
 
-    // 2. ?대??꾪솕踰덊샇 (媛?대뜲 ?먮━ 留덉뒪??
+    // 2. 휴대전화번호 (가운데 자리 마스킹)
     result = PHONE_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let full = &caps[0];
         if full.contains('-') || full.contains(' ') {
@@ -131,7 +133,7 @@ pub fn apply_deidentification(input: &str) -> String {
         }
     }).to_string();
 
-    // 3. 移대뱶踰덊샇 (以묎컙 8?먮━ 留덉뒪??
+    // 3. 카드번호 (중간 8자리 마스킹)
     result = CARD_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let full = &caps[0];
         if full.len() >= 16 {
@@ -141,7 +143,7 @@ pub fn apply_deidentification(input: &str) -> String {
         }
     }).to_string();
 
-    // 4. ?대찓??留덉뒪??
+    // 4. 이메일 마스킹
     result = EMAIL_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let email = &caps[0];
         let parts: Vec<&str> = email.split('@').collect();
@@ -159,8 +161,6 @@ pub fn apply_deidentification(input: &str) -> String {
     }).to_string();
 
     // 5. 한국인 성명 (Heuristic Score Based Masking 2.0)
-    // [FIX] Explicit Business/Vendor Allowlist to prevent over-masking (User Request: 오피스디포, 하이마트, 연구소 etc.)
-    // [FIX] Risk-based Approach: Minimal critical masking only.
     let safe_vendors = vec![
         "오피스디포", "하이마트", "이마트", "홈플러스", "스타벅스", "쿠팡", "네이버", "카카오",
         "삼성전자", "LG전자", "연구소", "컨설팅", "갈비", "일식", "맛집", "가든", "식당", "병원", "약국",
@@ -171,25 +171,19 @@ pub fn apply_deidentification(input: &str) -> String {
     let mut spans = Vec::new(); // (start, end, replacement)
     
     // Pass 1: Collect Candidates from NAME_REGEX (which includes surname patterns)
-    // We now allow 1-3 chars after surname to catch 2-4 character names
     let refined_name_regex = Regex::new(r"(김|이|박|최|정|강|조|윤|장|임|한|오|서|신|권|황|안|송|전|홍|유|고|문|양|손|배|조|백|허|유|남|심|노|하|곽|성|차|주|우|구|신|임|나|전|민|유|진|지|엄|채|원|천|방|공|현|함|변|염|양|변|여|추|노|도|소|신|석|선|설|마|길|주|연|방|위|표|명|기|반|왕|금|옥|육|인|맹|제|모|계|남궁|독고|제갈|사공|황보)([가-힣]{1,3})").unwrap();
     
     for cap in refined_name_regex.captures_iter(&result) {
         let m = cap.get(0).unwrap();
         let name = m.as_str();
         
-        // [FIX] Smart Heuristics 2.0: Look-ahead for Team/Dept suffixes
-        // If the match itself ends with suffix OR the text IMMEDIATELY following matches a suffix
         let end_idx = m.end();
         let suffix_check = if end_idx < result.len() { &result[end_idx..] } else { "" };
         
-        // Check Safe Vendors (Prevent "?ㅽ뵾?ㅻ뵒?? -> "??*?뷀룷")
         if safe_vendors.iter().any(|&v| name.contains(v) || suffix_check.contains(v) || result[m.start()..].starts_with(v)) {
             continue;
         }
 
-        // [FIX] Strong Suffix Protection (Negative to Positive logic)
-        // IF it ends with or is followed by an ORG suffix, capture is INVALID as a name.
         let org_suffixes = vec!["팀", "부", "과", "본부", "센터", "그룹", "지점", "국", "실", "국", "부", "계", "처", "관", "단", "실", "실", "실", "동", "은행", "카드", "금고", "조합"];
         
         if org_suffixes.iter().any(|&s| name.ends_with(s) || suffix_check.starts_with(s)) {
@@ -199,12 +193,10 @@ pub fn apply_deidentification(input: &str) -> String {
         let (s, e) = (m.start(), m.end());
         let score = score_candidate(&result, name, s, e);
         
-        // [POLICY CHANGE] Higher Thresholds for Risk Analysis Efficiency
-        // We prefer False Negatives (Missing a name) over False Positives (Masking 'Marketing')
         let threshold = match name.chars().count() {
-            4 => 5,  // Slightly lowered (was 6)
-            3 => 3,  // Lowered for data grid support (was 7)
-            2 => 8,  // Lowered (was 10)
+            4 => 5,  
+            3 => 3,  
+            2 => 8,  
             _ => 15,
         };
         
@@ -212,18 +204,13 @@ pub fn apply_deidentification(input: &str) -> String {
             spans.push((s, e, mask_hangul_name(name)));
         }
     }
-    // ... Pass 2 ...
-
-
 
     // Pass 2: Title-coupled masking (Higher confidence)
     for cap in NAME_TITLE_REGEX.captures_iter(&result) {
         let m = cap.get(0).unwrap();
         let name_only = cap.get(1).unwrap().as_str(); 
         let title_only = cap.get(2).unwrap().as_str();
-        let _full_match = m.as_str();
         
-        // 源 遺??-> 源* 遺??
         let masked = format!("{}*{}", &name_only[..name_only.chars().next().unwrap().len_utf8()], title_only);
         spans.push((m.start(), m.end(), masked));
     }
@@ -243,8 +230,6 @@ pub fn apply_deidentification(input: &str) -> String {
     for (s, e, rep) in filtered_spans.into_iter().rev() {
         result.replace_range(s..e, &rep);
     }
-
-
 
     if result != input {
         println!(">>> [DE-ID] Masked content: '{}' -> '{}'", input, result);
@@ -275,7 +260,6 @@ impl MaskingSession {
         let count = self.counters.entry(category.to_string()).or_insert(0);
         *count += 1;
         
-        // [FIX] Align with Frontend Identity Vault demo (Employee_NN instead of Name_01)
         let mask = if category == "Name" {
             format!("Employee_{}", count)
         } else {
@@ -289,7 +273,6 @@ impl MaskingSession {
 
     pub fn unmask_string(&self, text: &str) -> String {
         let mut result = text.to_string();
-        // Sort keys by length (desc) to avoid partial replacement issues (e.g. Name_1 replacing start of Name_10)
         let mut masked_keys: Vec<&String> = self.reverse_map.keys().collect();
         masked_keys.sort_by(|a, b| b.len().cmp(&a.len()));
 
@@ -305,8 +288,8 @@ impl MaskingSession {
 pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
     let mut result = text.to_string();
 
-    // 1. Resident Registration Number (RRN) - Static Masking or Pseudonym
-    let rrn_re = Regex::new(r"\d{6}-?[1-4]\d{6}").unwrap();
+    // 1. Resident Registration Number (RRN)
+    let rrn_re = Regex::new(r"\\d{6}-?[1-4]\\d{6}").unwrap();
     let rrn_matches: Vec<String> = rrn_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in rrn_matches {
         let mask = session.get_mask(&m, "RRN");
@@ -314,7 +297,7 @@ pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
     }
 
     // 2. Credit Card
-    let card_re = Regex::new(r"\d{4}-\d{4}-\d{4}-\d{4}").unwrap();
+    let card_re = Regex::new(r"\\d{4}-\\d{4}-\\d{4}-\\d{4}").unwrap();
     let card_matches: Vec<String> = card_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in card_matches {
         let last_4 = &m[m.len()-4..];
@@ -323,7 +306,7 @@ pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
     }
 
     // 3. Email
-    let email_re = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+    let email_re = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}").unwrap();
     let email_matches: Vec<String> = email_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in email_matches {
         if let Some(at_pos) = m.find('@') {
@@ -337,46 +320,44 @@ pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
         }
     }
 
-    // 4. Phone Number (Pseudonymization)
-    let phone_re = Regex::new(r"010-\d{3,4}-\d{4}").unwrap();
+    // 4. Phone Number
+    let phone_re = Regex::new(r"010-\\d{3,4}-\\d{4}").unwrap();
     let phone_matches: Vec<String> = phone_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in phone_matches {
         let mask = session.get_mask(&m, "Phone");
         result = result.replace(&m, &mask);
     }
 
-    // 5. Employee Number (Pseudonymization)
-    // Patterns: 240123 (6 digits starting with 2) or EMP-1234
-    let emp_re = Regex::new(r"(?:\b2\d{5}\b|EMP-\d{4})").unwrap();
+    // 5. Employee Number
+    let emp_re = Regex::new(r"(?:\\b2\\d{5}\\b|EMP-\\d{4})").unwrap();
     let emp_matches: Vec<String> = emp_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in emp_matches {
         let mask = session.get_mask(&m, "EMP");
         result = result.replace(&m, &mask);
     }
 
-    // 6. Address (Pseudonymization - Simple heuristics)
-    // Looking for "시, "군", "구", "동", "길", "번지" patterns
-    let addr_re = Regex::new(r"(?:[가-힣]+(?:시|도|군|구|동|면|리|길|로)\s?)+\d*번지?").unwrap();
+    // 6. Address
+    let addr_re = Regex::new(r"(?:[가-힣]+(?:시|도|군|구|동|면|리|길|로)\\s?)+\\d*번지?").unwrap();
     let addr_matches: Vec<String> = addr_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in addr_matches {
-        if m.len() > 5 { // Avoid too short matches
+        if m.len() > 5 { 
             let mask = session.get_mask(&m, "Addr");
             result = result.replace(&m, &mask);
         }
     }
 
-    // 7. Entity/Vendor (Pseudonymization - Heuristics for (주), Inc, etc.)
-    let entity_re = Regex::new(r"[가-힣A-zA-Z0-9\s]{2,20}(?:\(주\)|주식회사|Inc\.|Ltd\.)").unwrap();
+    // 7. Entity/Vendor
+    let entity_re = Regex::new(r"[가-힣A-zA-Z0-9\\s]{2,20}(?:\\(주\\)|주식회사|Inc\\.|Ltd\\.)").unwrap();
     let entity_matches: Vec<String> = entity_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in entity_matches {
         let mask = session.get_mask(&m, "Entity");
         result = result.replace(&m, &mask);
     }
 
-    // 8. Positions/Ranks (Pseudonymization)
-    let ranks = vec!["부장", "차장", "과장", "대리", "사원", "주임", "이사", "본부장", "상무", "전무", "대표", "회장", "주임", "계장"];
+    // 8. Positions/Ranks
+    let ranks = vec!["부장", "차장", "과장", "대리", "사원", "주임", "이사", "본부장", "상무", "전무", "대표", "회장", "계장"];
     for rank in ranks {
-        let rank_re = Regex::new(&format!(r"\b{}\b", rank)).unwrap();
+        let rank_re = Regex::new(&format!(r"\\b{}\\b", rank)).unwrap();
         let rank_matches: Vec<String> = rank_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
         for m in rank_matches {
             let mask = session.get_mask(&m, "Rank");
@@ -384,16 +365,12 @@ pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
         }
     }
 
-    // 9. Departments - DISABLED (User feedback: Team names should be visible)
-    // let dept_re = Regex::new(r"[가-힣]{2,10}(?:팀|부|과|센터|파트|실)\b").unwrap();
-    // ... disable logic ...
+    // 9. Departments - DISABLED
 
-
-    // 10. Individual Names (Pseudonymization - 2-4 Korean chars)
-    let name_re = Regex::new(r"\b[가-힣]{2,4}\b").unwrap();
+    // 10. Individual Names
+    let name_re = Regex::new(r"\\b[가-힣]{2,4}\\b").unwrap();
     let name_matches: Vec<String> = name_re.find_iter(&result).map(|m| m.as_str().to_string()).collect();
     for m in name_matches {
-        // [FIX] Department/Team Exclusion
         if m.ends_with("팀") || m.ends_with("부") || m.ends_with("과") || m.ends_with("센터") || m.ends_with("본부") || m.ends_with("그룹") || m.ends_with("지점") {
             continue;
         }
@@ -406,98 +383,61 @@ pub fn mask_sensitive_data(text: &str, session: &mut MaskingSession) -> String {
 }
 
 pub fn count_pii_entities(text: &str) -> usize {
-    // [CRITICAL] Use global regexes for consistency
     let mut count = 0;
-    
     count += RRN_REGEX.find_iter(text).count();
     count += PHONE_REGEX.find_iter(text).count();
     count += CARD_REGEX.find_iter(text).count();
     count += EMAIL_REGEX.find_iter(text).count();
     
-    // Smart Name detection with business exclusion
     let business_exclusions = vec![
         "김가네", "이마트", "스타벅스", "하이마트", "쿠팡", "네이버", "카카오", "오피스디포",
         "고급", "회식비", "일식", "주류", "마트", "호텔", "숙박", "전자", "거래", "지우"
     ];
-    
     let name_count = NAME_REGEX.find_iter(text)
         .filter(|m| {
             let s = m.as_str();
             !business_exclusions.iter().any(|&ex| s.contains(ex))
         })
         .count();
-    
     count + name_count
 }
 
-// [PERMANENT] Hybrid PII Detection Engine
-// Weight-based detection: analyzes COMBINATIONS of PII indicators in a row
 #[allow(dead_code)]
 pub fn calculate_row_pii_weight(row_text: &str) -> f32 {
     let mut weight = 0.0;
-    
-    // Use global constants/regexes where available
     if RRN_REGEX.is_match(row_text) { weight += 3.0; }
     if PHONE_REGEX.is_match(row_text) { weight += 1.5; }
     if CARD_REGEX.is_match(row_text) { weight += 2.0; }
     if EMAIL_REGEX.is_match(row_text) { weight += 1.0; }
-    
-    // Employee ID (Local regex for now)
-    let emp_re = Regex::new(r"(?:\b2\d{5,7}\b|EMP-\d{4,6})").unwrap();
+    let emp_re = Regex::new(r"(?:\\b2\\d{5,7}\\b|EMP-\\d{4,6})").unwrap();
     if emp_re.is_match(row_text) { weight += 1.5; }
-    
-    // Department detection
-    let dept_re = Regex::new(r"[\u{AC00}-\u{D7A3}]{2,10}(?:팀|부|과|센터|파트|실)\b").unwrap();
+    let dept_re = Regex::new(r"[\\u{AC00}-\\u{D7A3}]{2,10}(?:팀|부|과|센터|파트|실)\\b").unwrap();
     let has_dept = dept_re.is_match(row_text);
     if has_dept { weight += 0.5; }
-    
-    // Name detection
     let has_name = if NAME_REGEX.is_match(row_text) {
         let matched = NAME_REGEX.find(row_text).map(|m| m.as_str()).unwrap_or("");
-        let business_names = vec![
-            "김가네", "이마트", "스타벅스", "하이마트", "쿠팡", "네이버", "카카오", "오피스디포",
-            "고급", "회식비", "일식", "주류", "마트", "호텔", "숙박", "전자", "거래", "지우"
-        ];
+        let business_names = vec!["김가네", "이마트", "스타벅스", "하이마트", "쿠팡", "네이버", "카카오", "오피스디포"];
         if !business_names.iter().any(|&b| matched.contains(b)) {
-            weight += 1.0;
-            true
-        } else {
-            false
-        }
-    } else {
-        false
-    };
-    
-    // [CRITICAL] RE-IDENTIFICATION RISK: Name + Department combination
-    if has_name && has_dept {
-        weight += 1.5; // Significant boost for the combination as requested by user
-    }
-    
-    // Address detection
-    let address_re = Regex::new(r"(?:서울|경기|인천|부산|대구|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주)[\u{AC00}-\u{D7A3}\s\d-]+(?:대로|길)\s*\d+").unwrap();
+            weight += 1.0; true
+        } else { false }
+    } else { false };
+    if has_name && has_dept { weight += 1.5; }
+    let address_re = Regex::new(r"(?:서울|경기|인천|부산|대구|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주)[\\u{AC00}-\\u{D7A3}\\s\\d-]+(?:대로|길)\\s*\\d+").unwrap();
     if address_re.is_match(row_text) { weight += 1.0; }
-    
     weight
 }
 
-// [PERMANENT] Batch PII Analysis for Large Datasets
 #[allow(dead_code)]
 pub fn analyze_batch_pii(rows: &[String], threshold: f32) -> Vec<bool> {
-    rows.iter()
-        .map(|row| calculate_row_pii_weight(row) >= threshold)
-        .collect()
+    rows.iter().map(|row| calculate_row_pii_weight(row) >= threshold).collect()
 }
 
-
 pub async fn geocode_address(address: &str, api_key: &str) -> Option<(f64, f64, String)> {
-    println!(">>> [GEOCODE] Requesting: {}", address);
     let client = Client::new();
     let full_address = format!("{}, South Korea", address);
     let res_result = client.get("https://maps.googleapis.com/maps/api/geocode/json")
         .query(&[("address", &full_address), ("key", &api_key.to_string())])
-        .send()
-        .await;
-
+        .send().await;
     match res_result {
         Ok(res) => {
             if res.status().is_success() {
@@ -512,14 +452,10 @@ pub async fn geocode_address(address: &str, api_key: &str) -> Option<(f64, f64, 
                         }
                     }
                 }
-            } else {
-                println!(">>> [GEOCODE] API Error: {}", res.status());
             }
         },
-        Err(e) => println!(">>> [GEOCODE] Network Error: {}", e),
+        _ => {}
     }
-
-    println!(">>> [GEOCODE] Failed to locate: {}", address);
     None
 }
 
@@ -527,13 +463,7 @@ pub fn read_file_with_encoding(path: &Path) -> Result<String, String> {
     let mut file = File::open(path).map_err(|e| e.to_string())?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-
-    // 1. Try UTF-8 first
-    if let Ok(utf8) = std::str::from_utf8(&buffer) {
-        return Ok(utf8.to_string());
-    }
-
-    // 2. Try EUC-KR explicitly (User Request)
+    if let Ok(utf8) = std::str::from_utf8(&buffer) { return Ok(utf8.to_string()); }
     let (cow, _, _) = EUC_KR.decode(&buffer);
     Ok(cow.to_string())
 }
@@ -542,7 +472,6 @@ pub fn extract_text_from_zip(path: &Path, file_patterns: Vec<&str>) -> Result<St
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mut archive = ZipArchive::new(file).map_err(|e| e.to_string())?;
     let mut full_text = String::new();
-
     let mut files_to_read = Vec::new();
     for i in 0..archive.len() {
         if let Ok(file) = archive.by_index(i) {
@@ -552,7 +481,6 @@ pub fn extract_text_from_zip(path: &Path, file_patterns: Vec<&str>) -> Result<St
             }
         }
     }
-
     for name in files_to_read {
         if let Ok(mut file) = archive.by_name(&name) {
             let mut content = String::new();
@@ -563,14 +491,11 @@ pub fn extract_text_from_zip(path: &Path, file_patterns: Vec<&str>) -> Result<St
                     else if c == '>' { is_tag = false; full_text.push(' '); }
                     else if !is_tag { full_text.push(c); }
                 }
-                full_text.push('\n');
+                full_text.push('\\n');
             }
         }
     }
-
-    if full_text.trim().is_empty() {
-        return Err("No text extracted from document".to_string());
-    }
+    if full_text.trim().is_empty() { return Err("No text extracted from document".to_string()); }
     Ok(full_text)
 }
 
@@ -605,7 +530,7 @@ pub fn read_any_file(path: &Path, ext: &str) -> Result<String, String> {
             let subject = parsed.headers.get_first_value("Subject").unwrap_or("No Subject".to_string());
             let from = parsed.headers.get_first_value("From").unwrap_or("[SENDER_NOT_IDENTIFIED]".to_string());
             let body = parsed.get_body().unwrap_or("[EMPTY_EMAIL_BODY]".to_string());
-            Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nBody:\n{}", from, subject, body))
+            Ok(format!("[EMAIL]\\nFrom: {}\\nSubject: {}\\nBody:\\n{}", from, subject, body))
         },
         "txt" | "md" | "json" | "xml" | "log" | "sql" | "csv" | "html" | "htm" => {
             read_file_with_encoding(path)
@@ -622,49 +547,37 @@ pub fn read_any_file(path: &Path, ext: &str) -> Result<String, String> {
 }
 
 pub fn clean_json_response(raw: &str) -> String {
-    // 1. Markdown Code Block Removal
-    let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s*```").unwrap();
-    let cleaned = if let Some(caps) = re.captures(raw) {
-        caps.get(1).map_or(raw, |m| m.as_str())
+    let re = Regex::new(r"(?s)\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`").unwrap();
+    if let Some(caps) = re.captures(raw) {
+        caps.get(1).map_or(raw, |m| m.as_str()).to_string()
     } else {
-        raw
-    };
-
-    // [CRITICAL FIX] Do NOT apply de-identification here. 
-    // AI output must be parsed as valid JSON first. 
-    // Unmasking happens in the audit engine using the session map.
-    cleaned.to_string()
+        raw.to_string()
+    }
 }
 
 pub fn extract_json(text: &str) -> String {
     let cleaned = clean_json_response(text);
-    // Fallback to finding the largest balanced block of { } or [ ]
     let first_brace = cleaned.find('{');
     let first_bracket = cleaned.find('[');
-
     match (first_brace, first_bracket) {
         (Some(brace_idx), Some(bracket_idx)) => {
             if brace_idx < bracket_idx {
-                if let Some(last_brace) = cleaned.rfind('}') {
-                    return cleaned[brace_idx..=last_brace].to_string();
-                }
+                if let Some(last_brace) = cleaned.rfind('}') { return cleaned[brace_idx..=last_brace].to_string(); }
             } else {
-                if let Some(last_bracket) = cleaned.rfind(']') {
-                    return cleaned[bracket_idx..=last_bracket].to_string();
-                }
+                if let Some(last_bracket) = cleaned.rfind(']') { return cleaned[bracket_idx..=last_bracket].to_string(); }
             }
         }
         (Some(idx), None) => {
-            if let Some(last) = cleaned.rfind('}') {
-                return cleaned[idx..=last].to_string();
-            }
+            if let Some(last) = cleaned.rfind('}') { return cleaned[idx..=last].to_string(); }
         }
         (None, Some(idx)) => {
-            if let Some(last) = cleaned.rfind(']') {
-                return cleaned[idx..=last].to_string();
-            }
+            if let Some(last) = cleaned.rfind(']') { return cleaned[idx..=last].to_string(); }
         }
         _ => {}
     }
     cleaned
 }
+\`;
+
+fs.writeFileSync('src-tauri/src/file_utils.rs', content, 'utf8');
+console.log('file_utils.rs completely reconstructed.');

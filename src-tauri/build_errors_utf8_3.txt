@@ -1,0 +1,2164 @@
+﻿cargo :     Checking auditflow v0.1.0 (C:\Users\user\.gemini\an
+tigravity\playground\AuditFlow\src-tauri)
+위치 줄:1 문자:1
++ cargo check > build_errors_3.txt 2>&1; Get-Content build_erro
+rs_3.txt ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking au.. 
+   .Flow\src-tauri):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: unknown start of token: \
+   --> src\commands.rs:291:9
+    |
+291 |         \"DATA_PENDING\".to_string()
+    |         ^
+
+error: prefix `d` is unknown
+   --> src\commands.rs:315:62
+    |
+315 |         let day_pattern = format!("{}%", date.format("%Y-
+%m-%d"));
+    |                                                          
+    ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+315 |         let day_pattern = format!("{}%", date.format("%Y-
+%m-%d "));
+    |                                                          
+     +
+
+error: prefix `d` is unknown
+   --> src\commands.rs:321:53
+    |
+321 |         trends.push(json!({ "day": date.format("%m-%d").t
+o_string(), "value": count }));
+    |                                                     ^ unk
+nown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+321 |         trends.push(json!({ "day": date.format("%m-%d ").
+to_string(), "value": count }));
+    |                                                      +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:341:81
+    |
+341 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+341 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:344:280
+    |
+344 | ...t_mode, logic_chain, grade FROM audit_issues ORDER BY 
+id DESC"
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+344 |         "SELECT id, issue_title, description, severity, r
+aw_row_data, row_index, detected_at, recommendations, evidence_
+quote, audit_id, evidence_image, status, assignee, due_date, re
+mediation_plan, manager_comment, verdict_mode, logic_chain, gra
+de FROM audit_issues ORDER BY id DESC "
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                     +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:346:321
+    |
+346 | ...ues WHERE project_type = ?1 OR audit_id = ?1 ORDER BY 
+id DESC"
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+346 |         "SELECT id, issue_title, description, severity, r
+aw_row_data, row_index, detected_at, recommendations, evidence_
+quote, audit_id, evidence_image, status, assignee, due_date, re
+mediation_plan, manager_comment, verdict_mode, logic_chain, gra
+de FROM audit_issues WHERE project_type = ?1 OR audit_id = ?1 O
+RDER BY id DESC "
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                                               
+               +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:378:81
+    |
+378 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+378 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:386:81
+    |
+386 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+386 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:390:66
+    |
+390 |     let _ = conn.execute("UPDATE audit_issues SET verdict
+_mode = 'HUMAN_REVIEWED' WHERE id = ?1", params![id]);
+    |                                                          
+        ^^^^^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+390 -     let _ = conn.execute("UPDATE audit_issues SET verdict
+_mode = 'HUMAN_REVIEWED' WHERE id = ?1", params![id]);
+390 +     let _ = conn.execute("UPDATE audit_issues SET verdict
+_mode = "HUMAN_REVIEWED" WHERE id = ?1", params![id]);
+    |
+
+error: prefix `db` is unknown
+   --> src\commands.rs:405:81
+    |
+405 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+405 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:411:43
+    |
+411 |         "UPDATE audit_issues SET status = 'Dismissed', ve
+rdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+    |                                           ^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+411 -         "UPDATE audit_issues SET status = 'Dismissed', ve
+rdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+411 +         "UPDATE audit_issues SET status = "Dismissed", ve
+rdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:411:71
+    |
+411 |         "UPDATE audit_issues SET status = 'Dismissed', ve
+rdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+    |                                                          
+             ^^^^^^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+411 -         "UPDATE audit_issues SET status = 'Dismissed', ve
+rdict_mode = 'HUMAN_DISMISSED' WHERE id = ?1", 
+411 +         "UPDATE audit_issues SET status = 'Dismissed', ve
+rdict_mode = "HUMAN_DISMISSED" WHERE id = ?1", 
+    |
+
+error: prefix `db` is unknown
+   --> src\commands.rs:421:81
+    |
+421 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+421 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `audit_issues` is unknown
+   --> src\commands.rs:423:267
+    |
+423 | ...nager_comment, verdict_mode, logic_chain, grade FROM a
+udit_issues".to_string();
+    |                                                         ^
+^^^^^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+423 |     let mut query = "SELECT id, issue_title, description,
+ severity, raw_row_data, row_index, detected_at, recommendation
+s, evidence_quote, audit_id, evidence_image, status, assignee, 
+due_date, remediation_plan, manager_comment, verdict_mode, logi
+c_chain, grade FROM audit_issues ".to_string();
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:424:83
+    |
+424 |     if let Some(ref s) = status_filter { query.push_str(&
+format!(" WHERE status = '{}'", s)); }
+    |                                                          
+                         ^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+424 -     if let Some(ref s) = status_filter { query.push_str(&
+format!(" WHERE status = '{}'", s)); }
+424 +     if let Some(ref s) = status_filter { query.push_str(&
+format!(" WHERE status = "{}"", s)); }
+    |
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:425:43
+    |
+425 |     query.push_str(" ORDER BY detected_at DESC");
+    |                                           ^^^^ unknown pr
+efix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+425 |     query.push_str(" ORDER BY detected_at DESC ");
+    |                                               +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:449:81
+    |
+449 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+449 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:481:81
+    |
+481 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+481 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:489:81
+    |
+489 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+489 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:491:187
+    |
+491 | ...ion FROM audit_plans WHERE year = ?1 ORDER BY risk_sco
+re DESC").map_err(|e| e.to_string())?;
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+491 |     let mut stmt = conn.prepare("SELECT id, year, audit_d
+omain, risk_score, strategic_importance, resource_days, status,
+ description FROM audit_plans WHERE year = ?1 ORDER BY risk_sco
+re DESC ").map_err(|e| e.to_string())?;
+    |                                                          
+                                                               
+                                                               
+       +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:499:81
+    |
+499 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+499 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:507:81
+    |
+507 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+507 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:519:47
+    |
+519 |     let db_path = app_dir.join("audit_data_v4.db");
+    |                                               ^^ unknown 
+prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+519 |     let db_path = app_dir.join("audit_data_v4.db ");
+    |                                                 +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:527:101
+    |
+527 | ...   if t.contains("marketing") || t.contains("留덉???) { 
+dept_filter = " WHERE unit_name LIKE '%Marketing%' OR unit_name
+ LIKE '%留덉???'".into()   ...
+    |                                                          
+                                       ^^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+527 -              if t.contains("marketing") || t.contains("留덉
+???) { dept_filter = " WHERE unit_name LIKE '%Marketing%' OR un
+it_name LIKE '%留덉???'".into(); }
+527 +              if t.contains("marketing") || t.contains("留덉
+???) { dept_filter = " WHERE unit_name LIKE "%Marketing%" OR un
+it_name LIKE '%留덉???'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:527:133
+    |
+527 | ...   if t.contains("marketing") || t.contains("留덉???) { 
+dept_filter = " WHERE unit_name LIKE '%Marketing%' OR unit_name
+ LIKE '%留덉???'".into()   ...
+    |                                                          
+                                                               
+        ^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+527 -              if t.contains("marketing") || t.contains("留덉
+???) { dept_filter = " WHERE unit_name LIKE '%Marketing%' OR un
+it_name LIKE '%留덉???'".into(); }
+527 +              if t.contains("marketing") || t.contains("留덉
+???) { dept_filter = " WHERE unit_name LIKE '%Marketing%' OR un
+it_name LIKE "%留덉???"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:528:101
+    |
+528 | ...   else if t.contains("sales") || t.contains("?곸뾽") { 
+dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_name LIK
+E '%?곸뾽%'".into(); }
+    |                                                          
+                                      ^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+528 -              else if t.contains("sales") || t.contains("?
+곸뾽") { dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_n
+ame LIKE '%?곸뾽%'".into(); }
+528 +              else if t.contains("sales") || t.contains("?
+곸뾽") { dept_filter = " WHERE unit_name LIKE "%Sales%" OR unit_n
+ame LIKE '%?곸뾽%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:528:129
+    |
+528 | ...   else if t.contains("sales") || t.contains("?곸뾽") { 
+dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_name LIK
+E '%?곸뾽%'".into(); }
+    |                                                          
+                                                               
+   ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+528 -              else if t.contains("sales") || t.contains("?
+곸뾽") { dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_n
+ame LIKE '%?곸뾽%'".into(); }
+528 +              else if t.contains("sales") || t.contains("?
+곸뾽") { dept_filter = " WHERE unit_name LIKE '%Sales%' OR unit_n
+ame LIKE "%?곸뾽%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:529:146
+    |
+529 | ...蹂댄샇") || t.contains("蹂댁븞") { dept_filter = " WHERE uni
+t_name LIKE '%IT%' OR unit_name LIKE '%Security%' OR unit_name 
+LIKE '%蹂댁븞%'".into(); }
+    |                                                          
+                ^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+529 -              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE '%IT%' OR unit_name LIKE '%Security
+%' OR unit_name LIKE '%蹂댁븞%'".into(); }
+529 +              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE "%IT%" OR unit_name LIKE '%Security
+%' OR unit_name LIKE '%蹂댁븞%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:529:171
+    |
+529 | ...ept_filter = " WHERE unit_name LIKE '%IT%' OR unit_nam
+e LIKE '%Security%' OR unit_name LIKE '%蹂댁븞%'".into(); }
+    |                                                          
+       ^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+529 -              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE '%IT%' OR unit_name LIKE '%Security
+%' OR unit_name LIKE '%蹂댁븞%'".into(); }
+529 +              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE '%IT%' OR unit_name LIKE "%Security
+%" OR unit_name LIKE '%蹂댁븞%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:529:202
+    |
+529 | ...me LIKE '%IT%' OR unit_name LIKE '%Security%' OR unit_
+name LIKE '%蹂댁븞%'".into(); }
+    |                                                          
+          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+529 -              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE '%IT%' OR unit_name LIKE '%Security
+%' OR unit_name LIKE '%蹂댁븞%'".into(); }
+529 +              else if t.contains("it") || t.contains("secu
+rity") || t.contains("?뺣낫蹂댄샇") || t.contains("蹂댁븞") { dept_filt
+er = " WHERE unit_name LIKE '%IT%' OR unit_name LIKE '%Security
+%' OR unit_name LIKE "%蹂댁븞%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:530:143
+    |
+530 | ...?몄궗") || t.contains("湲됱뿬") { dept_filter = " WHERE uni
+t_name LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR unit_name L
+IKE '%?몄궗%'".into(); }
+    |                                                          
+              ^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+530 -              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR
+ unit_name LIKE '%?몄궗%'".into(); }
+530 +              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE "%HR%" OR unit_name LIKE '%Payroll%' OR
+ unit_name LIKE '%?몄궗%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:530:168
+    |
+530 | ...ept_filter = " WHERE unit_name LIKE '%HR%' OR unit_nam
+e LIKE '%Payroll%' OR unit_name LIKE '%?몄궗%'".into(); }
+    |                                                          
+       ^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+530 -              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR
+ unit_name LIKE '%?몄궗%'".into(); }
+530 +              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE '%HR%' OR unit_name LIKE "%Payroll%" OR
+ unit_name LIKE '%?몄궗%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:530:198
+    |
+530 | ...ame LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR unit_
+name LIKE '%?몄궗%'".into(); }
+    |                                                          
+          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+530 -              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR
+ unit_name LIKE '%?몄궗%'".into(); }
+530 +              else if t.contains("hr") || t.contains("payr
+oll") || t.contains("?몄궗") || t.contains("湲됱뿬") { dept_filter =
+ " WHERE unit_name LIKE '%HR%' OR unit_name LIKE '%Payroll%' OR
+ unit_name LIKE "%?몄궗%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:531:127
+    |
+531 | ...   else if t.contains("procurement") || t.contains("援щ
+ℓ") || t.contains("議곕떖") { dept_filter = " WHERE unit_name LIKE
+ '%Procurement%' OR un ...
+    |                                                          
+                                                               
+   ^^^^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+531 -              else if t.contains("procurement") || t.conta
+ins("援щℓ") || t.contains("議곕떖") { dept_filter = " WHERE unit_na
+me LIKE '%Procurement%' OR unit_name LIKE '%援щℓ%'".into(); }
+531 +              else if t.contains("procurement") || t.conta
+ins("援щℓ") || t.contains("議곕떖") { dept_filter = " WHERE unit_na
+me LIKE "%Procurement%" OR unit_name LIKE '%援щℓ%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:531:161
+    |
+531 | ...lter = " WHERE unit_name LIKE '%Procurement%' OR unit_
+name LIKE '%援щℓ%'".into(); }
+    |                                                          
+          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+531 -              else if t.contains("procurement") || t.conta
+ins("援щℓ") || t.contains("議곕떖") { dept_filter = " WHERE unit_na
+me LIKE '%Procurement%' OR unit_name LIKE '%援щℓ%'".into(); }
+531 +              else if t.contains("procurement") || t.conta
+ins("援щℓ") || t.contains("議곕떖") { dept_filter = " WHERE unit_na
+me LIKE '%Procurement%' OR unit_name LIKE "%援щℓ%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:532:125
+    |
+532 | ...   else if t.contains("logistics") || t.contains("臾쇰쪟"
+) || t.contains("諛곗넚") { dept_filter = " WHERE unit_name LIKE '
+%Logistics%' OR unit_n ...
+    |                                                          
+                                                               
+ ^^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+532 -              else if t.contains("logistics") || t.contain
+s("臾쇰쪟") || t.contains("諛곗넚") { dept_filter = " WHERE unit_name
+ LIKE '%Logistics%' OR unit_name LIKE '%臾쇰쪟%'".into(); }
+532 +              else if t.contains("logistics") || t.contain
+s("臾쇰쪟") || t.contains("諛곗넚") { dept_filter = " WHERE unit_name
+ LIKE "%Logistics%" OR unit_name LIKE '%臾쇰쪟%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:532:157
+    |
+532 | ...filter = " WHERE unit_name LIKE '%Logistics%' OR unit_
+name LIKE '%臾쇰쪟%'".into(); }
+    |                                                          
+          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+532 -              else if t.contains("logistics") || t.contain
+s("臾쇰쪟") || t.contains("諛곗넚") { dept_filter = " WHERE unit_name
+ LIKE '%Logistics%' OR unit_name LIKE '%臾쇰쪟%'".into(); }
+532 +              else if t.contains("logistics") || t.contain
+s("臾쇰쪟") || t.contains("諛곗넚") { dept_filter = " WHERE unit_name
+ LIKE '%Logistics%' OR unit_name LIKE "%臾쇰쪟%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:533:149
+    |
+533 | ...) || t.contains("?щТ") { dept_filter = " WHERE unit_na
+me LIKE '%Finance%' OR unit_name LIKE '%Treasury%' OR unit_name
+ LIKE '%?먭툑%'".into();   ...
+    |                                                          
+           ^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+533 -              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE '%Finance%' OR unit_name LIKE '%T
+reasury%' OR unit_name LIKE '%?먭툑%'".into(); }
+533 +              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE "%Finance%" OR unit_name LIKE '%T
+reasury%' OR unit_name LIKE '%?먭툑%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:533:179
+    |
+533 | ...ilter = " WHERE unit_name LIKE '%Finance%' OR unit_nam
+e LIKE '%Treasury%' OR unit_name LIKE '%?먭툑%'".into(); }
+    |                                                          
+       ^^^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+533 -              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE '%Finance%' OR unit_name LIKE '%T
+reasury%' OR unit_name LIKE '%?먭툑%'".into(); }
+533 +              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE '%Finance%' OR unit_name LIKE "%T
+reasury%" OR unit_name LIKE '%?먭툑%'".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:533:210
+    |
+533 | ...KE '%Finance%' OR unit_name LIKE '%Treasury%' OR unit_
+name LIKE '%?먭툑%'".into(); }
+    |                                                          
+          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+533 -              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE '%Finance%' OR unit_name LIKE '%T
+reasury%' OR unit_name LIKE '%?먭툑%'".into(); }
+533 +              else if t.contains("finance") || t.contains(
+"treasury") || t.contains("?먭툑") || t.contains("?щТ") { dept_fi
+lter = " WHERE unit_name LIKE '%Finance%' OR unit_name LIKE '%T
+reasury%' OR unit_name LIKE "%?먭툑%"".into(); }
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:540:44
+    |
+540 |     let mut issue_filter = "WHERE status = 'Accepted'".to
+_string();
+    |                                            ^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+540 -     let mut issue_filter = "WHERE status = 'Accepted'".to
+_string();
+540 +     let mut issue_filter = "WHERE status = "Accepted"".to
+_string();
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:545:33
+    |
+545 | ...   "WHERE status = 'Accepted' AND (audit_id = '{}' OR 
+project_type LIKE '%' || (SELECT title FROM audit_projects WHER
+E id = '{}') || '...
+    |                       ^^^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+545 -                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+545 +                 "WHERE status = "Accepted" AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:545:60
+    |
+545 | ...   "WHERE status = 'Accepted' AND (audit_id = '{}' OR 
+project_type LIKE '%' || (SELECT title FROM audit_projects WHER
+E id = '{}') || '...
+    |                                                  ^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+545 -                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+545 +                 "WHERE status = 'Accepted' AND (audit_id 
+= "{}" OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:545:138
+    |
+545 | ...   "WHERE status = 'Accepted' AND (audit_id = '{}' OR 
+project_type LIKE '%' || (SELECT title FROM audit_projects WHER
+E id = '{}') || '...
+    |                                                          
+                                                               
+       ^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+545 -                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+545 +                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = "{}") || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:545:199
+    |
+545 | ...d = '{}') || '%' OR (SELECT title FROM audit_projects 
+WHERE id = '{}') LIKE '%' || project_type || '%')", 
+    |                                                          
+           ^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+545 -                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = '{}') LIKE '%' || project_type || '%')", 
+545 +                 "WHERE status = 'Accepted' AND (audit_id 
+= '{}' OR project_type LIKE '%' || (SELECT title FROM audit_pro
+jects WHERE id = '{}') || '%' OR (SELECT title FROM audit_proje
+cts WHERE id = "{}") LIKE '%' || project_type || '%')", 
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:563:42
+    |
+563 |                 SUM(CASE WHEN severity = 'High' THEN 1 EL
+SE 0 END) as high,
+    |                                          ^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+563 -                 SUM(CASE WHEN severity = 'High' THEN 1 EL
+SE 0 END) as high,
+563 +                 SUM(CASE WHEN severity = "High" THEN 1 EL
+SE 0 END) as high,
+    |
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:564:42
+    |
+564 |                 SUM(CASE WHEN severity = 'Medium' THEN 1 
+ELSE 0 END) as med
+    |                                          ^^^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+564 -                 SUM(CASE WHEN severity = 'Medium' THEN 1 
+ELSE 0 END) as med
+564 +                 SUM(CASE WHEN severity = "Medium" THEN 1 
+ELSE 0 END) as med
+    |
+
+error: prefix `db` is unknown
+   --> src\commands.rs:603:81
+    |
+603 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+603 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `A` is unknown
+   --> src\commands.rs:608:136
+    |
+608 | ...r.get::<_, String>(1)?, r.get::<_, String>(2).unwrap_o
+r("N/A".to_string()), r.get::<_, i32>(3).unwrap_or(0), r.get::<
+_, String>(4).unw...
+    |                                                          
+     ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+608 |         conn.query_row(&query, params![id], |r| Ok((r.get
+::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2
+).unwrap_or("N/A ".to_string()), r.get::<_, i32>(3).unwrap_or(0
+), r.get::<_, String>(4).unwrap_or("N/A".to_string()), r.get::<
+_, String>(5).unwrap_or("N/A".to_string()), r.get::<_, Option<S
+tring>>(6)?))).map_err(|e| e.to_string())?
+    |                                                          
+                                                               
+                +
+
+error: prefix `A` is unknown
+   --> src\commands.rs:608:221
+    |
+608 | ..., i32>(3).unwrap_or(0), r.get::<_, String>(4).unwrap_o
+r("N/A".to_string()), r.get::<_, String>(5).unwrap_or("N/A".to_
+string()), r.get:...
+    |                                                          
+     ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+608 |         conn.query_row(&query, params![id], |r| Ok((r.get
+::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2
+).unwrap_or("N/A".to_string()), r.get::<_, i32>(3).unwrap_or(0)
+, r.get::<_, String>(4).unwrap_or("N/A ".to_string()), r.get::<
+_, String>(5).unwrap_or("N/A".to_string()), r.get::<_, Option<S
+tring>>(6)?))).map_err(|e| e.to_string())?
+    |                                                          
+                                                               
+                                                               
+                                      +
+
+error: prefix `A` is unknown
+   --> src\commands.rs:608:273
+    |
+608 | ..._or("N/A".to_string()), r.get::<_, String>(5).unwrap_o
+r("N/A".to_string()), r.get::<_, Option<String>>(6)?))).map_err
+(|e| e.to_string())?
+    |                                                          
+     ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+608 |         conn.query_row(&query, params![id], |r| Ok((r.get
+::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2
+).unwrap_or("N/A".to_string()), r.get::<_, i32>(3).unwrap_or(0)
+, r.get::<_, String>(4).unwrap_or("N/A".to_string()), r.get::<_
+, String>(5).unwrap_or("N/A ".to_string()), r.get::<_, Option<S
+tring>>(6)?))).map_err(|e| e.to_string())?
+    |                                                          
+                                                               
+                                                               
+                                                               
+                           +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:621:60
+    |
+621 | ...   let mut stmt = conn.prepare("SELECT issue_title || 
+': ' || description FROM audit_issues WHERE issue_title LIKE ?1
+ OR description L...
+    |                                                          
+^^^^
+    |
+note: there are non-printing characters, the full sequence is `
+: `
+   --> src\commands.rs:621:61
+    |
+621 | ...   let mut stmt = conn.prepare("SELECT issue_title || 
+': ' || description FROM audit_issues WHERE issue_title LIKE ?1
+ OR description L...
+    |                                                          
+ ^^
+help: consider removing the non-printing characters
+    |
+621 |         let mut stmt = conn.prepare("SELECT issue_title |
+| ':' || description FROM audit_issues WHERE issue_title LIKE ?
+1 OR description LIKE ?1 OR project_type LIKE ?1 LIMIT 15").map
+_err(|e| e.to_string())?;
+    |                                                          
+   ~
+
+error: unknown start of token: \
+   --> src\commands.rs:626:107
+    |
+626 |     let issues_context = if issues.is_empty() { "No speci
+fic findings.".into() } else { format!("Findings:\n{}", issues.
+join("\n")) };
+    |                                                          
+                                                 ^
+
+error: unknown start of token: \
+   --> src\commands.rs:626:127
+    |
+626 |     let issues_context = if issues.is_empty() { "No speci
+fic findings.".into() } else { format!("Findings:\n{}", issues.
+join("\n")) };
+    |                                                          
+                                                               
+      ^
+
+error: prefix `n` is unknown
+   --> src\commands.rs:626:128
+    |
+626 |     let issues_context = if issues.is_empty() { "No speci
+fic findings.".into() } else { format!("Findings:\n{}", issues.
+join("\n")) };
+    |                                                          
+                                                               
+       ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+626 |     let issues_context = if issues.is_empty() { "No speci
+fic findings.".into() } else { format!("Findings:\n{}", issues.
+join("\n ")) };
+    |                                                          
+                                                               
+        +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:637:81
+    |
+637 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+637 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:639:142
+    |
+639 | ...path FROM audit_data WHERE project_type = ?1 ORDER BY 
+id DESC").map_err(|e| e.to_string())?;
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+639 |     let mut stmt = conn.prepare("SELECT id, file_name, fi
+le_type, upload_date, file_path FROM audit_data WHERE project_t
+ype = ?1 ORDER BY id DESC ").map_err(|e| e.to_string())?;
+    |                                                          
+                                                               
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:647:81
+    |
+647 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+647 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:655:81
+    |
+655 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+655 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:664:81
+    |
+664 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+664 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `system_events` is unknown
+   --> src\commands.rs:667:102
+    |
+667 |     let mut query = "SELECT id, timestamp, event_type, de
+scription, related_entity_id, audit_id FROM system_events".to_s
+tring();
+    |                                                          
+                                            ^^^^^^^^^^^^^ unkno
+wn prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+667 |     let mut query = "SELECT id, timestamp, event_type, de
+scription, related_entity_id, audit_id FROM system_events ".to_
+string();
+    |                                                          
+                                                         +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:670:57
+    |
+670 |              query.push_str(&format!(" WHERE audit_id = '
+{}' OR audit_id IS NULL", id));
+    |                                                         ^
+^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+670 -              query.push_str(&format!(" WHERE audit_id = '
+{}' OR audit_id IS NULL", id));
+670 +              query.push_str(&format!(" WHERE audit_id = "
+{}" OR audit_id IS NULL", id));
+    |
+
+error: prefix `NULL` is unknown
+   --> src\commands.rs:670:77
+    |
+670 |              query.push_str(&format!(" WHERE audit_id = '
+{}' OR audit_id IS NULL", id));
+    |                                                          
+                   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+670 |              query.push_str(&format!(" WHERE audit_id = '
+{}' OR audit_id IS NULL ", id));
+    |                                                          
+                       +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:736:81
+    |
+736 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+736 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:738:200
+    |
+738 | ..._date, is_ai_generated FROM custom_scenarios ORDER BY 
+id DESC") {
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+738 |         if let Ok(mut stmt) = conn.prepare("SELECT id, ca
+tegory, name, risk_level, description, origin_audit_type, origi
+n_department, detected_date, is_ai_generated FROM custom_scenar
+ios ORDER BY id DESC ") {
+    |                                                          
+                                                               
+                                                               
+                    +
+
+error: prefix `?쒓났` is unknown
+   --> src\commands.rs:748:90
+    |
+748 |                     "origin_department": row.get::<_, Opt
+ion<String>>(6)?.unwrap_or("?쒖뒪???쒓났".to_string()), 
+    |                                                          
+                                   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+748 |                     "origin_department": row.get::<_, Opt
+ion<String>>(6)?.unwrap_or("?쒖뒪???쒓났 ".to_string()), 
+    |                                                          
+                                       +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:761:81
+    |
+761 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+761 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `DESC` is unknown
+   --> src\commands.rs:763:312
+    |
+763 | ..., valuation_tier FROM audit_projects ORDER BY created_
+at DESC").map_err(|e| e.to_string())?;
+    |                                                          
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+763 |     let mut stmt = conn.prepare("SELECT id, title, status
+, progress_pct, start_date, end_date, lead_auditor, planning_st
+art, planning_end, fieldwork_start, fieldwork_end, reporting_st
+art, reporting_end, audit_scope, findings_count, created_at, ri
+sk_score, valuation_tier FROM audit_projects ORDER BY created_a
+t DESC ").map_err(|e| e.to_string())?;
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                                               
+      +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:782:81
+    |
+782 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+782 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:792:81
+    |
+792 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+792 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `m` is unknown
+   --> src\commands.rs:795:33
+    |
+795 |     let yyyymm = now.format("%Y%m").to_string();
+    |                                 ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+795 |     let yyyymm = now.format("%Y%m ").to_string();
+    |                                  +
+
+error: prefix `S` is unknown
+   --> src\commands.rs:796:32
+    |
+796 |     let seq = now.format("%H%M%S").to_string();
+    |                                ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+796 |     let seq = now.format("%H%M%S ").to_string();
+    |                                 +
+
+error: prefix `d` is unknown
+   --> src\commands.rs:797:36
+    |
+797 |     let today = now.format("%Y-%m-%d").to_string(); // De
+fault to TODAY
+    |                                    ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+797 |     let today = now.format("%Y-%m-%d ").to_string(); // D
+efault to TODAY
+    |                                     +
+
+error: prefix `S` is unknown
+   --> src\commands.rs:812:46
+    |
+812 |         Local::now().format("%Y-%m-%d %H:%M:%S").to_strin
+g(),
+    |                                              ^ unknown pr
+efix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+812 |         Local::now().format("%Y-%m-%d %H:%M:%S ").to_stri
+ng(),
+    |                                               +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:824:81
+    |
+824 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+824 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `audit_issues` is unknown
+   --> src\commands.rs:827:39
+    |
+827 |     let _ = conn.execute("DELETE FROM audit_issues", []);
+    |                                       ^^^^^^^^^^^^ unknow
+n prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+827 |     let _ = conn.execute("DELETE FROM audit_issues ", [])
+;
+    |                                                   +
+
+error: prefix `system_events` is unknown
+   --> src\commands.rs:828:39
+    |
+828 |     let _ = conn.execute("DELETE FROM system_events", [])
+;
+    |                                       ^^^^^^^^^^^^^ unkno
+wn prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+828 |     let _ = conn.execute("DELETE FROM system_events ", []
+);
+    |                                                    +
+
+error: prefix `NULL` is unknown
+   --> src\commands.rs:831:112
+    |
+831 |     let _ = conn.execute("UPDATE audit_universe SET impac
+t_score = 0, likelihood_score = 0, ai_analysis_data = NULL", []
+);
+    |                                                          
+                                                      ^^^^ unkn
+own prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+831 |     let _ = conn.execute("UPDATE audit_universe SET impac
+t_score = 0, likelihood_score = 0, ai_analysis_data = NULL ", [
+]);
+    |                                                          
+                                                          +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:838:81
+    |
+838 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+838 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `audit_projects` is unknown
+   --> src\commands.rs:842:39
+    |
+842 |     let _ = conn.execute("DELETE FROM audit_projects", []
+);
+    |                                       ^^^^^^^^^^^^^^ unkn
+own prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+842 |     let _ = conn.execute("DELETE FROM audit_projects ", [
+]);
+    |                                                     +
+
+error: prefix `audit_issues` is unknown
+   --> src\commands.rs:843:39
+    |
+843 |     let _ = conn.execute("DELETE FROM audit_issues", []);
+    |                                       ^^^^^^^^^^^^ unknow
+n prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+843 |     let _ = conn.execute("DELETE FROM audit_issues ", [])
+;
+    |                                                   +
+
+error: prefix `audit_data` is unknown
+   --> src\commands.rs:844:39
+    |
+844 |     let _ = conn.execute("DELETE FROM audit_data", []);
+    |                                       ^^^^^^^^^^ unknown 
+prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+844 |     let _ = conn.execute("DELETE FROM audit_data ", []);
+    |                                                 +
+
+error: prefix `system_events` is unknown
+   --> src\commands.rs:845:39
+    |
+845 |     let _ = conn.execute("DELETE FROM system_events", [])
+;
+    |                                       ^^^^^^^^^^^^^ unkno
+wn prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+845 |     let _ = conn.execute("DELETE FROM system_events ", []
+);
+    |                                                    +
+
+error: prefix `audit_plans` is unknown
+   --> src\commands.rs:846:39
+    |
+846 |     let _ = conn.execute("DELETE FROM audit_plans", []);
+    |                                       ^^^^^^^^^^^ unknown
+ prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+846 |     let _ = conn.execute("DELETE FROM audit_plans ", []);
+    |                                                  +
+
+error: prefix `audit_universe` is unknown
+   --> src\commands.rs:847:39
+    |
+847 |     let _ = conn.execute("DELETE FROM audit_universe", []
+);
+    |                                       ^^^^^^^^^^^^^^ unkn
+own prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+847 |     let _ = conn.execute("DELETE FROM audit_universe ", [
+]);
+    |                                                     +
+
+error: prefix `suspicion_inbox` is unknown
+   --> src\commands.rs:850:39
+    |
+850 |     let _ = conn.execute("DELETE FROM suspicion_inbox", [
+]);
+    |                                       ^^^^^^^^^^^^^^^ unk
+nown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+850 |     let _ = conn.execute("DELETE FROM suspicion_inbox ", 
+[]);
+    |                                                      +
+
+error: prefix `adjudication_log` is unknown
+   --> src\commands.rs:851:39
+    |
+851 |     let _ = conn.execute("DELETE FROM adjudication_log", 
+[]);
+    |                                       ^^^^^^^^^^^^^^^^ un
+known prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+851 |     let _ = conn.execute("DELETE FROM adjudication_log ",
+ []);
+    |                                                       +
+
+error: prefix `scenario_catalog` is unknown
+   --> src\commands.rs:852:39
+    |
+852 |     let _ = conn.execute("DELETE FROM scenario_catalog", 
+[]);
+    |                                       ^^^^^^^^^^^^^^^^ un
+known prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+852 |     let _ = conn.execute("DELETE FROM scenario_catalog ",
+ []);
+    |                                                       +
+
+error: prefix `custom_scenarios` is unknown
+   --> src\commands.rs:853:39
+    |
+853 |     let _ = conn.execute("DELETE FROM custom_scenarios", 
+[]);
+    |                                       ^^^^^^^^^^^^^^^^ un
+known prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+853 |     let _ = conn.execute("DELETE FROM custom_scenarios ",
+ []);
+    |                                                       +
+
+error: prefix `engine_metrics` is unknown
+   --> src\commands.rs:854:39
+    |
+854 |     let _ = conn.execute("DELETE FROM engine_metrics", []
+);
+    |                                       ^^^^^^^^^^^^^^ unkn
+own prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+854 |     let _ = conn.execute("DELETE FROM engine_metrics ", [
+]);
+    |                                                     +
+
+error: prefix `seeded` is unknown
+   --> src\commands.rs:857:33
+    |
+857 |     Ok("Database Cleared and Re-seeded".into())
+    |                                 ^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+857 |     Ok("Database Cleared and Re-seeded ".into())
+    |                                       +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:862:81
+    |
+862 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+862 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `?쒕굹由ъ삤` is unknown
+   --> src\commands.rs:865:275
+    |
+865 | ...ue_data.2, issue_data.1, issue_data.3, if is_ai { "AI 
+?먯? ?쒕굹由ъ삤" } else { "?ъ슜???뺤쓽" }, is_ai as i32]).map_err(|e| e
+.to_string())?;
+    |                                                          
+     ^^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+865 |     conn.execute("INSERT INTO custom_scenarios (category,
+ name, risk_level, description, origin_audit_type, origin_depar
+tment, is_ai_generated) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", p
+arams![category, issue_data.0, issue_data.2, issue_data.1, issu
+e_data.3, if is_ai { "AI ?먯? ?쒕굹由ъ삤 " } else { "?ъ슜???뺤쓽" }, is
+_ai as i32]).map_err(|e| e.to_string())?;
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                      +
+
+error: prefix `?뺤쓽` is unknown
+   --> src\commands.rs:865:295
+    |
+865 | ...ta.1, issue_data.3, if is_ai { "AI ?먯? ?쒕굹由ъ삤" } else 
+{ "?ъ슜???뺤쓽" }, is_ai as i32]).map_err(|e| e.to_string())?;
+    |                                                          
+             ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+865 |     conn.execute("INSERT INTO custom_scenarios (category,
+ name, risk_level, description, origin_audit_type, origin_depar
+tment, is_ai_generated) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", p
+arams![category, issue_data.0, issue_data.2, issue_data.1, issu
+e_data.3, if is_ai { "AI ?먯? ?쒕굹由ъ삤" } else { "?ъ슜???뺤쓽 " }, is
+_ai as i32]).map_err(|e| e.to_string())?;
+    |                                                          
+                                                               
+                                                               
+                                                               
+                                                             +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:871:81
+    |
+871 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+871 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: prefix `db` is unknown
+   --> src\commands.rs:879:81
+    |
+879 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db");
+    |                                                          
+                       ^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+879 |     let db_path = app_handle.path().app_data_dir().unwrap
+().join("audit_data_v4.db ");
+    |                                                          
+                         +
+
+error: character literal may only contain one codepoint
+   --> src\commands.rs:885:103
+    |
+885 | ...   let high_risk_count: i64 = conn.query_row("SELECT C
+OUNT(*) FROM audit_issues WHERE severity = 'High' AND detected_
+at LIKE ?1", para...
+    |                                                          
+                                           ^^^^^^
+    |
+help: if you meant to write a string literal, use double quotes
+    |
+885 -         let high_risk_count: i64 = conn.query_row("SELECT
+ COUNT(*) FROM audit_issues WHERE severity = 'High' AND detecte
+d_at LIKE ?1", params![format!("{}%", year_str)], |r| r.get(0))
+.unwrap_or(0);
+885 +         let high_risk_count: i64 = conn.query_row("SELECT
+ COUNT(*) FROM audit_issues WHERE severity = "High" AND detecte
+d_at LIKE ?1", params![format!("{}%", year_str)], |r| r.get(0))
+.unwrap_or(0);
+    |
+
+error: prefix `audit_projects` is unknown
+   --> src\commands.rs:889:67
+    |
+889 |     let project_count: i64 = conn.query_row("SELECT COUNT
+(*) FROM audit_projects", [], |r| r.get(0)).unwrap_or(0);
+    |                                                          
+         ^^^^^^^^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+889 |     let project_count: i64 = conn.query_row("SELECT COUNT
+(*) FROM audit_projects ", [], |r| r.get(0)).unwrap_or(0);
+    |                                                          
+                       +
+
+error: prefix `?붿껌` is unknown
+   --> src\commands.rs:903:38
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽"], "violation_rate": 15.5 }                         ...
+    |                                        ^^^^ unknown prefi
+x
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌 ", "蹂몃????꾧껐", 
+"諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?
+ы썑 ?덉쓽"], "violation_rate": 15.5 }))
+    |                                            +
+
+error: prefix `?꾧껐` is unknown
+   --> src\commands.rs:903:48
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽"], "violation_rate": 15.5 }                         ...
+    |                                                       ^^^
+^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐 ", 
+"諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?
+ы썑 ?덉쓽"], "violation_rate": 15.5 }))
+    |                                                          
+ +
+
+error: prefix `?좉뎄留? is unknown
+   --> src\commands.rs:903:92
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽"], "violation_rate": 15.5 }                         ...
+    |                                                          
+                                                   ^^^^^^ unkno
+wn prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?", "?꾩쓽 ?ъ슜", "?
+ы썑 ?덉쓽"], "violation_rate": 15.5 }))
+    |                                                          
+                                                         +
+
+error: prefix `?ъ슜` is unknown
+   --> src\commands.rs:903:102
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽"], "violation_rate": 15.5 }                         ...
+    |                                                          
+                                                               
+   ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜 ", "?
+ы썑 ?덉쓽"], "violation_rate": 15.5 }))
+    |                                                          
+                                                               
+       +
+
+error: prefix `?덉쓽` is unknown
+   --> src\commands.rs:903:111
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽"], "violation_rate": 15.5 }                         ...
+    |                                                          
+                                                               
+                ^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+903 |     Ok(json!({ "official_flow": ["援щℓ ?붿껌", "蹂몃????꾧껐", "
+諛쒖＜", "?낃퀬", "寃곗젣"], "shadow_flow": ["?먯궛 ?좉뎄留?, "?꾩쓽 ?ъ슜", "?ы
+썑 ?덉쓽 "], "violation_rate": 15.5 }))
+    |                                                          
+                                                               
+                    +
+
+error: prefix `csv` is unknown
+   --> src\commands.rs:908:43
+    |
+908 |     Ok(vec![json!({ "name": "process_logs.csv", "status":
+ "Ready" })])
+    |                                           ^^^ unknown pre
+fix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+908 |     Ok(vec![json!({ "name": "process_logs.csv ", "status"
+: "Ready" })])
+    |                                              +
+
+error: unknown start of token: \
+   --> src\commands.rs:987:14
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |              ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:24
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                        ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:32
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                  ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:41
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                              ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:49
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                        ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:57
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                          
+        ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:59
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                          
+          ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:64
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                          
+               ^
+
+error: unknown start of token: \
+   --> src\commands.rs:987:66
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                          
+                 ^
+
+error: prefix `n` is unknown
+   --> src\commands.rs:987:67
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n",
+    |                                                          
+                  ^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+987 |             "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?곸꽭: {}\n?쒖뼵:
+ {}\n\n---\n\n ",
+    |                                                          
+                   +
+
+error: unknown start of token: \
+    --> src\commands.rs:1017:51
+     |
+1017 | ...   if high > 0 { "- High ?깃툒 ?좏샇??????꾩옣 ?ㅼ궗 諛?吏덉쓽\n
+- 愿???뚮챸 ?먮즺(SOP, 利앸튃) ?뺣낫" } else { "?꾩옱 利됱떆 議곗튂媛 ?꾩슂???ы빆?
+ ?놁쑝?? ?곗씠??嫄댁쟾???좎?媛 ?꾩슂?⑸땲??" },
+     |                                                         
+      ^
+
+error: prefix `?뺣낫` is unknown
+    --> src\commands.rs:1017:73
+     |
+1017 | ...   if high > 0 { "- High ?깃툒 ?좏샇??????꾩옣 ?ㅼ궗 諛?吏덉쓽\n
+- 愿???뚮챸 ?먮즺(SOP, 利앸튃) ?뺣낫" } else { "?꾩옱 利됱떆 議곗튂媛 ?꾩슂???ы빆?
+ ?놁쑝?? ?곗씠??嫄댁쟾???좎?媛 ?꾩슂?⑸땲??" },
+     |                                                         
+                                    ^^^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1017 |         if high > 0 { "- High ?깃툒 ?좏샇??????꾩옣 ?ㅼ궗 諛?吏덉쓽
+\n- 愿???뚮챸 ?먮즺(SOP, 利앸튃) ?뺣낫 " } else { "?꾩옱 利됱떆 議곗튂媛 ?꾩슂???ы
+빆? ?놁쑝?? ?곗씠??嫄댁쟾???좎?媛 ?꾩슂?⑸땲??" },
+     |                                                         
+                                          +
+
+error: prefix `d` is unknown
+    --> src\commands.rs:1020:45
+     |
+1020 |         chrono::Local::now().format("%Y-%m-%d").to_strin
+g()
+     |                                             ^ unknown pr
+efix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1020 |         chrono::Local::now().format("%Y-%m-%d ").to_stri
+ng()
+     |                                              +
+
+error: prefix `db` is unknown
+    --> src\commands.rs:1028:81
+     |
+1028 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db");
+     |                                                         
+                        ^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1028 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db ");
+     |                                                         
+                          +
+
+error: prefix `format` is unknown
+    --> src\commands.rs:1031:55
+     |
+1031 |     let nid: i64 = id.parse().map_err(|_| "Invalid ID fo
+rmat".to_string())?;
+     |                                                       ^^
+^^^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1031 |     let nid: i64 = id.parse().map_err(|_| "Invalid ID fo
+rmat ".to_string())?;
+     |                                                         
+    +
+
+error: character literal may only contain one codepoint
+    --> src\commands.rs:1053:67
+     |
+1053 |                 "SELECT COUNT(*) FROM audit_issues WHERE
+ status = 'Accepted' AND project_type = ?1",
+     |                                                         
+          ^^^^^^^^^^
+     |
+help: if you meant to write a string literal, use double quotes
+     |
+1053 -                 "SELECT COUNT(*) FROM audit_issues WHERE
+ status = 'Accepted' AND project_type = ?1",
+1053 +                 "SELECT COUNT(*) FROM audit_issues WHERE
+ status = "Accepted" AND project_type = ?1",
+     |
+
+error: character literal may only contain one codepoint
+    --> src\commands.rs:1080:100
+     |
+1080 |                     "INSERT INTO system_events (id, even
+t_type, description, audit_id) VALUES (?1, 'AI_SIGNAL', ?2, ?3)
+",
+     |                                                         
+                                           ^^^^^^^^^^^
+     |
+help: if you meant to write a string literal, use double quotes
+     |
+1080 -                     "INSERT INTO system_events (id, even
+t_type, description, audit_id) VALUES (?1, 'AI_SIGNAL', ?2, ?3)
+",
+1080 +                     "INSERT INTO system_events (id, even
+t_type, description, audit_id) VALUES (?1, "AI_SIGNAL", ?2, ?3)
+",
+     |
+
+error: prefix `db` is unknown
+    --> src\commands.rs:1092:81
+     |
+1092 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db");
+     |                                                         
+                        ^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1092 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db ");
+     |                                                         
+                          +
+
+error: prefix `db` is unknown
+    --> src\commands.rs:1153:81
+     |
+1153 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db");
+     |                                                         
+                        ^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: consider inserting whitespace here
+     |
+1153 |     let db_path = app_handle.path().app_data_dir().unwra
+p().join("audit_data_v4.db ");
+     |                                                         
+                          +
+
+error: character literal may only contain one codepoint
+    --> src\commands.rs:1164:33
+     |
+1164 |     CONTEXT: Deep Dive Audit of '{}' department (Project
+ Context: {}).
+     |                                 ^^^^
+     |
+help: if you meant to write a string literal, use double quotes
+     |
+1164 -     CONTEXT: Deep Dive Audit of '{}' department (Project
+ Context: {}).
+1164 +     CONTEXT: Deep Dive Audit of "{}" department (Project
+ Context: {}).
+     |
+
+error: prefix `DATA` is unknown
+    --> src\commands.rs:1166:121
+     |
+1166 |     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided 'RAW
+ DATA'. 
+     |                                                         
+                                                               
+ ^^^^ unknown prefix
+     |
+     = note: prefixed identifiers and literals are reserved sin
+ce Rust 2021
+help: if you meant to write a string literal, use double quotes
+     |
+1166 -     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided 'RAW
+ DATA'. 
+1166 +     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided "RAW
+ DATA". 
+     |
+
+error[E0762]: unterminated character literal
+    --> src\commands.rs:1166:125
+     |
+1166 |     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided 'RAW
+ DATA'. 
+     |                                                         
+                                                               
+     ^^^
+     |
+help: if you meant to write a string literal, use double quotes
+     |
+1166 -     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided 'RAW
+ DATA'. 
+1166 +     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-
+quality audit findings (risks/anomalies) from the provided "RAW
+ DATA". 
+     |
+
+For more information about this error, try `rustc --explain E07
+62`.
+error: could not compile `auditflow` (bin "auditflow") due to 1
+26 previous errors

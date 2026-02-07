@@ -32,3 +32,4 @@ dotenvy = "0.15.7"
 tauri-plugin-fs = "2.0.0-rc"
 uuid = { version = "1.10", features = ["v4"] }
 rand = "0.8"
+md5 = "0.7"

@@ -142,7 +142,8 @@ pub struct AnalysisResult {
     pub status: String,
 }
 
-// AI 遺꾩꽍 寃곌낵 ?꾩껜瑜??대뒗 援ъ“泥?
+// AI 분석 결과 전체를 담는 구조체
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditAnalysisResult {
     pub summary: String,
@@ -150,24 +151,26 @@ pub struct AuditAnalysisResult {
     pub findings: Vec<AuditFinding>,
 }
 
-// 媛쒕퀎 諛쒓껄 ?ы빆 (?ш린??梨꾪깮/湲곌컖 ?щ?, 利앸튃 ?깆씠 ?ы븿?섏뼱????
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditFinding {
     pub id: String,
     pub category: String,
     pub severity: String, // High, Medium, Low
     pub description: String,
-    pub evidence: String, // ?곸꽭 利앸튃 ?곗씠??
+    pub evidence: String, // 상세 증빙 데이터
     pub recommendation: String,
     pub status: String, // "Pending", "Accepted", "Rejected"
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SheetData {
     pub name: String,
     pub data: Vec<Vec<String>>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditScenario {
     pub id: String, // e.g., "PR-01", "CC-01"
@@ -182,7 +185,7 @@ pub struct AuditScenario {
     pub enabled: bool,
 }
 
-// [CERTIFIED AUDIT] Structure for audit_run_log.json
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditRunLog {
     pub run_id: String,
@@ -194,6 +197,7 @@ pub struct AuditRunLog {
     pub reproducibility_check: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ScanSummary {
     pub total_rows: usize,
@@ -201,6 +205,7 @@ pub struct ScanSummary {
     pub rule_engine_summary: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AiOutputCard {
     pub title: String,

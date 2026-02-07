@@ -38,7 +38,7 @@ export default function AuditWorkspace() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
     const [thoughts, setThoughts] = useState<{ thought: string, type: string }[]>([]);
-    const [isCertifiedMode, setIsCertifiedMode] = useState(false);
+    const [isVerifiedMode, setIsVerifiedMode] = useState(false);
     const [certifiedLog, setCertifiedLog] = useState<any | null>(null);
 
     useEffect(() => {
@@ -107,11 +107,27 @@ export default function AuditWorkspace() {
         }, 2000);
     };
 
+    const handleLockRuleSet = async () => {
+        try {
+            const newVersion = await safeInvoke('lock_project_ruleset', { projectId: activeProject });
+            // Refresh projects list to update status
+            const res: any = await safeInvoke("get_audit_projects");
+            setProjects(res);
+            setThoughts(prev => [...prev, {
+                thought: `🔐 CONSTITUTIONAL ACT: RuleSet locked as ${newVersion}. (PHASE 2 Ready)`,
+                type: "security"
+            }]);
+            alert(`RuleSet Locked Successfully!\nVersion: ${newVersion}`);
+        } catch (err: any) {
+            alert("Locking failed: " + err);
+        }
+    };
+
     const handleAnalyze = async () => {
         setIsAnalyzing(true);
         setThoughts(prev => [...prev, { thought: "🧠 Neural Core Activation: Establishing bridge to Gemini 3.0 Pro...", type: "ai" }]);
         try {
-            if (isCertifiedMode) {
+            if (isVerifiedMode) {
                 const log = await safeInvoke('execute_certified_audit', { projectId: activeProject });
                 setCertifiedLog(log);
             } else {
@@ -125,10 +141,17 @@ export default function AuditWorkspace() {
             setTimeout(() => {
                 setIsAnalyzing(false);
             }, 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("Analysis failed: " + err);
+            // Constitutional Error Handling
+            const errorMsg = err.message || err.toString();
+            setThoughts(prev => [...prev, {
+                thought: `🚫 EXECUTION REFUSED: ${errorMsg}`,
+                type: "security"
+            }]);
             setIsAnalyzing(false);
+            // [UX Check] Show clear barrier in UI for Refusal Spec compliance
+            alert("AuditFlow Constitutional Barrier:\n\n" + errorMsg);
         }
     };
 
@@ -138,7 +161,7 @@ export default function AuditWorkspace() {
                 <div className="absolute top-0 right-0 p-12 text-emerald-500/10"><ShieldCheck size={160} /></div>
                 <div className="flex items-center gap-4 text-emerald-400">
                     <div className="bg-emerald-500/20 p-3 rounded-2xl"><ShieldCheck size={32} /></div>
-                    <h3 className="text-4xl font-black tracking-tighter italic uppercase">Authenticated Forensic Set</h3>
+                    <h3 className="text-4xl font-black tracking-tighter italic uppercase">Traceable Decision Set</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
@@ -169,6 +192,20 @@ export default function AuditWorkspace() {
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Legitimate Context (Rebuttal)</p>
                                 <p className="text-xs text-slate-400 font-bold italic leading-relaxed">"{card.counter_argument}"</p>
                             </div>
+
+                            {/* [PHASE 3] Logic Trace Visualization */}
+                            {card.logic_chain && (
+                                <div className="space-y-3">
+                                    <p className="text-[11px] font-black text-blue-500/50 uppercase tracking-widest italic flex items-center gap-2">
+                                        <Terminal size={12} /> Logic Trace (Constitutional Evidence)
+                                    </p>
+                                    <div className="bg-black/40 rounded-xl p-4 border border-blue-500/10 font-mono text-[10px] text-emerald-500/70">
+                                        {card.logic_chain.map((step: string, i: number) => (
+                                            <p key={i} className="mb-1 leading-tight">{i + 1}. {step}</p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                 <div className="space-y-1">
@@ -290,14 +327,14 @@ export default function AuditWorkspace() {
                         </div>
 
                         <button
-                            onClick={() => setIsCertifiedMode(!isCertifiedMode)}
-                            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center gap-3 ${isCertifiedMode
+                            onClick={() => setIsVerifiedMode(!isVerifiedMode)}
+                            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center gap-3 ${isVerifiedMode
                                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
                                 : 'bg-slate-900/50 border-white/10 text-slate-500 hover:text-white'
                                 }`}
                         >
-                            {isCertifiedMode ? <ShieldCheck size={14} /> : <Zap size={14} />}
-                            {isCertifiedMode ? "Certified Mode (Golden Case)" : "Insight Mode (Thinking Stream)"}
+                            {isVerifiedMode ? <ShieldCheck size={14} /> : <Zap size={14} />}
+                            {isVerifiedMode ? "Verified Judgment Run (Traceable)" : "Insight Mode (Thinking Stream)"}
                         </button>
                     </div>
                 </div>
@@ -463,7 +500,7 @@ export default function AuditWorkspace() {
                 {activeProject && step === 3 && (
                     <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 h-full">
                         {certifiedLog || analysisResult ? (
-                            isCertifiedMode ? <CertifiedResultCards /> : (
+                            isVerifiedMode ? <CertifiedResultCards /> : (
                                 <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[64px] p-24 text-center space-y-16 relative overflow-hidden shadow-[0_0_100px_rgba(37,99,235,0.1)] h-full flex flex-col justify-center">
                                     <div className="absolute top-0 right-0 p-12 text-emerald-500/10"><BrainCircuit size={160} /></div>
                                     <h3 className="text-5xl font-black text-white tracking-tighter italic uppercase">AI Forensic Scan Complete</h3>
@@ -491,17 +528,27 @@ export default function AuditWorkspace() {
                                         <BrainCircuit className="text-white relative z-10" size={96} />
                                     </div>
                                     <h2 className="text-6xl font-black text-white tracking-tighter italic uppercase">
-                                        {isCertifiedMode ? "Certified Audit Run" : "Neural Core Execution"}
+                                        {isVerifiedMode ? "Verified Judgment Run" : "Neural Core Execution"}
                                     </h2>
                                     <p className="text-slate-400 font-medium max-w-xl mx-auto leading-relaxed text-xl">
                                         Forensic integrity confirmed. Ready to execute
-                                        {isCertifiedMode ? " Certified Rule-First Audit." : " Gemini 3.0 Pro audit engine."}
+                                        {isVerifiedMode ? " Locked Compliance Run." : " Gemini 3.0 Pro audit engine."}
                                     </p>
                                 </div>
-                                <button onClick={handleAnalyze} disabled={isAnalyzing} className="bg-white text-black px-20 py-8 rounded-[40px] font-black text-2xl uppercase tracking-[0.2em] hover:bg-blue-50 transition-all flex items-center gap-6 mx-auto shadow-2xl hover:scale-105 active:scale-95">
-                                    {isAnalyzing ? <Loader2 className="animate-spin" size={32} /> : (isCertifiedMode ? <ShieldCheck size={32} className="text-emerald-500" /> : <Zap size={32} className="text-blue-600" />)}
-                                    {isAnalyzing ? "Processing Data..." : (isCertifiedMode ? "Execute Certified Scan" : "Run AI Audit Engine")}
-                                </button>
+                                {isVerifiedMode && projects.find(p => p.id === activeProject)?.ruleset_status !== 'LOCKED' ? (
+                                    <button
+                                        onClick={handleLockRuleSet}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-20 py-8 rounded-[40px] font-black text-2xl uppercase tracking-[0.2em] transition-all flex items-center gap-6 mx-auto shadow-2xl hover:scale-105 active:scale-95"
+                                    >
+                                        <Lock size={32} />
+                                        Lock RuleSet First
+                                    </button>
+                                ) : (
+                                    <button onClick={handleAnalyze} disabled={isAnalyzing} className="bg-white text-black px-20 py-8 rounded-[40px] font-black text-2xl uppercase tracking-[0.2em] hover:bg-blue-50 transition-all flex items-center gap-6 mx-auto shadow-2xl hover:scale-105 active:scale-95">
+                                        {isAnalyzing ? <Loader2 className="animate-spin" size={32} /> : (isVerifiedMode ? <ShieldCheck size={32} className="text-emerald-500" /> : <Zap size={32} className="text-blue-600" />)}
+                                        {isAnalyzing ? "Processing Data..." : (isVerifiedMode ? "Execute Verified Judgment" : "Run AI Audit Engine")}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

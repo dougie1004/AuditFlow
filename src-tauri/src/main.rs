@@ -12,6 +12,7 @@ mod mapper;
 mod compliance_dd_flow;
 mod ai_detection;
 mod debug_api;
+mod constitution;
 
 use database::initialize_database;
 use std::fs;
@@ -27,10 +28,10 @@ fn load_permanent_config() -> Result<(), String> {
         let config: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
         
         println!(">>> [PERMANENT CONFIG] Loaded optimization settings:");
-        println!("    Mode: {}", config["optimization"]["mode"].as_str().unwrap_or("hybrid"));
-        println!("    PII Threshold: {}", config["optimization"]["pii_weight_threshold"].as_f64().unwrap_or(2.0));
-        println!("    Flash Model: {}", config["optimization"]["use_flash_model"].as_bool().unwrap_or(true));
-        println!("    Batch Size: {}", config["optimization"]["batch_size"].as_u64().unwrap_or(2000));
+        println!("    Mode: {}", config["optimization"]["mode"].as_str().unwrap_or("hybrid")); // ALLOW_MOCK: Default UI mode is non-critical
+        println!("    PII Threshold: {}", config["optimization"]["pii_weight_threshold"].as_f64().unwrap_or(2.0)); // ALLOW_MOCK
+        println!("    Flash Model: {}", config["optimization"]["use_flash_model"].as_bool().unwrap_or(true)); // ALLOW_MOCK
+        println!("    Batch Size: {}", config["optimization"]["batch_size"].as_u64().unwrap_or(2000)); // ALLOW_MOCK
     } else {
         println!(">>> [PERMANENT CONFIG] Creating default config...");
         // Config will be created by first run
@@ -116,12 +117,15 @@ fn main() {
             commands::get_case_detail,
             commands::get_engine_health_stats,
             commands::run_formal_adjudication,
+            commands::execute_certified_audit,
+            commands::lock_project_ruleset,
             debug_api::debug_reset_inbox,
             debug_api::debug_inject_signals,
             debug_api::debug_get_inbox_stats,
             debug_api::debug_process_next,
             debug_api::get_risk_report_data,
-            debug_api::debug_run_calibration_test
+            debug_api::debug_run_calibration_test,
+            constitution::check_system_integrity
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

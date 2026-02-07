@@ -1,119 +1,272 @@
-﻿cargo :     Checking auditflo
-w v0.1.0 (C:\Users\user\.gemi
-ni\antigravity\scratch\auditf
-low\src-tauri)
+﻿cargo :     Checking auditflow v0.1.0 (C:\Users\user\.gemini\an
+tigravity\playground\AuditFlow\src-tauri)
 위치 줄:1 문자:1
-+ cargo check 2> build_errors
-.txt
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~
-    + CategoryInfo           
-   : NotSpecified: (    Che  
-  cking au...flow\src-taur   
- i):String) [], RemoteExc    
-eption
-    + FullyQualifiedErrorId  
-   : NativeCommandError
++ cargo check > build_errors.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking au.. 
+   .Flow\src-tauri):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
  
-error: cannot find macro `jso
-n` in this scope
-   --> src\database.rs:200:12
+error: unknown start of token: \
+   --> src\file_utils.rs:522:14
     |
-200 |         Ok(json!({
-    |            ^^^^
+522 |     println!(\">>> [GEOCODE] Failed to locate: {}\", addr
+ess);
+    |              ^
+
+error: prefix `xml` is unknown
+   --> src\file_utils.rs:550:83
     |
-help: consider importing this
- macro
+550 |             if file_patterns.iter().any(|&p| name.contain
+s(p) && name.ends_with(".xml")) {
+    |                                                          
+                         ^^^ unknown prefix
     |
-  1 + use serde_json::json;
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+550 |             if file_patterns.iter().any(|&p| name.contain
+s(p) && name.ends_with(".xml ")) {
+    |                                                          
+                            +
+
+error: prefix `document` is unknown
+   --> src\file_utils.rs:572:44
+    |
+572 |         return Err("No text extracted from document".to_s
+tring());
+    |                                            ^^^^^^^^ unkno
+wn prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+572 |         return Err("No text extracted from document ".to_
+string());
+    |                                                    +
+
+error: prefix `Ready` is unknown
+   --> src\file_utils.rs:585:17
+    |
+585 |     ("Full Scan Ready".to_string(), row_store)
+    |                 ^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+585 |     ("Full Scan Ready ".to_string(), row_store)
+    |                      +
+
+error: prefix `Ready` is unknown
+   --> src\file_utils.rs:593:17
+    |
+593 |     ("Full Scan Ready".to_string(), row_store)
+    |                 ^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+593 |     ("Full Scan Ready ".to_string(), row_store)
+    |                      +
+
+error: prefix `document` is unknown
+   --> src\file_utils.rs:599:58
+    |
+599 |         "docx" => extract_text_from_zip(path, vec!["word/
+document"]),
+    |                                                          
+^^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+599 |         "docx" => extract_text_from_zip(path, vec!["word/
+document "]),
+    |                                                          
+        +
+
+error: prefix `slide` is unknown
+   --> src\file_utils.rs:600:64
+    |
+600 |         "pptx" => extract_text_from_zip(path, vec!["ppt/s
+lides/slide"]),
+    |                                                          
+      ^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+600 |         "pptx" => extract_text_from_zip(path, vec!["ppt/s
+lides/slide "]),
+    |                                                          
+           +
+
+error: prefix `sharedStrings` is unknown
+   --> src\file_utils.rs:601:56
+    |
+601 |         "xlsx" => extract_text_from_zip(path, vec!["xl/sh
+aredStrings", "xl/worksheets/sheet"]),
+    |                                                        ^^
+^^^^^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+601 |         "xlsx" => extract_text_from_zip(path, vec!["xl/sh
+aredStrings ", "xl/worksheets/sheet"]),
+    |                                                          
+           +
+
+error: prefix `sheet` is unknown
+   --> src\file_utils.rs:601:87
+    |
+601 |         "xlsx" => extract_text_from_zip(path, vec!["xl/sh
+aredStrings", "xl/worksheets/sheet"]),
+    |                                                          
+                             ^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+601 |         "xlsx" => extract_text_from_zip(path, vec!["xl/sh
+aredStrings", "xl/worksheets/sheet "]),
+    |                                                          
+                                  +
+
+error: prefix `Subject` is unknown
+   --> src\file_utils.rs:605:83
+    |
+605 |             let subject = parsed.headers.get_first_value(
+"Subject").unwrap_or("No Subject".to_string());
+    |                                                          
+                         ^^^^^^^ unknown prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+605 |             let subject = parsed.headers.get_first_value(
+"Subject").unwrap_or("No Subject ".to_string());
+    |                                                          
+                                +
+
+error: unknown start of token: \
+   --> src\file_utils.rs:608:32
+    |
+608 |             Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nB
+ody:\n{}", from, subject, body))
+    |                                ^
+
+error: unknown start of token: \
+   --> src\file_utils.rs:608:42
+    |
+608 |             Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nB
+ody:\n{}", from, subject, body))
+    |                                          ^
+
+error: unknown start of token: \
+   --> src\file_utils.rs:608:55
+    |
+608 |             Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nB
+ody:\n{}", from, subject, body))
+    |                                                       ^
+
+error: unknown start of token: \
+   --> src\file_utils.rs:608:62
+    |
+608 |             Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nB
+ody:\n{}", from, subject, body))
+    |                                                          
+    ^
+
+error: unknown start of token: `
+   --> src\file_utils.rs:626:31
+    |
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                               ^^^
+    |
+    = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Sing
+le Quote), but it is not
+    |
+626 -     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+626 +     let re = Regex::new(r"(?s)'''(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
     |
 
-warning: unused imports: `Des
-erialize` and `Serialize`
- --> src\ai.rs:1:13
-  |
-1 | use serde::{Deserialize, 
-Serialize};
-  |             ^^^^^^^^^^^  
-^^^^^^^^^
-  |
-  = note: `#[warn(unused_impo
-rts)]` (part of `#[warn(unuse
-d)]`) on by default
-
-warning: unused import: `Tran
-saction`
- --> src\scenarios_seeder.rs:
-1:36
-  |
-1 | use rusqlite::{params, Co
-nnection, Transaction};
-  |                          
-          ^^^^^^^^^^^
-
-warning: unused import: `serd
-e_json::json`
- --> src\scenarios_seeder.rs:
-2:5
-  |
-2 | use serde_json::json;
-  |     ^^^^^^^^^^^^^^^^
-
-error: this function depends 
-on never type fallback being 
-`()`
-   --> src\database.rs:197:1
+error: unknown start of token: \
+   --> src\file_utils.rs:626:43
     |
-197 | pub fn export_scenario_
-manifest(conn: &Connection, a
-pp_handle: &AppHandle) -> Res
-ult<(), String> {
-    | ^^^^^^^^^^^^^^^^^^^^^^^
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-^^^^^^^^^^^^^^^
-    |
-    = warning: this was previ
-ously accepted by the compile
-r but is being phased out; it
- will become a hard error in 
-Rust 2024 and in a future rel
-ease in all editions!
-    = note: for more informat
-ion, see <https://doc.rust-la
-ng.org/edition-guide/rust-202
-4/never-type-fallback.html>
-    = help: specify the types
- explicitly
-note: in edition 2024, the re
-quirement `!: Serialize` will
- fail
-   --> src\database.rs:218:48
-    |
-218 |     let content = serde
-_json::to_string_pretty(&mani
-fest).map_err(|e| e.to_string
-())?;
-    |                        
-                        ^^^^^
-^^^^
-    = note: `#[deny(dependenc
-y_on_unit_never_type_fallback
-)]` (part of `#[deny(rust_202
-4_compatibility)]`) on by def
-ault
-help: use `()` annotations to
- avoid fallback changes
-    |
-199 |     let rows = stmt.que
-ry_map::<(), _, _>([], |r| {
-    |                        
-      ++++++++++++
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                                           ^
 
-warning: `auditflow` (bin "au
-ditflow") generated 3 warning
-s
-error: could not compile `aud
-itflow` (bin "auditflow") due
- to 3 previous errors; 3 warn
-ings emitted
+error: unknown start of token: \
+   --> src\file_utils.rs:626:48
+    |
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                                                ^
+
+error: unknown start of token: \
+   --> src\file_utils.rs:626:50
+    |
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                                                  ^
+
+error: unknown start of token: \
+   --> src\file_utils.rs:626:56
+    |
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                                                        ^
+
+error: unknown start of token: `
+   --> src\file_utils.rs:626:59
+    |
+626 |     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+    |                                                          
+ ^^^
+    |
+    = note: character appears 2 more times
+help: Unicode character '`' (Grave Accent) looks like ''' (Sing
+le Quote), but it is not
+    |
+626 -     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*```").unwrap();
+626 +     let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)\s
+*'''").unwrap();
+    |
+
+error[E0765]: unterminated double quote string
+   --> src\file_utils.rs:626:62
+    |
+626 |       let re = Regex::new(r"(?s)```(?:json)?\s*([\s\S]*?)
+\s*```").unwrap();
+    |  ________________________________________________________
+______^
+627 | |     let cleaned = if let Some(caps) = re.captures(raw) 
+{
+628 | |         caps.get(1).map_or(raw, |m| m.as_str())
+629 | |     } else {
+...   |
+669 | |     cleaned
+670 | | }
+    | |__^
+
+For more information about this error, try `rustc --explain E07
+65`.
+error: could not compile `auditflow` (bin "auditflow") due to 2
+1 previous errors

@@ -1,0 +1,95 @@
+﻿cargo :     Checking auditflow v0.1.0 (C:\Users\user\.gemini\an
+tigravity\playground\AuditFlow\src-tauri)
+위치 줄:1 문자:1
++ cargo check > build_errors_2.txt 2>&1; Get-Content build_erro
+rs_2.txt ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking au.. 
+   .Flow\src-tauri):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: unknown start of token: \
+  --> src\ai.rs:86:18
+   |
+86 |         println!(\">>> [CONSTITUTIONAL_ERROR] API KEY MISS
+ING: {}\", e);
+   |                  ^
+
+error: unknown start of token: \
+   --> src\ai.rs:103:29
+    |
+103 |     let prompt = format!("{}\n\n[TARGET DATA]:\n{}", syst
+em_prompt, truncated_data);
+    |                             ^
+
+error: unknown start of token: \
+   --> src\ai.rs:103:31
+    |
+103 |     let prompt = format!("{}\n\n[TARGET DATA]:\n{}", syst
+em_prompt, truncated_data);
+    |                               ^
+
+error: unknown start of token: \
+   --> src\ai.rs:103:47
+    |
+103 |     let prompt = format!("{}\n\n[TARGET DATA]:\n{}", syst
+em_prompt, truncated_data);
+    |                                               ^
+
+error: prefix `response` is unknown
+   --> src\ai.rs:125:110
+    |
+125 |     let raw_text = json_res["candidates"][0]["content"]["
+parts"][0]["text"].as_str().ok_or("No content in AI response")?
+;
+    |                                                          
+                                                    ^^^^^^^^ un
+known prefix
+    |
+    = note: prefixed identifiers and literals are reserved sinc
+e Rust 2021
+help: consider inserting whitespace here
+    |
+125 |     let raw_text = json_res["candidates"][0]["content"]["
+parts"][0]["text"].as_str().ok_or("No content in AI response ")
+?;
+    |                                                          
+                                                            +
+
+error: mismatched closing delimiter: `}`
+   --> src\ai.rs:86:17
+    |
+ 84 | pub fn get_api_key() -> String {
+    |                                - closing delimiter possib
+ly meant for this
+ 85 |     AiConfig::from_env().map(|c| c.api_key).unwrap_or_els
+e(|e| {
+ 86 |         println!(\">>> [CONSTITUTIONAL_ERROR] API KEY MIS
+SING: {}\", e);
+    |                 ^ unclosed delimiter
+...
+183 | }
+    | ^ mismatched closing delimiter
+
+error: this file contains an unclosed delimiter
+   --> src\ai.rs:282:3
+    |
+ 84 | pub fn get_api_key() -> String {
+    |                                - unclosed delimiter
+ 85 |     AiConfig::from_env().map(|c| c.api_key).unwrap_or_els
+e(|e| {
+    |                                                          
+ -    - this delimiter might not be properly closed...
+    |                                                          
+ |
+    |                                                          
+ unclosed delimiter
+...
+183 | }
+    | - ...as it matches this but it has different indentation
+...
+282 | }
+    |  ^
+
+error: could not compile `auditflow` (bin "auditflow") due to 7
+ previous errors

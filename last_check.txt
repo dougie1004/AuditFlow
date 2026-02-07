@@ -1,0 +1,286 @@
+﻿cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\playground\Aud
+itFlow\src-tauri)
+위치 줄:1 문자:1
++ cargo check --manifest-path
+ src-tauri/Cargo.toml --color
+ never 2>&1 | ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...Flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+error[E0425]: cannot find val
+ue `app_handle` in this scope
+   --> src\audit_engine.rs:73
+9:5
+    |
+737 |     _app_handle: &AppHa
+ndle,
+    |     ----------- `_app_h
+andle` defined here
+738 | ) -> Result<(), String>
+ {
+739 |     app_handle.emit("an
+alysis-progress", json!({
+    |     ^^^^^^^^^^
+    |
+help: the leading underscore 
+in `_app_handle` marks it as 
+unused, consider renaming it 
+to `app_handle`
+    |
+737 -     _app_handle: &AppHa
+ndle,
+737 +     app_handle: &AppHan
+dle,
+    |
+
+error[E0425]: cannot find val
+ue `db_path` in this scope
+   --> src\audit_engine.rs:74
+5:33
+    |
+736 |     _db_path: &PathBuf,
+    |     -------- `_db_path`
+ defined here
+...
+745 |     let conn = Connecti
+on::open(db_path).map_err(|e|
+ e.to_string())?;
+    |                        
+         ^^^^^^^
+    |
+help: the leading underscore 
+in `_db_path` marks it as unu
+sed, consider renaming it to 
+`db_path`
+    |
+736 -     _db_path: &PathBuf,
+736 +     db_path: &PathBuf,
+    |
+
+error[E0425]: cannot find val
+ue `target_files` in this sco
+pe
+   --> src\audit_engine.rs:78
+5:75
+    |
+734 |     _target_files: Vec<
+(String, String)>,
+    |     ------------- `_tar
+get_files` defined here
+...
+785 |     println!(">>> [Xecu
+trix] Starting Issue-Centric 
+Scan on {} files...", target_
+files.len());
+    |                        
+                             
+                      ^^^^^^^
+^^^^^
+    |
+help: the leading underscore 
+in `_target_files` marks it a
+s unused, consider renaming i
+t to `target_files`
+    |
+734 -     _target_files: Vec<
+(String, String)>,
+734 +     target_files: Vec<(
+String, String)>,
+    |
+
+error[E0425]: cannot find val
+ue `target_files` in this sco
+pe
+   --> src\audit_engine.rs:78
+7:29
+    |
+734 |     _target_files: Vec<
+(String, String)>,
+    |     ------------- `_tar
+get_files` defined here
+...
+787 |     for (f_path, f_name
+) in target_files {
+    |                        
+     ^^^^^^^^^^^^
+    |
+help: the leading underscore 
+in `_target_files` marks it a
+s unused, consider renaming i
+t to `target_files`
+    |
+734 -     _target_files: Vec<
+(String, String)>,
+734 +     target_files: Vec<(
+String, String)>,
+    |
+
+error[E0425]: cannot find val
+ue `db_path` in this scope
+   --> src\compliance_dd_flow
+.rs:553:33
+    |
+508 |     _db_path: &PathBuf,
+    |     -------- `_db_path`
+ defined here
+...
+553 |     let conn = Connecti
+on::open(db_path).map_err(|e|
+ e.to_string())?;
+    |                        
+         ^^^^^^^
+    |
+help: the leading underscore 
+in `_db_path` marks it as unu
+sed, consider renaming it to 
+`db_path`
+    |
+508 -     _db_path: &PathBuf,
+508 +     db_path: &PathBuf,
+    |
+
+error[E0425]: cannot find val
+ue `project_type` in this sco
+pe
+   --> src\compliance_dd_flow
+.rs:568:17
+    |
+507 |     _project_type: &str
+,
+    |     ------------- `_pro
+ject_type` defined here
+...
+568 |                 project
+_type,
+    |                 ^^^^^^^
+^^^^^
+    |
+help: the leading underscore 
+in `_project_type` marks it a
+s unused, consider renaming i
+t to `project_type`
+    |
+507 -     _project_type: &str
+,
+507 +     project_type: &str,
+    |
+
+error[E0308]: mismatched type
+s
+   --> src\commands.rs:209:61
+    |
+209 |         risk_score = st
+d::cmp::min(100, (high_count 
+* 20) + (findings_count * 5))
+;
+    |                        
+                             
+        ^^^^^^^^^^^^^^^^^^^^ 
+expected `i32`, found `i64`
+
+error[E0277]: cannot add `i64
+` to `i32`
+   --> src\commands.rs:209:59
+    |
+209 |         risk_score = st
+d::cmp::min(100, (high_count 
+* 20) + (findings_count * 5))
+;
+    |                        
+                             
+      ^ no implementation for
+ `i32 + i64`
+    |
+    = help: the trait `std::o
+ps::Add<i64>` is not implemen
+ted for `i32`
+    = help: the following oth
+er types implement trait `std
+::ops::Add<Rhs>`:
+              `&i32` implemen
+ts `std::ops::Add<i32>`
+              `&i32` implemen
+ts `std::ops::Add`
+              `i32` implement
+s `std::ops::Add<&i32>`
+              `i32` implement
+s `std::ops::Add<zerocopy::by
+teorder::I32<O>>`
+              `i32` implement
+s `std::ops::Add`
+
+error[E0277]: the size for va
+lues of type `str` cannot be 
+known at compilation time
+   --> src\audit_engine.rs:78
+7:10
+    |
+787 |     for (f_path, f_name
+) in target_files {
+    |          ^^^^^^ doesn't
+ have a size known at compile
+-time
+    |
+    = help: the trait `Sized`
+ is not implemented for `str`
+    = note: all local variabl
+es must have a statically kno
+wn size
+
+error[E0277]: the size for va
+lues of type `str` cannot be 
+known at compilation time
+   --> src\audit_engine.rs:78
+7:29
+    |
+787 |     for (f_path, f_name
+) in target_files {
+    |                        
+     ^^^^^^^^^^^^ doesn't hav
+e a size known at compile-tim
+e
+    |
+    = help: the trait `Sized`
+ is not implemented for `str`
+    = note: only the last ele
+ment of a tuple may have a dy
+namically sized type
+
+warning: unused variable: `fu
+ll_match`
+   --> src\file_utils.rs:224:
+13
+    |
+224 |         let full_match 
+= m.as_str();
+    |             ^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_full_match`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+Some errors have detailed exp
+lanations: E0277, E0308, E042
+5.
+For more information about an
+ error, try `rustc --explain 
+E0277`.
+warning: `auditflow` (bin "au
+ditflow") generated 1 warning
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 10 previous errors; 1 war
+ning emitted

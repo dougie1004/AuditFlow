@@ -16,7 +16,9 @@
 
 use serde::{Serialize, Deserialize};
 use rusqlite::{params, Connection};
+#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
 use chrono::NaiveDateTime;
 use crate::ai::{call_gemini_flash, extract_json};
 
@@ -38,12 +40,14 @@ pub struct ComplianceFinding {
     pub logic_chain: Vec<String>,   // List of specific boolean checks passed
     
     #[serde(skip)] 
+    #[allow(dead_code)]
     pub row_indices: Vec<usize>,
-    #[serde(skip)] 
+    #[allow(dead_code)]
     pub related_data: String, 
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AICommentary {
     pub narrative: String,           // The "Story"
     pub similarity_score: Option<f32>,
@@ -51,6 +55,7 @@ pub struct AICommentary {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TransactionRow {
     pub row_idx: usize,
     pub date_str: String,
@@ -72,6 +77,7 @@ pub enum JudicialInabilityReason {
     InsufficientFields,    // 판정에 필수적인 관측 데이터 필드 부족
     AmbiguousMapping,      // 데이터 매칭의 모호성으로 인한 판단 거부
     ConflictingRules,      // 상충하는 규칙으로 인한 확정 불가
+    HeuristicOnlyViolation, // [MANIFESTO 3.1] 명시적 규칙 없이 AI 추론만 존재하는 경우
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -116,7 +122,7 @@ impl Adjudicator {
             ))
         ).map_err(|e| format!("Signal Load Failed: {}", e))?;
 
-        let (observation, _scope, _related_ids_json, metadata_json, db_anomaly_score) = signal_row;
+        let (_observation, _scope, _related_ids_json, metadata_json, db_anomaly_score) = signal_row;
         
         // Parse metadata into JSON Value
         let metadata: serde_json::Value = metadata_json
@@ -156,14 +162,15 @@ impl Adjudicator {
         
         let mut triggered_metadata = Vec::new(); // (ID, Category, Name)
 
-        // Helper to log adjudication
-        let log_adj = |c: &Connection, sid: &str, rid: &str, crit: &str, res: &str, reas: &str| {
+        // Helper to log adjudication (PHASE 1-2 Guardian)
+        let log_adj = |c: &Connection, sid: &str, rid: &str, crit: &str, res: &str, reas: &str| -> Result<(), String> {
             // [IDEMPOTENCY] Clear old logs for this rule/signal before inserting new ones
             let _ = c.execute("DELETE FROM adjudication_log WHERE signal_id = ?1 AND rule_id = ?2", params![sid, rid]);
-            let _ = c.execute(
+            c.execute(
                 "INSERT INTO adjudication_log (signal_id, rule_id, criterion, result, reasoning) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![sid, rid, crit, res, reas]
-            );
+            ).map_err(|e| format!("Trace Path Incompleteness Error: 판단 로그 기록 실패 ({}). 실행을 중단합니다.", e))?;
+            Ok(())
         };
         
         // --- 1. Intent-Strong Rules (IS) ---
@@ -171,7 +178,7 @@ impl Adjudicator {
             let rule_id = "Rule_CC_SPLIT_01";
             let rule_name = "분할 결제(쪼개기) 의심";
             triggered_metadata.push((rule_id, RuleCategory::IntentStrong, rule_name));
-            log_adj(conn, signal_id, rule_id, "동일 가맹점/시간대 분할 결제 여부", "Match", "단기간 내 반복 결제로 한도 회피 정황 포착");
+            log_adj(conn, signal_id, rule_id, "동일 가맹점/시간대 분할 결제 여부", "Match", "단기간 내 반복 결제로 한도 회피 정황 포착")?;
         }
         
         // --- 2. Objective Violation Rules (OV) ---
@@ -181,20 +188,20 @@ impl Adjudicator {
             let rule_id = "Rule_DET_RESTRICTED_01";
             let rule_name = "제한 업종 가맹점 이용";
             triggered_metadata.push((rule_id, RuleCategory::ObjectiveViolation, rule_name));
-            log_adj(conn, signal_id, rule_id, "제한 업종(유흥/사치) 키워드 매칭", "Match", format!("가맹점명({})에 제한 키워드 포함 확인", location).as_str());
+            log_adj(conn, signal_id, rule_id, "제한 업종(유흥/사치) 키워드 매칭", "Match", format!("가맹점명({})에 제한 키워드 포함 확인", location).as_str())?;
         }
         
         // --- 3. Contextual / Weak Signal Rules (CW) ---
         if is_holiday {
             let rule_id = "Rule_CW_HOLIDAY";
             triggered_metadata.push((rule_id, RuleCategory::WeakSignal, "휴무일 결제"));
-            log_adj(conn, signal_id, rule_id, "공휴일 사용 여부", "Match", "공휴일 실사용 발생");
+            log_adj(conn, signal_id, rule_id, "공휴일 사용 여부", "Match", "공휴일 실사용 발생")?;
         }
 
         if is_near_home {
             let rule_id = "Rule_CW_NEAR_HOME";
             triggered_metadata.push((rule_id, RuleCategory::WeakSignal, "자택 인근 결제"));
-            log_adj(conn, signal_id, rule_id, "거주지 반경 1km 이내", "Match", "사용자 자택 주변 결제 발생");
+            log_adj(conn, signal_id, rule_id, "거주지 반경 1km 이내", "Match", "사용자 자택 주변 결제 발생")?;
         }
 
         if amount >= 100_000.0 {
@@ -208,7 +215,7 @@ impl Adjudicator {
             };
             
             triggered_metadata.push((rule_id, RuleCategory::WeakSignal, context_reason));
-            log_adj(conn, signal_id, rule_id, "단일 결제금액 10만원 상회", "Match", context_reason);
+            log_adj(conn, signal_id, rule_id, "단일 결제금액 10만원 상회", "Match", context_reason)?;
         }
 
         // [Phase 4-2] Grade Constitution v1.1 Matrix Mapping
@@ -273,7 +280,7 @@ impl Adjudicator {
         }
 
         // 3. GRADE C (UNRESOLVED ANOMALY): Reporting Interpretation Limit
-        if (is_count >= 1 || ov_count >= 1 || cw_count >= 2) {
+        if is_count >= 1 || ov_count >= 1 || cw_count >= 2 {
              logic_chain.push("검증: 내부 규정 확정 요건 미달(C)".to_string());
              return Ok(AdjudicationOutcome::Investigation {
                 context: format!("Interpretation Limit. IS:{}, OV:{}, CW:{}", is_count, ov_count, cw_count),
@@ -294,10 +301,10 @@ impl Adjudicator {
         // [HARD GUARD] Rule Hits == 0 MUST result in UNCLASSIFIED: NoApplicableRule
         // -------------------------------------------------------------------------
         if rule_hits == 0 {
-            logic_chain.push("🚨 [HARD GUARD] No matching rules found. Forced UNCLASSIFIED.".to_string());
+            logic_chain.push("🚨 [PHASE 1-3] Heuristic-only judgment detected and refused.".to_string());
             return Ok(AdjudicationOutcome::Unclassified {
-                reason: JudicialInabilityReason::NoApplicableRule,
-                message: format!("현재 심사 기준(Regulation) 내에 해당 패턴을 처리할 근거가 없음 (Score: {:.2})", witness_anomaly_score),
+                reason: JudicialInabilityReason::HeuristicOnlyViolation,
+                message: format!("Manifesto 3.1 위반: 명시적 규칙(Deterministic Rules) 없이 AI 추론만으로 판결을 내릴 수 없습니다. (Score: {:.2})", witness_anomaly_score),
                 logic_chain
             });
         }
@@ -311,6 +318,7 @@ impl Adjudicator {
 //  LAYER 1: RULE ENGINE (Deterministic)
 // =========================================================================
 
+#[allow(dead_code)]
 pub struct RuleEngine;
 
 impl RuleEngine {
@@ -428,6 +436,7 @@ impl RuleEngine {
 //  LAYER 2: AI WITNESS (Commentary)
 // =========================================================================
 
+#[allow(dead_code)]
 pub struct AIWitness; // "Your job is NOT to judge."
 
 impl AIWitness {
@@ -494,46 +503,85 @@ impl AIWitness {
 //  ORCHESTRATOR
 // =========================================================================
 
+#[allow(dead_code)]
 pub async fn run_compliance_check_flow(
     target_files: Vec<(String, String)>, // (Path, Name)
     project_type: &str,
     db_path: &PathBuf,
     app_handle: &tauri::AppHandle
-) -> Result<usize, String> {
+) -> Result<(usize, usize), String> {
     
     // 1. Data Ingestion & Normalization
     let mut all_txs: Vec<TransactionRow> = Vec::new();
     
     for (path_str, _) in target_files {
         let rows = crate::audit_engine::load_file_rows(&path_str);
-        // Simple Parser (Assuming Columns: Date, Vendor, Amount, Desc for MVP)
-        // In real world, we'd use Column Mapping Logic from audit_engine.
-        // Here we map indices purely for MVP demo.
+        if rows.is_empty() { continue; }
+
+        // [STRICT GUARD] Detect Headers & Map Columns
+        let mut date_idx: i32 = -1;
+        let mut vendor_idx: i32 = -1;
+        let mut amt_idx: i32 = -1;
+        let mut user_idx: i32 = -1;
+        let mut desc_idx: i32 = -1;
+
+        if let Some(headers) = rows.get(0) {
+            for (idx, h) in headers.iter().enumerate() {
+                let lower = h.to_lowercase();
+                if lower.contains("date") || lower.contains("일자") || lower.contains("일시") { date_idx = idx as i32; }
+                if lower.contains("vendor") || lower.contains("가맹점") || lower.contains("거래처") || lower.contains("상호") { vendor_idx = idx as i32; }
+                if lower.contains("amount") || lower.contains("금액") || lower.contains("합계") || lower.contains("가격") { amt_idx = idx as i32; }
+                if lower.contains("user") || lower.contains("사용자") || lower.contains("성명") || lower.contains("이름") { user_idx = idx as i32; }
+                if lower.contains("description") || lower.contains("적요") || lower.contains("내용") || lower.contains("목적") || lower.contains("category") { desc_idx = idx as i32; }
+            }
+        }
+
+        // [MANIFESTO 3.1] If no amount column, it's likely master data or reference, NOT a transaction file.
+        if amt_idx == -1 {
+            println!(">>> [CONSTITUTIONAL FILTER] Skipping non-transactional file (No Amount column): {}", path_str);
+            continue;
+        }
+
         for (i, row) in rows.iter().enumerate() {
             if i == 0 { continue; } // Skip header
-            if row.len() < 4 { continue; }
             
-            // Heuristic Parsing for Demo
-            let date = row.get(0).unwrap_or(&"".to_string()).to_string();
-            let vendor = row.get(1).unwrap_or(&"".to_string()).to_string();
-            let amt_str = row.get(2).unwrap_or(&"0".to_string()).replace(",", "");
+            let date = if date_idx >= 0 { row.get(date_idx as usize).cloned().unwrap_or_else(|| \"NOT_SPECIFIED\".to_string()) } else { \"NOT_SPECIFIED\".to_string() };
+            let vendor = if vendor_idx >= 0 { row.get(vendor_idx as usize).cloned().unwrap_or_else(|| \"MISSING_VENDOR\".to_string()) } else { \"MISSING_VENDOR\".to_string() };
+            let amt_str = if amt_idx >= 0 { row.get(amt_idx as usize).cloned().unwrap_or_else(|| \"0\".to_string()).replace(\",\", \"\") } else { \"0\".to_string() };
+            let user = if user_idx >= 0 { row.get(user_idx as usize).cloned().unwrap_or_else(|| \"MISSING_USER\".to_string()) } else { \"MISSING_USER\".to_string() };
+            let desc = if desc_idx >= 0 { row.get(desc_idx as usize).cloned().unwrap_or_else(|| \"-\".to_string()) } else { \"-\".to_string() };
+            
             let amount = amt_str.parse::<f64>().unwrap_or(0.0);
-            let desc = row.get(3).unwrap_or(&"".to_string()).to_string();
-            
-            // Timestamp parsing placeholder
-            let ts = 0; // Needs chrono parsing logic in production
-            
+            if amount <= 0.0 { continue; } // Skip zero or invalid amounts
+
+            // [FIX] Parse Timestamp to avoid Split-Payment Logic Overload/Infinite Loop
+            let mut ts = 0;
+            if !date.is_empty() {
+                // Try common formats: YYYY-MM-DD
+                if let Ok(ndt) = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d") {
+                    ts = ndt.and_hms_opt(0, 0, 0).map(|d| d.and_utc().timestamp()).unwrap_or(0);
+                }
+            }
+            // Fallback: If no date, use row index as a seed for a stable (yet distinct) timestamp
+            if ts == 0 { ts = (i as i64 + 1) * 86400; } 
+
             all_txs.push(TransactionRow {
                 row_idx: i,
                 date_str: date,
                 vendor,
                 amount,
                 description: desc,
-                card_owner: "Employee".to_string(), // Placeholder
+                card_owner: user, 
                 timestamp: ts
             });
         }
     }
+
+    if all_txs.is_empty() {
+        println!(">>> [AUDIT] No valid transactions found after filtering. Process ended.");
+        return Ok((0, 0));
+    }
+    let total_tx_count = all_txs.len();
 
     // 2. Rule Engine Execution (Deterministic)
     let mut findings: Vec<ComplianceFinding> = Vec::new();
@@ -541,34 +589,44 @@ pub async fn run_compliance_check_flow(
     findings.extend(RuleEngine::detect_split_payments(&all_txs));
     findings.extend(RuleEngine::detect_restricted_vendors(&all_txs));
     
-    // 3. AI Witness "Testimony"
+    // 3. AI Witness "Testimony" (Parallelized)
+    use futures::future::join_all;
+    
+    let mut tasks = Vec::new();
+    for finding in findings {
+        tasks.push(tokio::spawn(async move {
+            let commentary = AIWitness::testify(&finding).await;
+            (finding, commentary)
+        }));
+    }
+
+    let results = join_all(tasks).await;
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     let mut saved_count = 0;
 
-    for finding in findings {
-        // [Safety Seal] AI is ONLY called for findings.
-        let commentary = AIWitness::testify(&finding).await;
-        
-        // 4. Persistence
-        let _ = conn.execute(
-            "INSERT INTO audit_issues (
-                project_type, issue_title, description, severity, 
-                detected_at, evidence_quote, status, recommendations,
-                verdict_mode, logic_chain
-            ) VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP, ?5, 'Open', ?6, ?7, ?8)",
-            params![
-                project_type,
-                finding.violation_type,
-                commentary.narrative, 
-                finding.severity,     
-                finding.evidence.join("\n"),
-                format!("Violation of {}", finding.regulation_ref),
-                finding.verdict_mode,
-                serde_json::to_string(&finding.logic_chain).unwrap_or_else(|_| "[]".to_string())
-            ]
-        );
-        saved_count += 1;
+    for res in results {
+        if let Ok((finding, commentary)) = res {
+            // 4. Persistence
+            let _ = conn.execute(
+                "INSERT INTO audit_issues (
+                    project_type, issue_title, description, severity, 
+                    detected_at, evidence_quote, status, recommendations,
+                    verdict_mode, logic_chain
+                ) VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP, ?5, 'Open', ?6, ?7, ?8)",
+                params![
+                    project_type,
+                    finding.violation_type,
+                    commentary.narrative, 
+                    finding.severity,     
+                    finding.evidence.join("\n"),
+                    format!("Violation of {}", finding.regulation_ref),
+                    finding.verdict_mode,
+                    serde_json::to_string(&finding.logic_chain).unwrap_or_else(|_| "[]".to_string())
+                ]
+            );
+            saved_count += 1;
+        }
     }
 
-    Ok(saved_count)
+    Ok((total_tx_count, saved_count))
 }

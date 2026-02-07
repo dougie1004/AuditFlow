@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "check:models": "node scripts/ban-legacy-gemini-models.mjs"
+    "check:models": "node scripts/ban-legacy-gemini-models.mjs",
+    "audit:constitution": "node scripts/audit_constitution.js"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
