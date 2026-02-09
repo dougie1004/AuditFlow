@@ -84,9 +84,9 @@ export default function RemediationTracking() {
                 id: selectedIssue.id,
                 status: editStatus,
                 assignee: editAssignee || null,
-                due_date: editDueDate || null,
+                dueDate: editDueDate || null,
                 remediation: editRemediation,
-                comment: editComment
+                managerComment: editComment
             });
             alert("조치 현황이 성공적으로 업데이트되었습니다.");
             setSelectedIssue(null);

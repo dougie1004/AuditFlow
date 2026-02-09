@@ -344,8 +344,32 @@ export default function DataImport() {
     const handleDeleteSelected = async () => {
         if (selectedIds.size === 0) return;
         if (confirm(`선택한 ${selectedIds.size}개를 삭제하시겠습니까?`)) {
-            for (const id of selectedIds) await safeInvoke('delete_audit_file', { id });
-            fetchFiles();
+            try {
+                for (const id of selectedIds) {
+                    await safeInvoke('delete_audit_file', { id });
+                }
+                setSelectedIds(new Set());
+                await fetchFiles();
+            } catch (err) {
+                console.error("삭제 실패:", err);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
+        }
+    };
+
+    const handleDeleteOne = async (id: number, fileName: string) => {
+        if (confirm(`'${fileName}' 파일을 삭제하시겠습니까?`)) {
+            try {
+                await safeInvoke('delete_audit_file', { id });
+                // Remove from selection if it was selected
+                const newSet = new Set(selectedIds);
+                newSet.delete(id);
+                setSelectedIds(newSet);
+                await fetchFiles();
+            } catch (err) {
+                console.error("삭제 실패:", err);
+                alert("삭제 중 오류가 발생했습니다.");
+            }
         }
     };
 
@@ -512,7 +536,7 @@ export default function DataImport() {
                                                 <button onClick={() => handlePreview(file.file_path, file.file_name)} className="p-2 hover:text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all" title="Review">
                                                     <Eye className="w-5 h-5" />
                                                 </button>
-                                                <button onClick={() => handleDeleteSelected()} className="p-2 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all" title="Delete">
+                                                <button onClick={() => handleDeleteOne(file.id, file.file_name)} className="p-2 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all" title="Delete">
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
                                             </div>

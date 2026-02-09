@@ -36,9 +36,15 @@ const SeverityBadge = ({ severity }: { severity: string }) => {
         Medium: "bg-amber-500 text-white border-amber-600",
         Low: "bg-blue-500 text-white border-blue-600",
     };
+    const labels: Record<string, string> = {
+        Critical: "치명적",
+        High: "높음",
+        Medium: "중간",
+        Low: "낮음",
+    };
     return (
         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter border ${styles[severity] || "bg-slate-500 text-white"}`}>
-            {severity}
+            {labels[severity] || severity}
         </span>
     );
 };
@@ -218,7 +224,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div>
                         <button onClick={onBack} className="flex items-center gap-1 text-xs text-slate-400 font-bold hover:text-blue-600 mb-2 group">
-                            <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> {location.state ? 'BACK TO DASHBOARD' : 'COMMAND CENTER'}
+                            <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> {location.state ? '대시보드로 돌아가기' : '커맨드 센터'}
                         </button>
                         <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                             <Fingerprint className="w-5 h-5 text-blue-600" /> AI 정밀 탐지 리포트
@@ -244,7 +250,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                                 : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                 }`}
                         >
-                            {s} ONLY
+                            {s === 'Critical' ? '치명적' : s === 'High' ? '높음' : s === 'Medium' ? '중간' : '낮음'}만 보기
                         </button>
                     ))}
                 </div>
@@ -269,7 +275,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                         >
                             <div className="flex justify-between items-start mb-3">
                                 <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                                    {(issue.row_index || 0) > 0 ? `ENTRY #00${issue.row_index}` : 'SYSTEM DOC'}
+                                    {(issue.row_index || 0) > 0 ? `지출 데이터 #00${issue.row_index}` : '시스템 문서'}
                                 </span>
                                 <SeverityBadge severity={issue.severity} />
                             </div>
@@ -302,9 +308,9 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                                 <Card className="bg-red-50/50 border-red-100 p-4 flex items-start gap-3">
                                     <AlertTriangle className="w-5 h-5 text-red-500 mt-1 shrink-0" />
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">AUDIT SOURCE</span>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">감사 데이터 출처 (AUDIT SOURCE)</span>
                                         <h3 className="text-sm font-black text-slate-800 line-clamp-1">{selectedIssue.issue_title}</h3>
-                                        <p className="text-[10px] font-black text-red-400 uppercase mt-3 mb-1">AI DETECTED RISK</p>
+                                        <p className="text-[10px] font-black text-red-400 uppercase mt-3 mb-1">AI 탐지 리스크 분석</p>
                                         <p className="text-sm text-red-900 font-medium leading-relaxed">{selectedIssue.description}</p>
                                     </div>
                                 </Card>
@@ -314,7 +320,7 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                         <div className="p-10 max-w-5xl space-y-8">
                             <section>
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                                    <Database className="w-4 h-4" /> Hard Evidence (Raw Data)
+                                    <Database className="w-4 h-4" /> 객관적 증빙 데이터 (Raw Data)
                                 </h3>
                                 <Card className="p-0 border-none shadow-2xl">
                                     <div className="bg-slate-900 p-6 font-mono text-xs text-blue-400 overflow-x-auto leading-loose whitespace-pre-wrap">
@@ -326,14 +332,14 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Card className="p-6 bg-white border-blue-100">
                                     <h4 className="flex items-center gap-2 font-black text-slate-800 text-sm uppercase tracking-tight mb-4 text-blue-600">
-                                        <BrainCircuit className="w-4 h-4" /> Recommended Action
+                                        <BrainCircuit className="w-4 h-4" /> 추천 조치 사항 (Recommendation)
                                     </h4>
                                     <p className="text-sm text-slate-600 font-medium leading-relaxed">{selectedIssue.recommendations || "추천 조치가 없습니다."}</p>
                                 </Card>
                                 {getDisplayImage(selectedIssue) && (
                                     <Card className="p-6 bg-white border-amber-100">
                                         <h4 className="flex items-center gap-2 font-black text-slate-800 text-sm uppercase tracking-tight mb-4 text-amber-600">
-                                            <ImageIcon className="w-4 h-4" /> Visual Evidence
+                                            <ImageIcon className="w-4 h-4" /> 시각적 증빙 내역
                                         </h4>
                                         <div className="rounded-xl overflow-hidden border border-slate-100">
                                             <img
@@ -343,13 +349,13 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                                             />
                                         </div>
                                         <p className="text-[10px] text-slate-400 mt-3 font-bold text-center uppercase tracking-widest">
-                                            Reference Image (Menu/Receipt)
+                                            참조 이미지 (메뉴판/영수증 등)
                                         </p>
                                     </Card>
                                 )}
                                 <Card className="p-6 bg-slate-900 border-none">
                                     <h4 className="flex items-center gap-2 font-black text-white text-sm uppercase tracking-tight mb-4">
-                                        <Info className="w-4 h-4 text-slate-400" /> Auditor Decision
+                                        <Info className="w-4 h-4 text-slate-400" /> 감사인 최종 판정
                                     </h4>
                                     <div className="space-y-3">
                                         <button
@@ -376,13 +382,13 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200">
                                 <AutoSaveEditor
-                                    title="Manager's Review Comment"
+                                    title="감사인 검토 의견 (Review Note)"
                                     initialValue={selectedIssue.manager_comment || ""}
                                     placeholder="감사인의 검토 의견을 입력하세요. (자동 저장됨)"
                                     onSave={async (val) => safeInvoke('update_audit_issue_field', { id: selectedIssue.id, field: 'manager_comment', value: val })}
                                 />
                                 <AutoSaveEditor
-                                    title="Remediation Plan"
+                                    title="리스크 경감 계획 (Action Plan)"
                                     initialValue={selectedIssue.remediation_plan || ""}
                                     placeholder="구체적인 개선 계획을 입력하세요. (자동 저장됨)"
                                     onSave={async (val) => safeInvoke('update_audit_issue_field', { id: selectedIssue.id, field: 'remediation_plan', value: val })}
@@ -393,15 +399,15 @@ export default function AnalysisResult({ onBack }: { onBack: () => void }) {
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-white/50">
                         <Search size={80} className="text-slate-200 mb-8" />
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Investigation Required</h3>
-                        <p className="text-sm text-slate-400 font-medium">리스트에서 발견 사항을 선택하세요.</p>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">정밀 조사 대기 중</h3>
+                        <p className="text-sm text-slate-400 font-medium">좌측 리스트에서 발견 사항을 선택하여 상세 내용을 확인하세요.</p>
                     </div>
                 )}
             </div>
 
             <div className="w-[80px] border-l border-slate-200 bg-white flex flex-col items-center py-8 gap-10">
                 <div className="flex flex-col items-center gap-1 group cursor-help">
-                    <span className="text-[10px] font-black text-slate-400 uppercase rotate-90 my-6">SCORE</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase rotate-90 my-6 text-center">신뢰도 점수</span>
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border-2 ${stats.score < 70 ? 'border-red-500 text-red-500' : 'border-blue-600 text-blue-600'}`}>
                         {stats.score}
                     </div>

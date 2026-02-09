@@ -153,114 +153,253 @@ JSON 배열 형식으로만 출력하십시오. 절대 JSON 외의 텍스트를 
 ]
 "#;
 
-pub async fn perform_ai_detection_batch(rows_with_index: Vec<(usize, String)>) -> Vec<SuspicionSignal> {
-    if rows_with_index.is_empty() {
-        return Vec::new();
+use crate::models::AuditSignalPayload;
+use std::collections::HashMap;
+
+/// [LEVEL 2 SAFETY] Converts Raw Text -> Signal Vector locally.
+/// No raw text leaves this function.
+pub fn vectorize_row(row_idx: usize, raw_text: &str) -> AuditSignalPayload {
+    let lower = raw_text.to_lowercase();
+    let mut signals = Vec::new();
+
+    // 1. Amount Signal (Heuristic)
+    let mut max_val = 0.0;
+    // Simple parser for numbers in text, handling commas
+    let clean_text = raw_text.replace(",", ""); 
+    for part in clean_text.split(|c: char| !c.is_numeric() && c != '.') {
+        if let Ok(num) = part.parse::<f64>() {
+            if num > max_val { max_val = num; }
+        }
+    }
+    
+    // Amount Buckets
+    if max_val > 50_000_000.0 { signals.push("AMOUNT_BUCKET:CRITICAL".to_string()); }
+    else if max_val > 10_000_000.0 { signals.push("AMOUNT_BUCKET:HIGH".to_string()); }
+    else if max_val > 1_000_000.0 { signals.push("AMOUNT_BUCKET:MEDIUM".to_string()); }
+    else if max_val > 0.0 { signals.push("AMOUNT_BUCKET:LOW".to_string()); }
+
+    // Pattern: Round Amount (e.g. 1,000,000) - often indicates gift or bribe
+    if max_val > 100_000.0 && max_val % 10_000.0 == 0.0 {
+        signals.push("PATTERN:ROUND_AMOUNT".to_string());
     }
 
-    // Format Input Data
-    let mut data_block = String::new();
-    for (idx, text) in &rows_with_index {
-        data_block.push_str(&format!("Row {}: {}\n", idx, text));
+    // 2. Keyword Signals & Context
+    let keywords = vec![
+        ("consulting", "CTX:CONSULTING"), ("컨설팅", "CTX:CONSULTING"),
+        ("상품권", "CTX:GIFT_PURCHASE"), ("gift", "CTX:GIFT_PURCHASE"), ("voucher", "CTX:GIFT_PURCHASE"),
+        ("주점", "CTX:ENTERTAINMENT"), ("bar", "CTX:ENTERTAINMENT"), ("karaoke", "CTX:ENTERTAINMENT"),
+        ("골프", "CTX:GOLF"), ("golf", "CTX:GOLF"),
+        ("호텔", "CTX:HOTEL"), ("hotel", "CTX:HOTEL"),
+        ("할부", "PATTERN:SPLIT_PAYMENT"), ("split", "PATTERN:SPLIT_PAYMENT"), ("install", "PATTERN:SPLIT_PAYMENT"),
+        ("강남", "LOCATION:COMMERCIAL_DISTRICT"), ("gangnam", "LOCATION:COMMERCIAL_DISTRICT"),
+        ("여의도", "LOCATION:COMMERCIAL_DISTRICT"), ("yeouido", "LOCATION:COMMERCIAL_DISTRICT"),
+        ("종로", "LOCATION:COMMERCIAL_DISTRICT"), ("jongno", "LOCATION:COMMERCIAL_DISTRICT"),
+    ];
+
+    for (k, tag) in keywords {
+        if lower.contains(k) {
+            signals.push(tag.to_string());
+        }
     }
 
-    let final_prompt = format!("{}\n\n[DATA TO OBSERVE]\n{}", CONSTITUTIONAL_PROMPT, data_block);
+    // 3. Time Heuristic (Regex) - looking for HH:MM
+    // We use a simple regex here. For production, use lazy_static.
+    if let Ok(re) = regex::Regex::new(r"(\d{1,2}):(\d{2})") {
+        if let Some(caps) = re.captures(&raw_text) {
+            if let (Ok(h), Ok(_m)) = (caps[1].parse::<u32>(), caps[2].parse::<u32>()) {
+                if h >= 22 || h < 6 {
+                    signals.push("TIME:AFTER_HOURS".to_string());
+                } else if h >= 18 {
+                    signals.push("TIME:EVENING".to_string());
+                } else if h >= 12 && h < 14 {
+                    signals.push("TIME:LUNCH_HOUR".to_string());
+                } else {
+                    signals.push("TIME:BUSINESS_HOURS".to_string());
+                }
+            }
+        }
+    }
+    
+    // Explicit keywords for time if regex fails but text says so
+    if lower.contains("심야") || lower.contains("late night") {
+        if !signals.contains(&"TIME:AFTER_HOURS".to_string()) {
+            signals.push("TIME:AFTER_HOURS".to_string());
+        }
+    }
 
-    // Call Gemini (Using generic call to avoid dependency cycle if possible, but we use crate::ai)
-    // Note: ensure crate::ai::call_gemini_direct is public
+    // 4. Imprint Hash
+    let imprint = format!("{:x}", md5::compute(raw_text));
+
+    // 5. Metadata
+    let mut meta = HashMap::new();
+    meta.insert("row_idx".to_string(), row_idx.to_string());
+    meta.insert("amount_value".to_string(), max_val.to_string());
+
+    AuditSignalPayload {
+        evidence_hash: imprint,
+        extracted_signals: signals,
+        meta_dimension: meta,
+        masked_snippet: None, 
+    }
+}
+
+pub async fn perform_vector_analysis(rows_with_index: Vec<(usize, String)>) -> Vec<SuspicionSignal> {
+    if rows_with_index.is_empty() { return Vec::new(); }
+
+    // 1. Local Vectorization (The "Air Gap")
+    let vectors: Vec<AuditSignalPayload> = rows_with_index.iter()
+        .map(|(idx, text)| vectorize_row(*idx, text))
+        .collect();
+
+    // [V-SCORE] Statistical Analysis (Z-Score)
+    let amounts: Vec<f64> = vectors.iter()
+        .map(|v| v.meta_dimension.get("amount_value").and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0))
+        .collect();
+    
+    let count = amounts.len() as f64;
+    let mean = amounts.iter().sum::<f64>() / count;
+    let variance = amounts.iter().map(|value| {
+        let diff = mean - *value;
+        diff * diff
+    }).sum::<f64>() / count;
+    let std_dev = variance.sqrt();
+
+    // 2. Cloud Transmission (Vectors Only)
+    // We send JSON of vectors, NOT text.
+    let vector_json = serde_json::to_string_pretty(&vectors).unwrap_or_default();
+    
+    let system_vector_prompt = r#"
+You occupy the role of [Evidence AI] in the AuditFlow system.
+Your input is a list of [AuditSignalVector] objects.
+Your task is to analyze these VECTORS (combinations of signals) and identify potential risks.
+
+[INPUT SPEC]
+- evidence_hash: Unique ID of original data (do not ask for source).
+- extracted_signals: Tags like "AMOUNT_BUCKET:HIGH", "CTX:GIFT_CARD".
+
+[RULES]
+1. You CANNOT see the original text. Do not hallucinate names or details.
+2. Rely ONLY on the signals provided.
+3. If "CTX:GIFT_CARD" AND "AMOUNT_BUCKET:HIGH" appear, flag as "High Risk Gift Card Purchase".
+4. If "CTX:CONSULTING" appears without "AMOUNT_BUCKET:HIGH", flag as "Low Risk Routine Consulting".
+
+[S-Score Guidelines]
+- 0.0 ~ 0.2: Normal connection (e.g. 'Consulting' tag + 'Office' context)
+- 0.3 ~ 0.6: Ambiguous (e.g. 'Consulting' tag with no clear context)
+- 0.7 ~ 1.0: HIGH Semantic Anomaly (e.g. 'Consulting' tag + 'CTX:ENTERTAINMENT' or 'CTX:GOLF')
+
+[OUTPUT FORMAT]
+JSON Array of:
+{
+  "row_index": <int from metadata>,
+  "risk_label": "High | Medium | Low",
+  "reasoning": "<Explanation based on signals>",
+  "semantic_score": <0.0 to 1.0>
+}
+"#;
+
+    let final_prompt = format!("{}\n\n[VECTOR STREAM]\n{}", system_vector_prompt, vector_json);
+
     let ai_response = match crate::ai::call_gemini_direct(&final_prompt).await {
         Ok(res) => res,
         Err(e) => {
-            println!(">>> [AI Driver] API Error: {}", e);
-            return Vec::new(); // Fail safe
-        }
-    };
-
-    // Clean Markdown if present
-    let cleaned_json = crate::file_utils::extract_json(&ai_response);
-
-    // Parse JSON
-    let observations: Vec<AiObservationOutput> = match serde_json::from_str(&cleaned_json) {
-        Ok(v) => v,
-        Err(e) => {
-            println!(">>> [AI Driver] JSON Parse Error: {}. Raw: {}", e, cleaned_json);
+            println!(">>> [Evidence AI] Connection Failed: {}", e);
             return Vec::new();
         }
     };
 
-    // ------------------------------------------------------------------------
-    // [HYBRID SCORING ENGINE v1.0]
-    // ------------------------------------------------------------------------
+    let cleaned_json = crate::file_utils::extract_json(&ai_response);
     
-    // Step 1: Statistical Baseline (Batch-wide)
-    let amounts: Vec<f64> = observations.iter().map(|o| o.amount as f64).collect();
-    let mean = if !amounts.is_empty() { amounts.iter().sum::<f64>() / amounts.len() as f64 } else { 0.0 };
-    let std_dev = if amounts.len() > 1 {
-        let variance = amounts.iter().map(|&a| (a - mean).powi(2)).sum::<f64>() / (amounts.len() - 1) as f64;
-        variance.sqrt()
-    } else { 0.0 };
+    #[derive(serde::Deserialize)]
+    struct VectorResponse {
+        row_index: usize,
+        risk_label: String,
+        reasoning: String,
+        semantic_score: f32, // S-Score
+    }
+
+    // Default to empty if parsing fails
+    let ai_results: Vec<VectorResponse> = serde_json::from_str(&cleaned_json).unwrap_or_else(|_| Vec::new());
+    
+    // Map AI results by row_index for easy lookup
+    let ai_map: HashMap<usize, VectorResponse> = ai_results.into_iter().map(|r| (r.row_index, r)).collect();
 
     let mut signals = Vec::new();
-    for obs in observations {
-        // [SAFETY CHECK] Forbidden Words Guardian
-        let forbidden_words = vec!["의심", "부정", "위반", "문제", "비정상", "위험", "불법", "배임", "횡령"];
-        if forbidden_words.iter().any(|&w| format!("{} {}", obs.purpose, obs.location_name).contains(w)) {
-            continue;
+
+    // 3. Hybrid Synthesis (S + V + C)
+    for (i, vector) in vectors.iter().enumerate() {
+        let row_idx = vector.meta_dimension.get("row_idx").and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+        let amount = amounts[i];
+        
+        // A. V-Score (Value) + [LAYER 2] PROXIMITY CHECK (Threshold Evasion)
+        let z_score = if std_dev > 0.0 { (amount - mean) / std_dev } else { 0.0 };
+        let mut v_base = if z_score > 3.0 { 1.0 } else if z_score > 2.0 { 0.7 } else if z_score > 1.0 { 0.3 } else { 0.0 };
+        
+        // [THRESHOLD DETECTOR] 5M KRW (Corporate limit)
+        // Check 95% ~ 99.9% proximity (e.g., 4,990,000 KRW)
+        let threshold_5m = 5_000_000.0;
+        let ratio_5m = amount / threshold_5m;
+        if ratio_5m >= 0.95 && ratio_5m < 1.0 {
+            v_base = 1.0; // Force MAX V-Score for 'Intentional Avoidance'
+        }
+        let v_score = v_base;
+
+        // B. C-Score (Context) + [LAYER 3] MULTI-FACTOR CORRELATION
+        let mut c_score = 0.0;
+        let mut has_lounge = false;
+        let mut has_night = false;
+        let is_high_value = amount >= 300_000.0;
+
+        for sig in &vector.extracted_signals {
+            if sig.contains("CTX:ENTERTAINMENT") || sig.contains("CTX:GOLF") { has_lounge = true; c_score += 0.4; } 
+            else if sig.contains("CTX:GIFT_PURCHASE") { c_score += 0.3; } // else if to avoid double counting if categorized
+            
+            if sig.contains("TIME:AFTER_HOURS") { has_night = true; c_score += 0.2; }
+            if sig.contains("PATTERN:SPLIT_PAYMENT") { c_score += 0.5; }
+        }
+        
+        // [Multi-factor Boost] Lounge + Night + High Value = Critical
+        if has_lounge && has_night && is_high_value {
+            c_score = 1.0; // Force Critical Risk on Intersection
         }
 
-        // 1) S-Score (Semantic, 40%) - Directly from AI's contextual insight
-        let s_score = obs.semantic_score;
+        if c_score > 1.0 { c_score = 1.0; }
 
-        // 2) V-Score (Value, 40%) - Statistical outlier detection
-        // Normalize Z-score to 0.0 ~ 1.0 range
-        let v_score = if std_dev > 0.0 {
-            let z = (obs.amount as f64 - mean) / std_dev;
-            (z * 0.2).max(0.0).min(1.0) as f32 // 5 sigma starts at 1.0
-        } else {
-            0.0
-        };
+        // C. S-Score (Semantic): From AI
+        let s_res = ai_map.get(&row_idx);
+        let s_score = s_res.map(|r| r.semantic_score).unwrap_or(0.0);
+        let reasoning = s_res.map(|r| r.reasoning.clone()).unwrap_or("Analysis failed".to_string());
+        
+        // D. Final Integrated Score
+        // Formula: S(40%) + V(40%) + C(20%)
+        let final_score = (s_score * 0.4f32) + (v_score as f32 * 0.4f32) + (c_score as f32 * 0.2f32);
 
-        // 3) C-Score (Context, 20%) - Hard flags
-        let mut c_score: f32 = 0.0;
-        let restricted_keywords = vec!["Bar", "Club", "유흥", "주점", "단란"];
-        if restricted_keywords.iter().any(|&kw| obs.location_name.contains(kw) || obs.purpose.contains(kw)) {
-            c_score += 0.5_f32; // High bump for restricted terms
+        if final_score > 0.4 {
+             signals.push(SuspicionSignal::new(
+                format!("[Hybrid Analysis] Score {:.2} (S:{:.1}, V:{:.1}, C:{:.1}) - {}", final_score, s_score, v_score, c_score, &reasoning),
+                final_score,
+                vec![row_idx as i64],
+                SignalScope::Transaction,
+                SignalSource::AI("HYBRID_ENGINE_V2".to_string()),
+                Some(serde_json::json!({
+                    "s_score": s_score,
+                    "v_score": v_score,
+                    "c_score": c_score,
+                    "z_score": z_score,
+                    "amount": amount,
+                    "batch_mean": mean,
+                    "batch_std_dev": std_dev,
+                    "vector_reasoning": reasoning,
+                    "risk_label": if final_score > 0.8 { "High" } else { "Medium" }
+                }))
+            ));
         }
-        // Weekend check (Simple)
-        if obs.date.contains("Sat") || obs.date.contains("Sun") {
-            c_score += 0.2_f32;
-        }
-
-        // Final Aggregate (Weighted Average)
-        let final_score = (s_score * 0.4_f32) + (v_score * 0.4_f32) + (c_score.min(1.0) as f32 * 0.2_f32);
-        let rounded_score = (final_score * 100.0_f32).round() / 100.0_f32;
-
-        let observation_text = format!(
-            "[수행 주체]: {}\n[결제 가맹점]: {}\n[결제 금액]: KRW {}\n[결제 일자]: {}\n[지출 목적]: {}\n[결제 수단]: {}",
-            obs.actor_type, obs.location_name, obs.amount, obs.date, obs.purpose, obs.payment_method
-        );
-
-        let metadata = serde_json::json!({
-            "actor_type": obs.actor_type,
-            "location": obs.location_name,
-            "amount": obs.amount,
-            "date": obs.date,
-            "purpose": obs.purpose,
-            "semantic_score": s_score,
-            "stats_score": v_score,
-            "context_score": c_score,
-            "final_hybrid_score": rounded_score
-        });
-
-        signals.push(SuspicionSignal::new(
-            observation_text,
-            rounded_score,
-            vec![obs.row_index as i64],
-            SignalScope::Transaction,
-            SignalSource::AI("HYBRID_ENGINE_V1".to_string()),
-            Some(metadata)
-        ));
     }
 
     signals
+}
+
+// Legacy function stub (for compatibility if needed, but redirects to vector)
+pub async fn perform_ai_detection_batch(rows: Vec<(usize, String)>) -> Vec<SuspicionSignal> {
+    perform_vector_analysis(rows).await
 }

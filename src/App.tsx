@@ -13,10 +13,8 @@ import insightrixLogo from "./assets/insightrix_logo.png";
 
 // 페이지 컴포넌트 임포트
 import Dashboard from "./pages/Dashboard";
-import DataImport from "./pages/DataImport";
-import AnalysisResult from "./pages/AnalysisResult";
-import ScenarioManager from "./pages/ScenarioManager";
-import ProcessMonitoring from "./pages/ProcessMonitoring";
+import DataImport from "./pages/DataUpload";
+import AuditWorkspace from "./pages/AuditWorkspace";
 import ProductionMonitor from "./pages/ProductionMonitor";
 import KnowledgeBase from './pages/KnowledgeBase';
 import CorpCardAudit from "./pages/CorpCardAudit";
@@ -28,6 +26,7 @@ import RemediationDashboard from "./pages/RemediationDashboard";
 import ExecutiveAdmin from "./pages/ExecutiveAdmin";
 import RiskHeatmap from "./pages/RiskHeatmap";
 import ProjectDetail from "./pages/ProjectDetail";
+import AuditHistory from "./pages/AuditHistory"; // Import History
 import StagingArea from "./pages/StagingArea";
 import AIAnalysisReport from "./components/AIAnalysisReport";
 import ExpertConsole from "./pages/ExpertConsole";
@@ -127,7 +126,7 @@ export default function App() {
 }
 
 function Layout() {
-  const { user, activeProject, logout } = useApp();
+  const { user, activeProject, setActiveProject, logout } = useApp();
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const navigate = useNavigate();
@@ -191,7 +190,7 @@ function Layout() {
 
         {/* [Scope Selector] Current Audit Project */}
         <div className="mb-10 px-2 mt-4">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 pl-1 opacity-50">Active Deal context</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 opacity-50">Active Audit Context</p>
           <div
             onClick={() => navigate('/portfolio')}
             className={`p-5 rounded-[22px] border cursor-pointer transition-all duration-300 ${activeProject ? 'bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border-blue-500/30 text-white shadow-xl shadow-blue-950/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
@@ -200,11 +199,26 @@ function Layout() {
               <div className={`p-2 rounded-xl ${activeProject ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}>
                 <FileText size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">집중 관리 딜 (Focus)</span>
+              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">활성 감사 컨텍스트 (Active)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black truncate max-w-[150px] tracking-tight">{activeProject || '실사 대상 선택...'}</span>
-              <ChevronDown size={14} className="opacity-40" />
+              <span className="text-[10px] font-black truncate max-w-[150px] tracking-tight">{activeProject || '전사 통합 감사 (Whole Company)'}</span>
+              {activeProject ? (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("현재 활성 감사 컨텍스트를 해제하시겠습니까?")) {
+                      setActiveProject(null);
+                    }
+                  }}
+                  className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                  title="컨텍스트 해제"
+                >
+                  <X size={14} className="opacity-60 hover:opacity-100 hover:text-rose-400" />
+                </div>
+              ) : (
+                <ChevronDown size={14} className="opacity-40" />
+              )}
             </div>
           </div>
           {!activeProject && location.pathname !== '/tasks' && (
@@ -217,22 +231,16 @@ function Layout() {
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Command & Control</p>
-          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="통합 실사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="종합 감사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Data Pipeline</p>
-          <NavItem to="/import" icon={<Database size={18} />} label="데이터 업로드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/staging" icon={<ListChecks size={18} />} label="AI 매핑 & 검토 (Staging)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Intelligent Layer</p>
+          <NavItem to="/import" icon={<Database size={18} />} label="감사 데이터 업로드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/workspace" icon={<Layers size={18} />} label="감사 실행 워크스페이스" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AuditFlow AI 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Analysis Factory</p>
-          <NavItem to="/expert-console" icon={<Cpu size={18} />} label="리스크 판정 커맨드 센터" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/ai-discovery" icon={<BrainCircuit size={18} />} label="리스크 시그널 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AI 인텔리전스 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/scenarios" icon={<ShieldCheck size={18} />} label="실사 시나리오 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Monitoring & Remediation</p>
-          <NavItem to="/portfolio" icon={<FileText size={18} />} label="전체 진단 업무 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/remediation" icon={<CheckCircle2 size={18} />} label="리스크 경감 추적기" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
-          <NavItem to="/report" icon={<FileText size={18} />} label="경영진 실사 요약서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Management</p>
+          <NavItem to="/portfolio" icon={<FileText size={18} />} label="감사 프로젝트 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/report" icon={<FileText size={18} />} label="감사 결론 및 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
           <div className="mt-8 pt-4 border-t border-slate-800">
             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">Utility & Debug</p>
@@ -276,24 +284,14 @@ function Layout() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/import" element={<DataImport />} />
-            <Route path="/analysis-result" element={<AnalysisResult onBack={() => navigate('/')} />} />
+            <Route path="/data-upload/:id" element={<DataImport />} />
+            <Route path="/workspace/:id?" element={<AuditWorkspace />} />
             <Route path="/portfolio" element={<AuditTask />} />
-            <Route path="/scenarios" element={<ScenarioManager />} />
-            <Route path="/mining" element={<ProcessMonitoring />} />
-            <Route path="/production" element={<ProductionMonitor />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
-            <Route path="/card" element={<CorpCardAudit />} />
             <Route path="/ai" element={<AIAssistant />} />
             <Route path="/report" element={<AuditReport />} />
-            <Route path="/remediation" element={<RemediationDashboard />} />
-            <Route path="/executive" element={<ExecutiveAdmin />} />
-            <Route path="/risk-heatmap" element={<RiskHeatmap />} />
-            <Route path="/data-upload" element={<DataImport />} />
-            <Route path="/data-upload/:id" element={<DataImport />} />
-            <Route path="/staging" element={<StagingArea />} />
-            <Route path="/ai-discovery" element={<AIAnalysisReport />} />
-            <Route path="/expert-console" element={<ExpertConsole />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
+            <Route path="/history" element={<AuditHistory />} />
 
             {/* Debug Routes (Hidden) */}
             <Route path="/debug/audit-lifecycle" element={<AuditLifecycle />} />

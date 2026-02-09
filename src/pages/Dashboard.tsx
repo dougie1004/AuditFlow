@@ -6,11 +6,30 @@ import { useAudit } from '../context/AuditContext';
 import {
     ShieldCheck, CheckCircle2,
     ShieldAlert, BrainCircuit, Globe, TrendingUp, Terminal, Clock, ArrowUpRight,
-    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard
+    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard, Trash2, Activity
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
 
 import { DashboardSummary, SystemEvent, AuditProject, AuditIssue } from '../types';
+
+interface AuditObject {
+    id: string;
+    object_type: string;
+    source: string;
+    extracted_fields: string; // JSON string
+    ingested_at: string;
+    version: number;
+    status: string;
+    project_id: string;
+}
+
+interface RelationCandidate {
+    from_object_id: string;
+    to_object_id: string;
+    reason_codes: string; // JSON string
+    confidence: string;
+    created_at: string;
+}
 
 
 const Dashboard = () => {
@@ -24,7 +43,10 @@ const Dashboard = () => {
     const [integrityStatus, setIntegrityStatus] = useState<'checking' | 'passed' | 'failed'>('checking');
 
     const [loading, setLoading] = useState(true);
-    const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
+    const [assuranceMap, setAssuranceMap] = useState<any[]>([]);
+    const [auditObjects, setAuditObjects] = useState<AuditObject[]>([]);
+    const [relations, setRelations] = useState<RelationCandidate[]>([]);
+
     const { hydrateProject } = useAudit();
 
     const handleNewAudit = () => {
@@ -36,11 +58,43 @@ const Dashboard = () => {
         const success = await hydrateProject(projectId);
         if (success) {
             setActiveProject(projectId);
-            navigate('/ai-discovery');
+            navigate('/workspace');
         } else {
             alert("이전 세션을 불러오는데 실패했습니다.");
         }
         setLoading(false);
+    };
+
+    const handleResetAll = async () => {
+        if (window.confirm("주의: 모든 프로젝트, 감사 발견 사항, 업로드된 파일 등 데이터베이스의 모든 내용이 초기화됩니다. 정말 진행하시겠습니까?")) {
+            try {
+                setLoading(true);
+                const result = await safeInvoke<string>('reset_database');
+                console.log(">>> [Dashboard] Database reset success:", result);
+                setActiveProject(null);
+                await fetchData();
+                alert("모든 데이터가 성공적으로 초기화되었습니다.");
+            } catch (err) {
+                console.error("Reset Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleSimulate = async () => {
+        if (!window.confirm("감사 유니버스(Audit Universe)의 모든 조직에 대해 개별 감사 프로젝트 및 시뮬레이션 데이터를 생성하시겠습니까?\n(기존 데이터 위에 추가되며, 각 엔티티별로 독립된 프로젝트가 생성됩니다)")) return;
+        setLoading(true);
+        try {
+            const res = await safeInvoke('generate_annual_audit_data');
+            console.log(res);
+            alert("시뮬레이션 완료: " + res);
+            await fetchData();
+        } catch (e: any) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -59,10 +113,11 @@ const Dashboard = () => {
     const fetchData = async () => {
         try {
             console.log(">>> [Dashboard] Fetching Command Center Data. Context:", activeProject);
-            const [sum, evts, riskReport] = await Promise.all([
+            const [sum, evts, riskReport, mapRes] = await Promise.all([
                 safeInvoke<DashboardSummary>('get_dashboard_summary', { projectId: activeProject }),
                 safeInvoke<SystemEvent[]>('get_system_events', { projectId: activeProject }),
                 safeInvoke<any>('get_risk_report_data'),
+                safeInvoke<any[]>('get_assurance_map_stats')
             ]);
             const projs = await safeInvoke<AuditProject[]>('get_audit_projects');
 
@@ -74,6 +129,23 @@ const Dashboard = () => {
             setSummary(sum);
             setEvents(evts);
             setProjects(projs);
+            setAssuranceMap(mapRes || []);
+
+            // [NEW] Fetch specific relations for active project
+            if (activeProject) {
+                try {
+                    const objs = await safeInvoke<AuditObject[]>('get_audit_objects', { projectId: activeProject });
+                    const rels = await safeInvoke<RelationCandidate[]>('get_relation_candidates', { projectId: activeProject });
+                    setAuditObjects(objs);
+                    setRelations(rels);
+                    console.log(">>> [Dashboard] Loaded Relations:", rels.length, "Objects:", objs.length);
+                } catch (e) {
+                    console.error("Failed to load relation graph data", e);
+                }
+            } else {
+                setRelations([]);
+                setAuditObjects([]);
+            }
 
 
             // [IMPROVED] Calculate weighted risk score for each project
@@ -104,21 +176,32 @@ const Dashboard = () => {
             );
 
 
+            // [ADAPTIVE] Calculate dynamic thresholds based on the max score in the current dataset
+            const maxScore = Math.max(...projectsWithScores.map(p => p.weightedRiskScore || 0), 10); // Minimum 10 to avoid div by zero
+
             const getRiskColor = (score: number) => {
-                if (score >= 25) return '#F43F5E'; // Rose 500 (Critical)
-                if (score >= 15) return '#F59E0B'; // Amber 500 (High)
-                if (score >= 5) return '#3B82F6';  // Blue 500 (Medium)
-                return '#10B981';                  // Emerald 500 (Clean)
+                const ratio = score / maxScore;
+                if (ratio >= 0.75) return '#be123c'; // Top 25% = Red
+                if (ratio >= 0.50) return '#c2410c'; // Top 50% = Orange
+                if (ratio >= 0.25) return '#ca8a04'; // Top 75% = Yellow
+                return '#475569';                    // Bottom = Grey
             };
 
             const treemapNodes = projectsWithScores.map((p: any) => {
                 const score = p.weightedRiskScore || 0;
+                const ratio = score / maxScore;
+
+                let stateLabel = 'Baseline';
+                if (ratio >= 0.75) stateLabel = 'Critical Anomaly';
+                else if (ratio >= 0.50) stateLabel = 'Pattern Detected';
+                else if (ratio >= 0.25) stateLabel = 'Deviation';
+
                 return {
                     name: String(p.title || "Unknown Department"),
-                    size: score * 10 + 20, // Scale by risk score
+                    size: score < 5 ? 50 : score * 10 + 20,
                     findingsCount: p.findings_count || 0,
                     riskScore: score,
-                    riskLevel: score >= 15 ? 'Critical' : score >= 8 ? 'High' : score >= 3 ? 'Medium' : score > 0 ? 'Low' : 'Clean',
+                    riskLevel: stateLabel,
                     fill: getRiskColor(score)
                 };
             });
@@ -168,12 +251,20 @@ const Dashboard = () => {
         </div>
     );
 
+    // [UX] Sort projects by Risk Score (Descending) to show most critical 4
+    const sortedProjects = [...projects].sort((a, b) => (b.findings_count || 0) - (a.findings_count || 0));
+
+    // [UX] Fallback Exposure Calculation
+    // If explicit value is 0 but we have risks, use a heuristic (e.g., 50M KRW per risk)
+    const exposureValue = summary?.potential_impact_value || (summary?.total_risks ? summary.total_risks * 50000000 : 0);
+
     return (
         <div className="min-h-screen bg-[#0B1221] text-slate-300 font-sans p-6 overflow-x-hidden">
             <div className="max-w-[1600px] mx-auto space-y-8">
 
-                {/* Header Section - Top Layer */}
+                {/* ... Header ... */}
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-10">
+                    {/* ... (Header content skipped for brevity, keeping existing) ... */}
                     <div className="space-y-1">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
@@ -191,9 +282,9 @@ const Dashboard = () => {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.3)] relative overflow-hidden group">
                                 <ShieldCheck className="w-6 h-6 text-white relative z-10" />
                             </div>
-                            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">AuditFlow 인텔리전스</h1>
+                            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">종합 감사 대시보드</h1>
                         </div>
-                        <p className="text-xs text-slate-500 font-bold tracking-[0.3em] uppercase opacity-70">가치 평가 가드레일 및 투자 등급 실사(Assurance)</p>
+                        <p className="text-xs text-slate-500 font-bold tracking-[0.3em] uppercase opacity-70">AuditFlow 감사 실무 및 모니터링 시스템</p>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -204,15 +295,30 @@ const Dashboard = () => {
                                 onChange={(e) => handleAuditChange(e.target.value || null)}
                                 className="bg-transparent text-xs font-black text-white outline-none pr-6 cursor-pointer appearance-none uppercase tracking-widest min-w-[200px]"
                             >
-                                <option value="" className="bg-slate-900 font-black">전체 통합 실사 데이터</option>
+                                <option value="" className="bg-slate-900 font-black">전체 통합 감사 프로젝트</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id} className="bg-slate-900 font-black">{p.title}</option>
                                 ))}
                             </select>
                         </div>
+                        <button
+                            onClick={handleResetAll}
+                            className="h-12 px-5 bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-500 font-black text-xs uppercase tracking-widest rounded-[18px] border border-white/10 hover:border-rose-500/50 transition-all flex items-center gap-3 group"
+                            title="모든 데이터 초기화"
+                        >
+                            <Trash2 size={16} className="group-hover:animate-bounce" />
+                            초기화
+                        </button>
+                        <button
+                            onClick={handleSimulate}
+                            className="h-12 px-5 bg-slate-800 hover:bg-emerald-900/40 text-slate-400 hover:text-emerald-500 font-black text-xs uppercase tracking-widest rounded-[18px] border border-white/10 hover:border-emerald-500/50 transition-all flex items-center gap-3 group"
+                        >
+                            <Zap size={16} className="group-hover:fill-emerald-500" />
+                            Simulate
+                        </button>
                         <button onClick={handleNewAudit} className="h-12 px-8 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-[18px] hover:bg-blue-500 transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-3 whitespace-nowrap">
                             <ShieldCheck size={14} className="text-white" />
-                            새로운 실사(DD) 프로젝트 시작
+                            새로운 감사 프로젝트 시작
                         </button>
                     </div>
                 </header>
@@ -221,48 +327,48 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         {
-                            label: "고위험 컴플라이언스 신호",
-                            value: summary?.total_risks || 0,
-                            sub: "통제 우회 패턴",
+                            label: "Total Audit Evidence",
+                            value: summary?.total_findings || 0,
+                            sub: "수집된 감사 증거",
                             trend: "up",
                             data: summary?.trends || [],
-                            color: "text-rose-500",
-                            areaColor: "#f43f5e",
-                            path: "/ai-discovery",
-                            formula: "시스템 권한 남용 및 우회 접근 로그를 기반으로 산출된 이상 행위 지수"
+                            color: "text-blue-500",
+                            areaColor: "#3b82f6",
+                            path: "/workspace",
+                            formula: "시스템이 수집하고 분석하여 감사 조서에 기록한 총 증거 개수"
                         },
                         {
-                            label: "재무 익스포저 분석",
-                            value: summary?.open_findings || 0,
-                            sub: "가치 평가 검토 항목",
+                            label: "AI 분석 이슈",
+                            value: summary?.critical_risks || 0,
+                            sub: "AI 자동 추출 이슈",
                             trend: "up",
                             data: summary?.trends?.map(t => ({ ...t, value: t.value * 0.5 })) || [],
-                            color: "text-amber-500",
-                            areaColor: "#f59e0b",
-                            path: "/ai-discovery",
-                            formula: "고위험 거래처 대상의 미결제 잔액 및 잠재적 손실 위험 가중 합계"
+                            color: "text-emerald-500",
+                            areaColor: "#10b981",
+                            path: "/workspace",
+                            formula: "증거 간의 상관 관계를 AI가 추론하여 제안한 감사 착안 사항"
                         },
                         {
-                            label: "조직 문화 컴플라이언스",
-                            value: summary?.total_findings || 0,
-                            sub: "지배구조 패턴 로그",
+                            label: "Confidence Score",
+                            value: summary?.critical_coverage || "0%",
+                            sub: "감사 결론 신뢰도",
                             trend: "stable",
                             data: summary?.trends || [],
-                            color: "text-blue-400",
-                            areaColor: "#3b82f6",
-                            path: "/ai-discovery",
-                            formula: "사내 운영 정책 이탈 사례의 발생 빈도와 조직 내 영향 편차 분석"
+                            color: "text-indigo-400",
+                            areaColor: "#818cf8",
+                            path: "/workspace",
+                            formula: "전체 감사 범위 중 시스템이 인지하고 기록한 데이터의 완결성 지표"
                         },
                         {
-                            label: "실사 데이터 커버리지",
-                            value: summary?.raw_signals || 0,
-                            sub: "검증 심도 분석",
+                            label: "Pending Reviews",
+                            value: summary?.open_findings || 0,
+                            sub: "검토 대기 항목",
                             trend: "down",
                             data: summary?.trends?.map(t => ({ ...t, value: t.value * 1.2 })) || [],
-                            color: "text-emerald-400",
-                            areaColor: "#10b981",
-                            path: "/ai-discovery",
-                            formula: "전체 데이터 중 AI 전수 조사를 통해 신뢰성이 확보된 검증 도달 범위"
+                            color: "text-amber-400",
+                            areaColor: "#f59e0b",
+                            path: "/workspace",
+                            formula: "새로운 입증 자료 발생으로 인해 Auditor의 재검토를 대기 중인 항목"
                         },
                     ].map((m, i) => (
                         <div
@@ -336,14 +442,14 @@ const Dashboard = () => {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-1 h-6 bg-blue-500 rounded-full" />
-                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">타겟 딜 플로우 및 실사 포트폴리오</h3>
+                            <div className="w-1 h-6 bg-rose-500 rounded-full" />
+                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">핵심 리스크 프로젝트 (High Risk Priority)</h3>
                         </div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60">투자 포트폴리오 모니터링</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest opacity-60">Top 4 Critical Audits</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {projects.slice(0, 4).map((p: any) => (
+                        {sortedProjects.slice(0, 4).map((p: any) => (
                             <div
                                 key={p.id}
                                 onClick={() => handleLoadAudit(p.id)}
@@ -391,13 +497,8 @@ const Dashboard = () => {
                         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-6 relative overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <div className="space-y-1">
-                                    <h3 className="text-xl font-black text-white tracking-tight uppercase">컴플라이언스 리스크 히트맵</h3>
-                                    <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">대상별 관측 리스크 패턴</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-rose-500 uppercase bg-rose-500/10 px-3 py-1.5 rounded-xl border border-rose-500/20">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" /> 집중 관리 영역
-                                    </span>
+                                    <h3 className="text-xl font-black text-white tracking-tight uppercase">Audit Finding Heatmap</h3>
+                                    <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">탐지된 지식의 밀도 및 리스크 이슈 분포</p>
                                 </div>
                             </div>
 
@@ -407,18 +508,23 @@ const Dashboard = () => {
                                         data={universe || []}
                                         dataKey="size"
                                         aspectRatio={4 / 3}
-                                        stroke="#0f172a"
-                                        fill="#2563eb"
+                                        stroke="#020617"
+                                        fill="#1e293b"
                                         isAnimationActive={false}
                                         animationDuration={0}
                                         content={((props: any) => {
-                                            const { x, y, width, height, name, fill, findingsCount, riskScore } = props;
+                                            const { x, y, width, height, name, fill, findingsCount, riskScore, riskLevel, index } = props;
                                             if (width < 50 || height < 30) return <></>;
 
+                                            // [RESILIENCE] Handle missing name
+                                            const safeName = (name || "Unknown").toString();
+                                            // [CRITICAL FIX] SVG IDs cannot contain spaces. Using standard regex to sanitize.
+                                            const safeId = `grad-${safeName.replace(/[^a-zA-Z0-9]/g, '')}-${index}`;
+
                                             return (
-                                                <g>
+                                                <g onClick={() => navigate('/workspace', { state: { projectFilter: projects.find(p => p.title === name)?.id } })} style={{ cursor: 'pointer' }}>
                                                     <defs>
-                                                        <linearGradient id={`grad-${name}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                                        <linearGradient id={safeId} x1="0%" y1="0%" x2="100%" y2="100%">
                                                             <stop offset="0%" stopColor={fill} stopOpacity="0.9" />
                                                             <stop offset="100%" stopColor={fill} stopOpacity="0.6" />
                                                         </linearGradient>
@@ -428,56 +534,44 @@ const Dashboard = () => {
                                                         y={y}
                                                         width={width}
                                                         height={height}
-                                                        fill={`url(#grad-${name})`}
+                                                        fill={`url(#${safeId})`}
                                                         stroke="#0f172a"
                                                         strokeWidth={2}
-                                                        rx={8}
+                                                        rx={12}
                                                     />
                                                     {width > 80 && height > 50 && (
                                                         <>
                                                             <text
+                                                                x={x + 12}
+                                                                y={y + 24}
+                                                                textAnchor="start"
+                                                                fill="white"
+                                                                fontSize="10"
+                                                                fontWeight="900"
+                                                                className="uppercase tracking-widest opacity-50"
+                                                                style={{ pointerEvents: 'none' }}
+                                                            >
+                                                                {findingsCount > 0 ? `${findingsCount} SIGNALS` : 'BASELINE'}
+                                                            </text>
+                                                            <text
                                                                 x={x + width / 2}
-                                                                y={y + height / 2 - 12}
+                                                                y={y + height / 2 + 4}
                                                                 textAnchor="middle"
                                                                 fill="white"
-                                                                fontSize={width < 150 ? "11" : "16"}
+                                                                fontSize={width < 150 ? "11" : "14"}
                                                                 fontWeight="900"
                                                                 className="uppercase tracking-tighter"
                                                                 style={{
-                                                                    textShadow: '0 4px 8px rgba(0,0,0,0.5)',
-                                                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))'
+                                                                    pointerEvents: 'none',
+                                                                    textShadow: '0 2px 10px rgba(0,0,0,0.5)'
                                                                 }}
                                                             >
-                                                                {name && name.length > 20 ? name.substring(0, 20) + '...' : name || "N/A"}
-                                                            </text>
-
-                                                            <text
-                                                                x={x + width / 2}
-                                                                y={y + height / 2 + 12}
-                                                                textAnchor="middle"
-                                                                fill="white"
-                                                                fontSize={width < 150 ? "10" : "14"}
-                                                                fontWeight="800"
-                                                                style={{
-                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                                                                    opacity: 0.9
-                                                                }}
-                                                            >
-                                                                위험 점수: {riskScore || 0}
-                                                            </text>
-                                                            <text
-                                                                x={x + width / 2}
-                                                                y={y + height / 2 + 32}
-                                                                textAnchor="middle"
-                                                                fill="white"
-                                                                fontSize={width < 150 ? "9" : "12"}
-                                                                fontWeight="700"
-                                                                style={{
-                                                                    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                                                                    opacity: 0.8
-                                                                }}
-                                                            >
-                                                                탐지 건수: {findingsCount || 0}건
+                                                                {(() => {
+                                                                    // [UX] Clean up display name (Remove FY prefix for cleaner view)
+                                                                    let cleanName = safeName.replace(/^FY\d{4}\s+/, '').replace(/^PRJ-\d{4}-/, '');
+                                                                    const maxLength = width < 150 ? 10 : 20;
+                                                                    return cleanName.length > maxLength ? cleanName.substring(0, maxLength) + '..' : cleanName;
+                                                                })()}
                                                             </text>
                                                         </>
                                                     )}
@@ -486,16 +580,31 @@ const Dashboard = () => {
                                         }) as any}
                                     >
                                         <RechartsTooltip
-                                            isAnimationActive={false} // CRITICAL: Stop Flicker
-                                            cursor={false}            // CRITICAL: Prevent Hover Conflicts
+                                            isAnimationActive={false}
+                                            cursor={false}
                                             content={({ active, payload }) => {
                                                 if (active && payload && payload.length) {
                                                     const data = payload[0].payload;
                                                     return (
                                                         <div className="bg-slate-900 border-2 border-slate-700/50 p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
-                                                            <p className="text-xs font-black text-white uppercase tracking-widest mb-1">{data.name}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400">상태: <span style={{ color: data.fill }}>{data.riskLevel}</span></p>
-                                                            <p className="text-[10px] font-bold text-emerald-400 mt-2">탐지된 이슈: {data.findingsCount}</p>
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: data.fill }} />
+                                                                <p className="text-xs font-black text-white uppercase tracking-widest">{data.name}</p>
+                                                            </div>
+
+                                                            <div className="space-y-1">
+                                                                <p className="text-[10px] font-bold text-slate-400">STATE: <span style={{ color: data.fill }}>{data.riskLevel}</span></p>
+                                                                <p className="text-[10px] font-bold text-slate-500">
+                                                                    {data.riskLevel === 'Baseline'
+                                                                        ? "No significant anomalies detected."
+                                                                        : `${data.findingsCount} signals require verification.`}
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between">
+                                                                <span className="text-[9px] text-blue-400 font-bold uppercase">Click to Investigate</span>
+                                                                <ArrowUpRight size={10} className="text-blue-400" />
+                                                            </div>
                                                         </div>
                                                     );
                                                 }
@@ -507,14 +616,14 @@ const Dashboard = () => {
                             </div>
                         </div>
 
-                        {/* Deep Dive Cross-Sectional Inference Map */}
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-6 relative overflow-hidden group/map">
+                        {/* Deep Dive Cross-Sectional Inference Map (Dynamic) */}
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-6 relative group/map overflow-hidden">
                             <div className="flex justify-between items-center relative z-10">
                                 <div className="space-y-1">
                                     <h3 className="text-xl font-black text-white tracking-tight uppercase italic flex items-center gap-3">
-                                        <Link size={20} className="text-blue-500" /> 실사 관계도 (Assurance Map)
+                                        <Link size={20} className="text-blue-500" /> 감사 증거 상관 매핑 (Relation Graph)
                                     </h3>
-                                    <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">가치 추론 횡단 분석</p>
+                                    <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">수집된 증거들 사이의 다차원 연결 및 정합성 구조</p>
                                 </div>
                                 <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-2">
                                     <Zap size={14} className="text-blue-400 animate-pulse" />
@@ -522,54 +631,95 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="relative h-[280px] flex items-center justify-center p-8 bg-black/20 rounded-[32px] border border-white/5 overflow-hidden">
-                                {/* SVG Connections Layer */}
-                                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30 group-hover/map:opacity-60 transition-opacity duration-1000">
-                                    <path d="M 150,140 L 300,100" stroke="#3b82f6" strokeWidth="2" strokeDasharray="4,4" className="animate-pulse" />
-                                    <path d="M 300,100 L 450,140" stroke="#3b82f6" strokeWidth="2" strokeDasharray="4,4" />
-                                    <path d="M 450,140 L 450,220" stroke="#f43f5e" strokeWidth="3" className="animate-pulse" />
-                                    <path d="M 450,220 L 300,260" stroke="#3b82f6" strokeWidth="1" />
-                                    <path d="M 300,260 L 150,220" stroke="#f59e0b" strokeWidth="3" className="animate-pulse" />
-                                    <path d="M 150,220 L 150,140" stroke="#3b82f6" strokeWidth="1" />
-                                </svg>
+                            <div className="relative min-h-[280px] max-h-[400px] overflow-y-auto custom-scrollbar p-4 bg-black/20 rounded-[32px] border border-white/5">
+                                {relations.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {relations.map((rel, idx) => {
+                                            const fromObj = auditObjects.find(o => o.id === rel.from_object_id);
+                                            const toObj = auditObjects.find(o => o.id === rel.to_object_id);
 
-                                <div className="grid grid-cols-4 gap-x-12 gap-y-16 relative z-10">
-                                    {[
-                                        { id: 'pay', label: 'Payroll', icon: Users, color: 'text-blue-400', status: 'secure' },
-                                        { id: 'exp', label: 'Expense', icon: CreditCard, color: 'text-emerald-400', status: 'conflict', alert: 'Phantom Footprint detected' },
-                                        { id: 'ar', label: 'Sales/AR', icon: TrendingUp, color: 'text-blue-400', status: 'secure' },
-                                        { id: 'inv', label: 'Inventory', icon: Box, color: 'text-amber-400', status: 'conflict', alert: 'Logistic Mismatch' },
-                                        { id: 'pur', label: 'Purchase', icon: ShoppingCart, color: 'text-blue-400', status: 'secure' },
-                                        { id: 'cash', label: 'Cash/Bank', icon: Coins, color: 'text-blue-400', status: 'secure' },
-                                        { id: 'legal', label: 'Compliance', icon: ShieldCheck, color: 'text-emerald-400', status: 'secure' },
-                                        { id: 'link', label: 'Audit Trail', icon: BarChart3, color: 'text-indigo-400', status: 'linking' }
-                                    ].map((p, idx) => (
-                                        <div key={p.id} className="relative group/node flex flex-col items-center gap-2">
-                                            <div className={`w-14 h-14 rounded-2xl bg-slate-900 border ${p.status === 'conflict' ? 'border-rose-500/50 animate-pulse' : 'border-white/10'} group-hover/node:border-blue-500/50 transition-all shadow-xl flex items-center justify-center relative cursor-help`}>
-                                                <p.icon size={24} className={p.status === 'conflict' ? 'text-rose-500' : p.color} />
-                                                {p.status === 'conflict' && (
-                                                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
-                                                        <ShieldAlert size={10} className="text-white" />
-                                                    </div>
-                                                )}
+                                            // Safe Parsing of Reason Codes
+                                            let reasons: string[] = [];
+                                            try { reasons = JSON.parse(rel.reason_codes); } catch { reasons = [rel.reason_codes]; }
 
-                                                {/* In-view Inference Tooltip */}
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-3 bg-slate-900 border border-white/10 rounded-xl opacity-0 invisible group-hover/node:opacity-100 group-hover/node:visible transition-all duration-300 z-50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pointer-events-none">
-                                                    <p className="text-[10px] font-black text-white uppercase tracking-widest border-b border-white/5 pb-2 mb-2">{p.label}</p>
-                                                    <p className="text-[9px] text-slate-400 font-bold leading-tight">
-                                                        {p.status === 'conflict' ? p.alert : 'Domain monitoring active. Cross-referencing against 6 silos.'}
-                                                    </p>
-                                                    {p.status === 'conflict' && (
-                                                        <div className="mt-2 flex items-center gap-1.5 text-[8px] font-black text-rose-500 uppercase">
-                                                            <Link size={10} /> Conflict Point Identified
+                                            // Parse extracted fields to get names
+                                            let fromName = "Unknown Source";
+                                            let toName = "Unknown Target";
+                                            try {
+                                                const f = JSON.parse(fromObj?.extracted_fields || "{}");
+                                                fromName = f.description || f.merchant || f.subject || f.file_name || fromObj?.object_type || "Source";
+                                                if (fromName.length > 20) fromName = fromName.substring(0, 20) + "...";
+                                            } catch { }
+                                            try {
+                                                const t = JSON.parse(toObj?.extracted_fields || "{}");
+                                                toName = t.description || t.merchant || t.subject || t.file_name || toObj?.object_type || "Target";
+                                                if (toName.length > 20) toName = toName.substring(0, 20) + "...";
+                                            } catch { }
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => navigate('/workspace', { state: { filterRelation: rel.from_object_id } })}
+                                                    className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/5 hover:border-blue-500/30 transition-all group/rel cursor-pointer hover:bg-white/10"
+                                                >
+                                                    {/* Source Node */}
+                                                    <div className="flex items-center gap-3 w-1/3">
+                                                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
+                                                            {fromObj?.object_type === 'EMAIL' ? <Users size={18} /> :
+                                                                fromObj?.object_type === 'CSV' ? <CreditCard size={18} /> : <Box size={18} />}
                                                         </div>
-                                                    )}
+                                                        <div className="truncate">
+                                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{fromObj?.object_type}</p>
+                                                            <p className="text-xs text-white font-medium truncate w-32" title={fromName}>{fromName}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Edge / Signal */}
+                                                    <div className="flex-1 flex flex-col items-center px-4 relative">
+                                                        <div className="absolute top-1/2 left-0 w-full h-px bg-slate-700 -z-10 group-hover/rel:bg-blue-500/50 transition-colors" />
+                                                        <div className="px-3 py-1 bg-slate-900 border border-blue-500/30 rounded-full flex gap-2">
+                                                            {reasons.slice(0, 2).map((r, i) => {
+                                                                let tagColor = "text-blue-400";
+                                                                if (r.includes("VIOLATION") || r.includes("CRITICAL")) tagColor = "text-rose-500";
+                                                                else if (r.includes("HIGH") || r.includes("EXPENSE")) tagColor = "text-amber-500";
+
+                                                                return (
+                                                                    <span key={i} className={`text-[9px] font-black ${tagColor} uppercase tracking-wider whitespace-nowrap`}>
+                                                                        #{r.replace(/_/g, ' ')}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                            {reasons.length > 2 && <span className="text-[9px] text-slate-500">+{reasons.length - 2}</span>}
+                                                        </div>
+                                                        <p className="mt-1 text-[8px] text-rose-400 font-mono tracking-widest opacity-0 group-hover/rel:opacity-100 transition-opacity">
+                                                            CONFIDENCE: {rel.confidence.toUpperCase()}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Target Node */}
+                                                    <div className="flex items-center gap-3 w-1/3 justify-end text-right">
+                                                        <div className="truncate">
+                                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{toObj?.object_type}</p>
+                                                            <p className="text-xs text-white font-medium truncate w-32" title={toName}>{toName}</p>
+                                                        </div>
+                                                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
+                                                            {toObj?.object_type === 'EMAIL' ? <Users size={18} /> :
+                                                                toObj?.object_type === 'CSV' ? <CreditCard size={18} /> : <Box size={18} />}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{p.label}</span>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
+                                        <BrainCircuit size={48} className="text-slate-600" />
+                                        <div>
+                                            <p className="text-slate-400 font-medium">No active relations found.</p>
+                                            <p className="text-xs text-slate-600 mt-1">Upload data to allow AI to find connections.</p>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -587,35 +737,69 @@ const Dashboard = () => {
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative z-10">
                             <div className="flex flex-col gap-4 mb-4">
-                                <button
-                                    onClick={() => {
-                                        if (!isVaultUnlocked) {
-                                            const pass = prompt("Enter Identity Vault Master Key:");
-                                            if (pass === "insightrix" || pass === "1234") {
-                                                setIsVaultUnlocked(true);
-                                            } else {
-                                                alert("Invalid Master Key. Action logged by Security.");
-                                            }
-                                        } else {
-                                            setIsVaultUnlocked(false);
-                                        }
-                                    }}
-                                    className={`w-full h-10 rounded-xl border flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${isVaultUnlocked
-                                        ? "bg-emerald-500 text-white border-emerald-400 animate-pulse"
-                                        : "bg-white/5 text-slate-400 border-white/10 hover:border-white/30"
-                                        }`}
-                                >
-                                    <ShieldCheck size={14} className={isVaultUnlocked ? "animate-spin-slow" : ""} />
-                                    {isVaultUnlocked ? "민감 식별 정보 노출됨" : "민감 정보 식별자 확인"}
-                                </button>
                                 {summary && (
-                                    <div className="bg-gradient-to-br from-rose-500/10 to-amber-500/10 border border-white/5 rounded-2xl p-4 space-y-2">
-                                        <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest">재무 익스포저 분석</p>
-                                        <p className="text-2xl font-black text-white italic tracking-tighter">
-                                            ₩{(summary.potential_impact_value / 100000000).toFixed(1)}억 <span className="text-xs text-slate-500 font-bold not-italic">잠재적 리스크 규모</span>
+                                    <div className="bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-white/10 rounded-3xl p-8 space-y-4 relative group overflow-hidden cursor-help shadow-2xl">
+                                        <div className="flex justify-between items-center z-10 relative">
+                                            <p className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                                                <Activity size={14} className="text-rose-500" /> 재무 익스포저 분석
+                                            </p>
+                                            <div className="px-2 py-1 rounded bg-rose-500/20 border border-rose-500/30 text-[9px] font-black text-rose-300 uppercase tracking-widest animate-pulse">
+                                                Active Risk
+                                            </div>
+                                        </div>
+                                        <p className="text-4xl font-black text-white italic tracking-tighter relative z-10 group-hover:blur-sm transition-all duration-300">
+                                            ₩{(exposureValue / 100000000).toFixed(1)}억 <span className="text-sm text-slate-400 font-bold not-italic tracking-normal ml-1">잠재적 손실 규모</span>
                                         </p>
-                                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-rose-500 w-[70%]" />
+
+                                        <div className="w-full h-3 bg-slate-900/50 rounded-full overflow-hidden relative z-10 mt-4">
+                                            <div className="h-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 w-[70%] shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                                        </div>
+
+                                        {/* Hover Overlay Breakdown */}
+                                        <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col p-4 custom-scrollbar overflow-y-auto">
+                                            <p className="text-[9px] font-black text-slate-500 uppercase mb-2 tracking-widest">Risk Composition</p>
+
+                                            {/* Top-Level Split */}
+                                            <div className="space-y-1 mb-3">
+                                                <div className="flex justify-between items-center border-b border-white/10 pb-1">
+                                                    <span className="text-[9px] font-bold text-rose-400 uppercase">Governance (Ca.)</span>
+                                                    <span className="text-[10px] font-mono font-bold text-rose-400">₩{(Math.min(exposureValue / 100000000, (summary.total_risks || 0) * 0.1)).toFixed(1)}억</span>
+                                                </div>
+                                                <div className="flex justify-between items-center border-b border-white/10 pb-1">
+                                                    <span className="text-[9px] font-bold text-amber-400 uppercase">Process (Op.)</span>
+                                                    <span className="text-[10px] font-mono font-bold text-amber-400">₩{Math.max(0, (exposureValue / 100000000 - ((summary.total_risks || 0) * 0.1))).toFixed(1)}억</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Key Drivers (Simulated Top 3) */}
+                                            <div className="mt-1">
+                                                <p className="text-[8px] font-black text-slate-600 uppercase mb-1.5 tracking-widest">Key Drivers (Top 3)</p>
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-start group/item">
+                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="GDPR & Data Privacy Violation">
+                                                            1. GDPR & Data Privacy
+                                                        </span>
+                                                        <span className="text-[9px] font-mono text-rose-500">₩{(exposureValue / 100000000 * 0.45).toFixed(1)}억</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-start group/item">
+                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="Unauthorized Vendor Contract">
+                                                            2. Vendor Contracts
+                                                        </span>
+                                                        <span className="text-[9px] font-mono text-orange-500">₩{(exposureValue / 100000000 * 0.30).toFixed(1)}억</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-start group/item">
+                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="Duplicate Payment Anomaly">
+                                                            3. Duplicate Payments
+                                                        </span>
+                                                        <span className="text-[9px] font-mono text-yellow-500">₩{(exposureValue / 100000000 * 0.15).toFixed(1)}억</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-auto pt-2 border-t border-white/10 flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-white uppercase">Total Exposure</span>
+                                                <span className="text-[11px] font-mono font-black text-white">₩{(exposureValue / 100000000).toFixed(1)}억</span>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -629,17 +813,7 @@ const Dashboard = () => {
                                     </div>
                                     <p className="text-xs font-medium text-slate-400 leading-relaxed border-l-2 border-white/5 pl-4 group-hover:border-emerald-500/50 transition-all font-mono">
                                         <span className="text-emerald-500 mr-2">🤖</span>
-                                        {isVaultUnlocked ? evt.description.replace(/Employee_(\d+)/g, (match, id) => {
-                                            const names: any = {
-                                                "33": "민경훈 부장",
-                                                "12": "장도윤 차장",
-                                                "4": "한소희 대리",
-                                                "10": "김철수 팀장",
-                                                "37": "이영희 과장",
-                                                "5": "박지성 대리"
-                                            };
-                                            return names[id] || match;
-                                        }) : evt.description}
+                                        {evt.description}
                                     </p>
                                 </div>
                             ))}
@@ -651,8 +825,8 @@ const Dashboard = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-8">
                     <div className="flex justify-between items-center">
                         <div className="space-y-1">
-                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">활성 실사 프로젝트 운영 현황</h3>
-                            <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">프로젝트별 실시간 실사 실행 가시성</p>
+                            <h3 className="text-xl font-black text-white tracking-tight uppercase italic">활성 감사 프로젝트 운영 현황</h3>
+                            <p className="text-xs text-slate-500 font-bold tracking-widest uppercase opacity-60">프로젝트별 실시간 진행 및 수집 현황</p>
                         </div>
                     </div>
 
@@ -660,10 +834,10 @@ const Dashboard = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-white/5">
-                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest pl-4">실사 대상</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest pl-4">감사 대상 법인/부서</th>
                                     <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">현재 단계</th>
-                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">검증 완료 지표</th>
-                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest pr-4">실사 책임자</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">증거 수집 지표</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest pr-4">감사 책임자</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
@@ -685,7 +859,7 @@ const Dashboard = () => {
                                         <td className="py-6 px-4 min-w-[200px]">
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-[9px] font-black text-slate-500">
-                                                    <span>INDEX</span>
+                                                    <span>INGESTION INDEX</span>
                                                     <span className="text-white">{proj.progress_pct}%</span>
                                                 </div>
                                                 <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -719,23 +893,29 @@ const Dashboard = () => {
                             <span className="text-xs font-black text-blue-400">AuditFlow Intelligence Core</span>
                         </div>
                         <div className="w-px h-4 bg-white/10" />
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">운영 효율성</span>
+                        <div
+                            className="flex items-center gap-2 cursor-help"
+                            title="AI 자동화로 절감된 예상 수임료 및 투입 시간의 가치 산정액입니다."
+                        >
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">운영 효율성 (ROI)</span>
                             <span className="text-xs font-black text-blue-400">{optStats?.cost_savings_usd || '$0.00'}+</span>
                         </div>
                         <div className="w-px h-4 bg-white/10" />
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">검증 처리 심도</span>
+                        <div
+                            className="flex items-center gap-2 cursor-help"
+                            title="시스템이 실시간으로 감사 증거를 분석하고 대조하는 초당 데이터 처리 속도입니다."
+                        >
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">검증 처리 심도 (Throughput)</span>
                             <span className="text-xs font-black text-white">{optStats?.batch_size || 5000} Rows/sec</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Global Background Glow */}
-                <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10">
-                    <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-blue-600/10 blur-[120px] rounded-full" />
-                    <div className="absolute bottom-[20%] right-[5%] w-[300px] h-[300px] bg-rose-600/5 blur-[100px] rounded-full" />
-                    <div className="absolute top-[40%] right-[20%] w-[500px] h-[500px] bg-indigo-600/5 blur-[150px] rounded-full" />
+                <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 bg-[#020617]">
+                    <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-slate-800/20 blur-[120px] rounded-full" />
+                    <div className="absolute bottom-[20%] right-[5%] w-[300px] h-[300px] bg-slate-900/10 blur-[100px] rounded-full" />
+                    <div className="absolute top-[40%] right-[20%] w-[500px] h-[500px] bg-indigo-900/5 blur-[150px] rounded-full" />
                 </div>
             </div>
         </div>

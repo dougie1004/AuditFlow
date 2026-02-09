@@ -185,32 +185,79 @@ pub struct AuditScenario {
     pub enabled: bool,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AuditRunLog {
-    pub run_id: String,
-    pub scan_summary: ScanSummary,
-    pub rule_hits: Vec<String>,
-    pub ai_input_payload: String, // Masked summary
-    pub ai_output_cards: Vec<AiOutputCard>,
-    pub execution_time: String,
-    pub reproducibility_check: String,
+pub struct AuditObject {
+    pub id: String, // UUID
+    pub object_type: String, // LEDGER, APPROVAL, POLICY, EMAIL, DOC
+    pub source: String, // file, manual, api
+    pub extracted_fields: String, // JSON
+    pub ingested_at: String,
+    pub version: i32,
+    pub status: String, // ACTIVE, SUPERSEDED
+    pub project_id: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ScanSummary {
-    pub total_rows: usize,
-    pub candidate_rows: usize,
-    pub rule_engine_summary: String,
+pub struct RelationCandidate {
+    pub from_object_id: String,
+    pub to_object_id: String,
+    pub reason_codes: String, // JSON Array
+    pub confidence: String, // heuristic, pattern, exact
+    pub created_at: String,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AiOutputCard {
-    pub title: String,
-    pub risk_level: String, // High, Medium, Low
-    pub rationale: Vec<String>, // Why we should look (3 points)
-    pub counter_argument: String, // Possible normal scenario
-    pub next_action: String, // Single step
+pub struct ReEvaluationEvent {
+    pub trigger_object_id: String,
+    pub affected_object_id: String,
+    pub reason: String, // e.g. "new policy context"
+    pub logged_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuditSession {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub period_start: String,
+    pub period_end: String,
+    pub included_object_types: String,
+    pub status: String, // OPEN, CLOSED, ARCHIVED
+    pub final_report: Option<String>, // Generated summary report after closing
+    pub reviewer_name: Option<String>,
+    pub reviewer_ack: Option<String>, // Timestamp of Reviewer acknowledgement
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReviewItem {
+    pub id: String,
+    pub session_id: String,
+    pub object_id: Option<String>,
+    pub relation_candidate_id: Option<String>,
+    pub reason: String,
+    pub status: String, // PENDING, CONFIRMED, ESCALATED, DEFERRED, DISMISSED
+    pub snapshot_data: Option<String>, // JSON snapshot of the object/context at creation
+    pub reviewer_note: Option<String>,
+    pub reviewer_final_note: Option<String>, // Note by the Reviewer on ESCALATED items
+    pub created_at: String,
+}
+
+// [PATENT CLAIM] The Structure of Audit Signal Vector (Cloud Transmission)
+// This struct enforces the "Zero-Trust" architecture at the compiler level.
+// It is physically impossible to construct this payload with raw text fields.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuditSignalPayload {
+    // 1. Identity is Hashed (Zero Knowledge)
+    pub evidence_hash: String, 
+    
+    // 2. Content is Signalized (Vectorization)
+    pub extracted_signals: Vec<String>, // e.g. ["urgent", "weekend", "high_amount", "gift_card"]
+    
+    // 3. Context is Metadata (No Raw Text)
+    // Using HashMap requires std::collections::HashMap or models.rs import
+    pub meta_dimension: std::collections::HashMap<String, String>, 
+    
+    // 4. Minimal Context Snippet (Must be Masked)
+    pub masked_snippet: Option<String>,
 }

@@ -42,7 +42,7 @@ export const pickFiles = async (): Promise<string[] | FileList | null> => {
 
 export const uploadFile = async (projectType: string, file: string | File): Promise<any> => {
     if (isTauri() && typeof file === 'string') {
-        return await safeInvoke('upload_audit_file', { projectType, filePath: file });
+        return await safeInvoke('upload_audit_file', { projectType: projectType, filePath: file });
     } else if (file instanceof File) {
         // Web Fallback: Mock upload or store in memory
         console.log("Web upload for file:", file.name);

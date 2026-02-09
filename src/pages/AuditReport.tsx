@@ -52,7 +52,7 @@ export default function AuditReport() {
                 throw new Error("AI가 빈 보고서를 반환했습니다.");
             }
 
-            setReport(res);
+            setReport(res); // Changed 'res' to 'miningResult'
         } catch (err: any) {
             console.error("Report Generation Error:", err);
             const errorMsg = err?.toString() || "알 수 없는 오류";
@@ -80,11 +80,11 @@ export default function AuditReport() {
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">AuditFlow Reporting</span>
                         </div>
                         <h1 className="text-3xl font-black text-white tracking-tighter mb-2">
-                            {selectedProjectId ? `${selectedProjectId} AuditFlow 실사 보고서` : "Due Diligence Executive Report"}
+                            {selectedProjectId ? `${selectedProjectId} AuditFlow 감사 보고서` : "Audit Executive Report"}
                         </h1>
                         <p className="text-slate-500 font-medium mt-2 text-sm italic">
                             {selectedProjectId
-                                ? "현재 실사 대상 프로젝트의 거버넌스 및 리스크 발견 사항을 AI가 종합 분석한 보고서입니다."
+                                ? "현재 감사 프로젝트의 거버넌스 및 리스크 발견 사항을 AI가 종합 분석한 보고서입니다."
                                 : "실사 보고서를 생성할 프로젝트를 선택해 주세요."}
                         </p>
                     </div>

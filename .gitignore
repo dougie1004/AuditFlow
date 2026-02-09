@@ -40,3 +40,25 @@ app_config.json
 *.njsproj
 *.sln
 *.sw?
+
+# Confidential Documentation
+docs/
+audit_report_korean.html
+
+# Test Data
+test_data/
+tamper_test/
+
+# Helper Scripts & Logs (Not part of core codebase)
+*.py
+debug_*.cjs
+fix_*.cjs
+reconstruct_*.cjs
+restore_*.py
+vacuum_db.py
+backend_log.txt
+build_errors.txt
+tsc_*.txt
+vite_build_*.txt
+cargo_*.txt
+constitution_report.txt

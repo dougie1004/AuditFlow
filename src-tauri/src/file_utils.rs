@@ -24,7 +24,10 @@ lazy_static! {
     static ref BUSINESS_TERMS: std::collections::HashSet<&'static str> = {
         let mut s = std::collections::HashSet::new();
         for &t in &["전략","대표","급여","인사","감사","이사회","결재","보고","회의","법인카드","증빙","리스트","통제","내부통제","프로세스","시나리오","전무","상무","이사","지출","수입","지급", "미팅", "카드", "송금", "금액", "적요", "내역", "임금", 
-                    "팀", "부서", "본부", "지점", "사업부", "센터", "그룹", "총무", "영업", "기획", "개발", "디자인", "마케팅", "재무", "회계", "자금", "구매", "생산", "품질", "물류", "교육", "법무", "홍보", "비서"] { s.insert(t); }
+                    "팀", "부서", "본부", "지점", "사업부", "센터", "그룹", "총무", "영업", "기획", "개발", "디자인", "마케팅", "재무", "회계", "자금", "구매", "생산", "품질", "물류", "교육", "법무", "홍보", "비서",
+                    "고기집", "선물용", "회의비", "회식비", "수수료", "관리비", "임차료", "보험료", "접대비", "복리후생", "여비",
+                    // Stems for ambiguous suffix check
+                    "고기", "선물", "회식", "야근", "수선", "주차", "교통", "소모품", "비품", "탕비", "접대", "관리", "임차", "보험", "복리", "식대", "용역", "급식"] { s.insert(t); }
         s
     };
     
@@ -35,6 +38,37 @@ lazy_static! {
     pub static ref EMAIL_REGEX: Regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
     pub static ref NAME_REGEX: Regex = Regex::new(r"\b[가-힣]{2,4}\b").unwrap();
     pub static ref NAME_TITLE_REGEX: Regex = Regex::new(r"([가-힣]{2,4})\s+(선생|교수|변호사|회계사|대표|사장|부사장|전무|상무|이사|본부장|실장|팀장|부장|차장|과장|대리|사원|계장|주임|CEO|CFO|COO|CTO|Manager|Director)").unwrap();
+    
+    // [SMART MASKING V2 DATASETS]
+    pub static ref SURNAMES: std::collections::HashSet<char> = {
+        let mut s = std::collections::HashSet::new();
+        for c in "김이박최정강조윤장임한오서신권황안송류전홍고문양손배조백허유남심노하곽성차주우구신임나전민유진지엄채원천방공현함변염양변여추노소현구치도신모선담석옥장".chars() {
+            s.insert(c);
+        }
+        s
+    };
+
+    pub static ref EXCLUSION_TERMS: std::collections::HashSet<&'static str> = {
+        let mut s = std::collections::HashSet::new();
+        let words = vec![
+            "공휴일", "공지", "공동", "공사", "공원", "공유", "공급",
+            "반드시", "반납", "반품", "반영", "반장", 
+            "서울시", "서류", "서비스", "서명", "서로", "서신",
+            "강남구", "강조", "강화", "강의", "강당",
+            "한도", "한국", "한정", "한번", "한계",
+            "이상", "이하", "이번", "이동", "이유", "이제", "이용", "이전", "이해",
+            "정상", "정기", "정리", "정보", "정책", "정부", "정산",
+            "조사", "조치", "조정", "조직", "조회",
+            "문서", "문제", "문화", "문의",
+            "전체", "전화", "전결", "전달", "전문", "전략", "전자",
+            "장소", "장비", "장부", "장기",
+            "신청", "신규", "신뢰", "신고",
+            "권한", "권리",
+            "대상", "대리", "대표",
+        ];
+        for w in words { s.insert(w); }
+        s
+    };
 }
 
 fn is_word_boundary(text: &str, idx: usize) -> bool {
@@ -109,12 +143,32 @@ fn mask_hangul_name(name: &str) -> String {
 
 
 pub fn apply_deidentification(input: &str) -> String {
-    let mut result = input.to_string();
+    // [PERMANENT] 2-Stage Masking Architecture
+    // Stage 1: Statutory Hard Masking (Legal Safety Belt)
+    // - RRN, Credit Cards, Phone Numbers, Emails
+    // - Deterministic, No AI Judgment involved.
+    let stage1 = mask_statutory_pii(input);
 
-    // 1. 二쇰??깅줉踰덊샇 (??7?먮━ 留덉뒪?? 900101-*******)
+    // Stage 2: Context-Aware Inference (Audit Context)
+    // - Names, Positions, Entities
+    // - Protects privacy while PRESERVING audit evidence (e.g. "Gift Cards", "Vendors")
+    let stage2 = mask_contextual_inference(&stage1);
+
+    if &stage2 != input {
+        println!(">>> [DE-ID] Masked content: '{}' -> '{}'", input, stage2);
+    }
+
+    stage2
+}
+
+// Stage 1: Mandatory Legal Protection
+fn mask_statutory_pii(text: &str) -> String {
+    let mut result = text.to_string();
+
+    // 1. 주민등록번호 (뒷7자리 마스킹)
     result = RRN_REGEX.replace_all(&result, "$1-*******").to_string();
 
-    // 2. ?대??꾪솕踰덊샇 (媛?대뜲 ?먮━ 留덉뒪??
+    // 2. 전화번호 (가운데/끝자리 마스킹)
     result = PHONE_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let full = &caps[0];
         if full.contains('-') || full.contains(' ') {
@@ -131,7 +185,7 @@ pub fn apply_deidentification(input: &str) -> String {
         }
     }).to_string();
 
-    // 3. 移대뱶踰덊샇 (以묎컙 8?먮━ 留덉뒪??
+    // 3. 카드번호 (중간 8자리 마스킹)
     result = CARD_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let full = &caps[0];
         if full.len() >= 16 {
@@ -141,7 +195,7 @@ pub fn apply_deidentification(input: &str) -> String {
         }
     }).to_string();
 
-    // 4. ?대찓??留덉뒪??
+    // 4. 이메일 (계정명 일부 마스킹)
     result = EMAIL_REGEX.replace_all(&result, |caps: &regex::Captures| {
         let email = &caps[0];
         let parts: Vec<&str> = email.split('@').collect();
@@ -158,99 +212,66 @@ pub fn apply_deidentification(input: &str) -> String {
         }
     }).to_string();
 
-    // 5. 한국인 성명 (Heuristic Score Based Masking 2.0)
-    // [FIX] Explicit Business/Vendor Allowlist to prevent over-masking (User Request: 오피스디포, 하이마트, 연구소 etc.)
-    // [FIX] Risk-based Approach: Minimal critical masking only.
-    let safe_vendors = vec![
-        "오피스디포", "하이마트", "이마트", "홈플러스", "스타벅스", "쿠팡", "네이버", "카카오",
-        "삼성전자", "LG전자", "연구소", "컨설팅", "갈비", "일식", "맛집", "가든", "식당", "병원", "약국",
-        "호텔", "리조트", "에어비앤비", "올리브영", "여기어때", "주유소", "충전소",
-        "법무법인", "회계법인", "노무법인", "세무법인", "개발원", "진흥원", "센터", "클럽", "나이스"
-    ];
-
-    let mut spans = Vec::new(); // (start, end, replacement)
-    
-    // Pass 1: Collect Candidates from NAME_REGEX (which includes surname patterns)
-    // We now allow 1-3 chars after surname to catch 2-4 character names
-    let refined_name_regex = Regex::new(r"(김|이|박|최|정|강|조|윤|장|임|한|오|서|신|권|황|안|송|전|홍|유|고|문|양|손|배|조|백|허|유|남|심|노|하|곽|성|차|주|우|구|신|임|나|전|민|유|진|지|엄|채|원|천|방|공|현|함|변|염|양|변|여|추|노|도|소|신|석|선|설|마|길|주|연|방|위|표|명|기|반|왕|금|옥|육|인|맹|제|모|계|남궁|독고|제갈|사공|황보)([가-힣]{1,3})").unwrap();
-    
-    for cap in refined_name_regex.captures_iter(&result) {
-        let m = cap.get(0).unwrap();
-        let name = m.as_str();
-        
-        // [FIX] Smart Heuristics 2.0: Look-ahead for Team/Dept suffixes
-        // If the match itself ends with suffix OR the text IMMEDIATELY following matches a suffix
-        let end_idx = m.end();
-        let suffix_check = if end_idx < result.len() { &result[end_idx..] } else { "" };
-        
-        // Check Safe Vendors (Prevent "?ㅽ뵾?ㅻ뵒?? -> "??*?뷀룷")
-        if safe_vendors.iter().any(|&v| name.contains(v) || suffix_check.contains(v) || result[m.start()..].starts_with(v)) {
-            continue;
-        }
-
-        // [FIX] Strong Suffix Protection (Negative to Positive logic)
-        // IF it ends with or is followed by an ORG suffix, capture is INVALID as a name.
-        let org_suffixes = vec!["팀", "부", "과", "본부", "센터", "그룹", "지점", "국", "실", "국", "부", "계", "처", "관", "단", "실", "실", "실", "동", "은행", "카드", "금고", "조합"];
-        
-        if org_suffixes.iter().any(|&s| name.ends_with(s) || suffix_check.starts_with(s)) {
-             continue; // Absolute Bypass
-        }
-
-        let (s, e) = (m.start(), m.end());
-        let score = score_candidate(&result, name, s, e);
-        
-        // [POLICY CHANGE] Higher Thresholds for Risk Analysis Efficiency
-        // We prefer False Negatives (Missing a name) over False Positives (Masking 'Marketing')
-        let threshold = match name.chars().count() {
-            4 => 5,  // Slightly lowered (was 6)
-            3 => 3,  // Lowered for data grid support (was 7)
-            2 => 8,  // Lowered (was 10)
-            _ => 15,
-        };
-        
-        if score >= threshold {
-            spans.push((s, e, mask_hangul_name(name)));
-        }
-    }
-    // ... Pass 2 ...
-
-
-
-    // Pass 2: Title-coupled masking (Higher confidence)
-    for cap in NAME_TITLE_REGEX.captures_iter(&result) {
-        let m = cap.get(0).unwrap();
-        let name_only = cap.get(1).unwrap().as_str(); 
-        let title_only = cap.get(2).unwrap().as_str();
-        let _full_match = m.as_str();
-        
-        // 源 遺??-> 源* 遺??
-        let masked = format!("{}*{}", &name_only[..name_only.chars().next().unwrap().len_utf8()], title_only);
-        spans.push((m.start(), m.end(), masked));
-    }
-
-    // Sort spans and remove overlaps
-    spans.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
-    let mut filtered_spans = Vec::new();
-    let mut last_end = 0;
-    for (s, e, rep) in spans {
-        if s >= last_end {
-            filtered_spans.push((s, e, rep));
-            last_end = e;
-        }
-    }
-
-    // Apply replacements from back to front
-    for (s, e, rep) in filtered_spans.into_iter().rev() {
-        result.replace_range(s..e, &rep);
-    }
-
-
-
-    if result != input {
-        println!(">>> [DE-ID] Masked content: '{}' -> '{}'", input, result);
-    }
-
     result
+}
+
+// Stage 2: Audit Context & Risk Preservation
+fn mask_contextual_inference(text: &str) -> String {
+    let mut masked_text = text.to_string();
+
+    // 1. Strict Name+Title Pattern (Very High Confidence)
+    // Matches: "김철수 부장", "이영희 님"
+    // Regex: NAME_TITLE_REGEX
+    for cap in NAME_TITLE_REGEX.captures_iter(text) {
+        if let Some(m) = cap.get(1) {
+            let name = m.as_str();
+            let range = m.range();
+            
+            // Check Exclusion (Title implies Name, but safe check)
+            if EXCLUSION_TERMS.contains(name) { continue; }
+            
+            // Mask Middle Char
+            let chars: Vec<char> = name.chars().collect();
+            if chars.len() >= 2 {
+                let mask_idx = if chars.len() == 2 { 1 } else { 1 };
+                let mut new_name = String::new();
+                for (i, c) in chars.iter().enumerate() {
+                    if i == mask_idx { new_name.push('*'); } else { new_name.push(*c); }
+                }
+                masked_text.replace_range(range, &new_name);
+            }
+        }
+    }
+
+    // 2. Loose Name Scanner (Heuristic)
+    // We scan for 3-char words starting with Surname that are NOT in exclusion list
+    let working_text = masked_text.clone();
+    let pattern = Regex::new(r"\b([가-힣]{3})\b").unwrap();
+    
+    for mat in pattern.find_iter(&working_text) {
+        let word = mat.as_str();
+        
+        let chars: Vec<char> = word.chars().collect();
+        if chars.len() != 3 { continue; }
+        
+        let first_char = chars[0];
+        
+        // Filter 1: Must start with a known Surname
+        if !SURNAMES.contains(&first_char) { continue; }
+
+        // Filter 2: Must NOT be in Exclusion list
+        if EXCLUSION_TERMS.contains(word) { continue; }
+
+        // Apply masking (Global replace for safety in this demo context)
+        let mut masked_word = String::new();
+        masked_word.push(chars[0]);
+        masked_word.push('*');
+        masked_word.push(chars[2]);
+        
+        masked_text = masked_text.replace(word, &masked_word);
+    }
+
+    masked_text
 }
 
 pub struct MaskingSession {

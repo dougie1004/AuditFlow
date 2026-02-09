@@ -5,7 +5,7 @@ import { useApp } from '../App';
 import {
     Plus, ClipboardList, Calendar, Target, AlertCircle,
     CheckCircle2, ChevronRight, Hash, ArrowLeft, Loader2, History, X, Download, TrendingUp,
-    Clock, Trash2
+    Clock, Trash2, Building2
 } from 'lucide-react';
 import { AuditProject, AuditPlan } from '../types';
 
@@ -165,8 +165,8 @@ export default function AuditTask() {
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
                         AuditFlow Strategic Control
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tight">진단 업무 관리 <span className="text-slate-400 font-medium">(DD Portfolio)</span></h1>
-                    <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 컴플라이언스 실사 및 진단 프로젝트를 관리합니다.</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">감사 프로젝트 관리 <span className="text-slate-400 font-medium">(Project Portfolio)</span></h1>
+                    <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 컴플라이언스 감사 프로젝트를 관리합니다.</p>
                 </div>
 
                 {!isCreating && (
@@ -361,78 +361,138 @@ export default function AuditTask() {
                                 <p className="text-slate-500 font-medium mt-1">상단의 '새 실사 업무 등록' 버튼을 눌러 시작하세요.</p>
                             </div>
                         </div>
-                    ) : projects.map((p) => (
-                        <Card
-                            key={p.id}
-                            onClick={() => {
-                                setActiveProject(p.id);
-                                navigate(`/project/${p.id}`);
-                            }}
-                            className={`group border-2 transition-all cursor-pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'}`}
-                        >
-                            <div className="p-8 space-y-6">
-                                <div className="flex justify-between items-start">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-blue-600 transition-all duration-500">
-                                        <Target size={24} />
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <div className="flex gap-2">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
-                                                p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
-                                                    'bg-rose-500/10 text-rose-400'
-                                                }`}>
-                                                {p.audit_type}
-                                            </span>
-                                            <button
-                                                onClick={(e) => handleDeleteProject(e, p.id)}
-                                                className="p-1 px-2 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                            >
-                                                <X size={14} />
-                                            </button>
+                    ) : (
+                        <>
+                            {/* Company Wide (Global) Context Card */}
+                            <Card
+                                onClick={() => {
+                                    setActiveProject(null);
+                                    navigate('/');
+                                }}
+                                className={`group border-2 transition-all cursor-pointer ${!activeProject ? 'border-indigo-500 ring-4 ring-indigo-500/10 bg-indigo-500/5' : 'hover:border-indigo-300 hover:shadow-2xl hover:-translate-y-2 duration-500'}`}
+                            >
+                                <div className="p-8 space-y-6">
+                                    <div className="flex justify-between items-start">
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
+                                            <Building2 size={24} />
                                         </div>
-                                        <p className="text-[10px] text-slate-400 font-bold mt-1 font-mono uppercase tracking-tighter">
-                                            Created: {p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
+                                                Enterprise Wide
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <h3 className="text-lg font-black text-white line-clamp-1 leading-tight">전사 통합 감사 (All Projects)</h3>
+                                        <p className="text-sm font-bold text-slate-400 flex items-center gap-1 group-hover:text-indigo-400 transition-colors">
+                                            <Target size={14} /> Scope: Global
                                         </p>
                                     </div>
-                                </div>
 
-                                <div className="space-y-1">
-                                    <h3 className="text-lg font-black text-white line-clamp-1 leading-tight">{p.title || p.id}</h3>
-                                    <p className="text-sm font-bold text-slate-400 flex items-center gap-1 group-hover:text-blue-500 transition-colors">
-                                        <CheckCircle2 size={14} /> Ref: {p.id}
-                                    </p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
-                                    <div className="space-y-1">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
-                                        <p className="text-xs font-bold text-blue-400 truncate">{p.status}</p>
+                                    <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Audits</p>
+                                            <p className="text-xs font-bold text-indigo-400 truncate">{projects.length} Projects</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Findings</p>
+                                            <p className="text-xs font-bold text-white truncate">{projects.reduce((acc, p) => acc + (p.findings_count || 0), 0)} Issues</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Findings</p>
-                                        <p className="text-xs font-bold text-white truncate">{p.findings_count || 0}</p>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Scope</p>
-                                    <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
-                                        {p.audit_scope || 'No scope defined for this audit project.'}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-4 group">
-                                    <div className="flex -space-x-2">
-                                        <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">AI</div>
-                                        <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-400 italic">G</div>
+                                    <div className="space-y-2">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Scope</p>
+                                        <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
+                                            Aggregated view of all active audit projects, risks, and compliance status across the organization.
+                                        </p>
                                     </div>
-                                    <div className="flex items-center gap-1 text-slate-300 group-hover:text-blue-500 transition-all font-black text-[10px] uppercase tracking-widest">
-                                        Open Portfolio <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+
+                                    <div className="flex items-center justify-between pt-4 group">
+                                        <div className="flex -space-x-2">
+                                            <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">ALL</div>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-slate-300 group-hover:text-indigo-400 transition-all font-black text-[10px] uppercase tracking-widest">
+                                            Open Dashboard <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+
+                            {projects.map((p) => (
+                                <Card
+                                    key={p.id}
+                                    onClick={() => {
+                                        setActiveProject(p.id);
+                                        navigate(`/project/${p.id}`);
+                                    }}
+                                    className={`group border-2 transition-all cursor-pointer ${activeProject === p.id ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-blue-300 hover:shadow-2xl hover:-translate-y-2 duration-500'}`}
+                                >
+                                    <div className="p-8 space-y-6">
+                                        <div className="flex justify-between items-start">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-blue-600 transition-all duration-500">
+                                                <Target size={24} />
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className="flex gap-2">
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${p.audit_type === '정기감사' ? 'bg-blue-500/10 text-blue-400' :
+                                                        p.audit_type === '수시감사' ? 'bg-amber-500/10 text-amber-400' :
+                                                            'bg-rose-500/10 text-rose-400'
+                                                        }`}>
+                                                        {p.audit_type}
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => handleDeleteProject(e, p.id)}
+                                                        className="p-1 px-2 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-1 font-mono uppercase tracking-tighter">
+                                                    Created: {p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <h3 className="text-lg font-black text-white line-clamp-1 leading-tight">{p.title || p.id}</h3>
+                                            <p className="text-sm font-bold text-slate-400 flex items-center gap-1 group-hover:text-blue-500 transition-colors">
+                                                <CheckCircle2 size={14} /> Ref: {p.id}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+                                                <p className="text-xs font-bold text-blue-400 truncate">{p.status}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Findings</p>
+                                                <p className="text-xs font-bold text-white truncate">{p.findings_count || 0}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Scope</p>
+                                            <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
+                                                {p.audit_scope || 'No scope defined for this audit project.'}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-4 group">
+                                            <div className="flex -space-x-2">
+                                                <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">AI</div>
+                                                <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-400 italic">G</div>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-slate-300 group-hover:text-blue-500 transition-all font-black text-[10px] uppercase tracking-widest">
+                                                Open Portfolio <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </>
+                    )}
                 </div>
             )
             }

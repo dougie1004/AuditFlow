@@ -1,3 +1,48 @@
+export interface AuditObject {
+    id: string;
+    object_type: string;
+    source: string;
+    extracted_fields: string;
+    ingested_at: string;
+    version: number;
+    status: string;
+    project_id?: string | null;
+}
+
+export interface RelationCandidate {
+    from_object_id: string;
+    to_object_id: string;
+    reason_codes: string;
+    confidence: string;
+    created_at: string;
+}
+
+export interface AuditSession {
+    id: string;
+    project_id: string;
+    name: string;
+    period_start: string;
+    period_end: string;
+    included_object_types: string;
+    status: 'OPEN' | 'CLOSED' | 'ARCHIVED';
+    final_report?: string | null;
+    reviewer_name?: string | null;
+    reviewer_ack?: string | null;
+    created_at: string;
+}
+
+export interface ReviewItem {
+    id: string;
+    session_id: string;
+    object_id?: string | null;
+    relation_candidate_id?: string | null;
+    reason: string;
+    status: 'PENDING' | 'CONFIRMED' | 'ESCALATED' | 'DEFERRED' | 'DISMISSED';
+    snapshot_data?: string | null;
+    reviewer_note?: string | null;
+    reviewer_final_note?: string | null;
+    created_at: string;
+}
 
 export interface AuditIssue {
     id: number;

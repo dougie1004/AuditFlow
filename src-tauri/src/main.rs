@@ -6,6 +6,9 @@ mod file_utils;
 mod ai;
 mod commands;
 mod audit_engine;
+mod file_loader;
+mod parser;
+mod domain_map;
 mod dedup;
 mod scenarios_seeder;
 mod mapper;
@@ -13,6 +16,8 @@ mod compliance_dd_flow;
 mod ai_detection;
 mod debug_api;
 mod constitution;
+mod assurance;
+mod simulator;
 
 use database::initialize_database;
 use std::fs;
@@ -55,12 +60,20 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
+            commands::get_dashboard_summary,
             commands::get_all_scenarios,
             commands::get_files_by_type,
-            commands::upload_audit_file,
+            commands::ingest_material,
+            commands::get_audit_objects,
+            commands::get_relation_candidates,
+            commands::create_audit_session,
+            commands::get_audit_sessions,
+            commands::get_review_queue,
+            commands::update_review_status,
+            commands::close_audit_session,
+            commands::resolve_escalation,
+            commands::acknowledge_session_report,
             commands::delete_audit_file,
-            commands::get_dashboard_summary,
-            commands::run_audit_analysis,
             commands::get_audit_issues,
             commands::update_issue_status,
             commands::update_audit_issue_status,
@@ -103,12 +116,9 @@ fn main() {
             commands::add_audit_plan_from_entity,
             commands::force_seed_universe,
             commands::get_system_events,
-            commands::execute_project_analysis,
-            commands::reset_system_data,
             commands::update_project_metadata,
             commands::get_workbook_details,
             commands::get_latest_analysis,
-            commands::perform_audit_analysis,
             commands::get_latest_accepted_finding,
             commands::get_optimization_stats,
             commands::map_transaction,
@@ -120,12 +130,16 @@ fn main() {
             commands::execute_certified_audit,
             commands::lock_project_ruleset,
             debug_api::debug_reset_inbox,
-            debug_api::debug_inject_signals,
             debug_api::debug_get_inbox_stats,
             debug_api::debug_process_next,
             debug_api::get_risk_report_data,
-            debug_api::debug_run_calibration_test,
-            constitution::check_system_integrity
+            commands::get_assurance_map_stats,
+            constitution::check_system_integrity,
+            commands::get_risk_summary,
+            commands::preview_vectorization,
+            commands::promote_risk_v2,
+            commands::update_status_v2,
+            simulator::generate_annual_audit_data
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

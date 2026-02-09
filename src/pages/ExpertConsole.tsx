@@ -278,11 +278,19 @@ export default function ExpertConsole() {
                                     {/* 3. Disposition */}
                                     <section>
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 block">3단계: 검토 결과 (Conclusion)</label>
-                                        <div className={`p-6 rounded-2xl border ${caseDetail.signal.status === 'Confirmed' ? 'bg-rose-500/10 border-rose-500/20' : 'bg-slate-500/5 border-white/5'}`}>
+                                        <div className={`p-6 rounded-2xl border ${caseDetail.signal.status === 'Confirmed' ? 'bg-rose-500/10 border-rose-500/20' :
+                                            caseDetail.signal.status === 'NeedsEvidence' ? 'bg-amber-500/10 border-amber-500/20' :
+                                                caseDetail.signal.status === 'Pending Remediation' ? 'bg-purple-500/10 border-purple-500/20' :
+                                                    'bg-slate-500/5 border-white/5'}`}>
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="space-y-1">
                                                     <h5 className="font-black text-white text-sm uppercase tracking-tight">{caseDetail.signal.status}</h5>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Investigation Status: {caseDetail.signal.status === 'Confirmed' ? 'INVESTIGATION REQUIRED' : 'NO FURTHER ACTION'}</p>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                                                        {caseDetail.signal.status === 'Confirmed' ? 'INVESTIGATION REQUIRED' :
+                                                            caseDetail.signal.status === 'NeedsEvidence' ? 'EVIDENCE SUBMISSION REQUIRED' :
+                                                                caseDetail.signal.status === 'Pending Remediation' ? 'WAITING FOR REMEDIATION' :
+                                                                    'NO FURTHER ACTION'}
+                                                    </p>
                                                 </div>
                                                 <StatusBadge status={caseDetail.signal.status} />
                                             </div>
@@ -291,12 +299,45 @@ export default function ExpertConsole() {
                                                 <p className="text-xs text-white font-bold leading-relaxed">
                                                     {caseDetail.signal.verdict_title || (caseDetail.signal.status.startsWith('Processed') ? "사내 심사 가이드라인에 따른 자동 종결" : "심사 절차 진행 중")}
                                                 </p>
-                                                <div className="pt-2 border-t border-white/5 flex items-center gap-2">
-                                                    <Info size={10} className="text-slate-600" />
-                                                    <p className="text-[9px] text-slate-600 font-medium">
-                                                        탐지 참고 지표: AI 통계적 이상 수치 {(caseDetail.signal.anomaly_score * 100).toFixed(1)}% (심사 기준 미포함 데이터)
-                                                    </p>
-                                                </div>
+
+                                                {/* [NEW] Remediation Action Button */}
+                                                {caseDetail.signal.status === 'NeedsEvidence' && (
+                                                    <div className="pt-4 border-t border-white/5">
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (confirm("해당 건에 대해 담당자에게 소명 요청 메일을 발송하시겠습니까?\n(근태 기록/Git 로그 제출 요청)")) {
+                                                                    // Simulate API Call
+                                                                    try {
+                                                                        // await safeInvoke('send_remediation_request', { signalId: caseDetail.signal.signal_id });
+                                                                        alert("📨 소명 요청 메일이 발송되었습니다.\n상태가 'Pending Remediation'으로 변경됩니다.");
+
+                                                                        // Optimistic UI Update
+                                                                        const updatedSignal = { ...caseDetail.signal, status: 'Pending Remediation' };
+                                                                        setCaseDetail({ ...caseDetail, signal: updatedSignal });
+                                                                        setSignals(prev => prev.map(s => s.signal_id === updatedSignal.signal_id ? updatedSignal : s));
+                                                                    } catch (e) {
+                                                                        alert(e);
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-black font-black text-xs rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                                        >
+                                                            <FileText size={14} /> 소명 자료 요청 (Request Evidence)
+                                                        </button>
+                                                        <p className="text-[9px] text-amber-500/70 mt-2 text-center font-bold">
+                                                            * 담당자에게 자동으로 증빙 제출 링크가 포함된 메일이 발송됩니다.
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {caseDetail.signal.status !== 'NeedsEvidence' && (
+                                                    <div className="pt-2 border-t border-white/5 flex items-center gap-2">
+                                                        <Info size={10} className="text-slate-600" />
+                                                        <p className="text-[9px] text-slate-600 font-medium">
+                                                            탐지 참고 지표: AI 통계적 이상 수치 {(caseDetail.signal.anomaly_score * 100).toFixed(1)}% (심사 기준 미포함 데이터)
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </section>

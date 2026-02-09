@@ -1,0 +1,166 @@
+cargo :     Checking auditflow v0.1.0 (C:\Users
+\user\.gemini\antigravity\playground\AuditFlow\
+src-tauri)
+?? ?:1 ??:1
++ cargo check > log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  
+      Checking au...Flow\src-tauri):String) [  
+  ], RemoteException
+    + FullyQualifiedErrorId : NativeCommandErr 
+   or
+ 
+warning: unused import: `call_gemini_chat`
+  --> src\commands.rs:12:37
+   |
+12 | use crate::ai::{call_gemini_direct, call_g
+emini_chat, extract_json};
+   |                                     ^^^^^^
+^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `
+#[warn(unused)]`) on by default
+
+warning: unused import: `regex::Regex`
+ --> src\audit_engine.rs:5:5
+  |
+5 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `Path`
+ --> src\compliance_dd_flow.rs:3:17
+  |
+3 | use std::path::{Path, PathBuf};
+  |                 ^^^^
+
+warning: unused import: `Value`
+ --> src\debug_api.rs:3:24
+  |
+3 | use serde_json::{json, Value};
+  |                        ^^^^^
+
+warning: unused import: `Manager`
+ --> src\constitution.rs:1:24
+  |
+1 | use tauri::{AppHandle, Manager};
+  |                        ^^^^^^^
+
+warning: unused import: `std::path::Path`
+ --> src\constitution.rs:3:5
+  |
+3 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `chrono::Datelike`
+ --> src\simulator.rs:4:5
+  |
+4 | use chrono::Datelike;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused variable: `pillar_culture`
+   --> src\commands.rs:295:9
+    |
+295 |     let pillar_culture = conn.query_row(
+    |         ^^^^^^^^^^^^^^ help: if this is i
+ntentional, prefix it with an underscore: `_pil
+lar_culture`
+    |
+    = note: `#[warn(unused_variables)]` (part o
+f `#[warn(unused)]`) on by default
+
+warning: unused variable: `amounts_new`
+   --> src\audit_engine.rs:201:22
+    |
+201 |                  let amounts_new: Vec<Str
+ing> = amount_regex.find_iter(&content_lower).m
+ap(|m| m.as_str().replace(",", "")).collect();
+    |                      ^^^^^^^^^^^ help: if
+ this is intentional, prefix it with an undersc
+ore: `_amounts_new`
+
+warning: unused variable: `domain`
+  --> src\debug_api.rs:45:21
+   |
+45 |     for (id, title, domain, risk) in sampl
+e_projects {
+   |                     ^^^^^^ help: if this i
+s intentional, prefix it with an underscore: `_
+domain`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:18:34
+   |
+18 | pub fn validate_execution_safety(app_handl
+e: &AppHandle, scope: &str) -> Result<(), Strin
+g> {
+   |                                  ^^^^^^^^^
+^ help: if this is intentional, prefix it with 
+an underscore: `_app_handle`
+
+warning: unused variable: `forbidden_literals`
+  --> src\constitution.rs:22:9
+   |
+22 |     let forbidden_literals = vec!["15420",
+ "placeholder", "mock_user"];
+   |         ^^^^^^^^^^^^^^^^^^ help: if this i
+s intentional, prefix it with an underscore: `_
+forbidden_literals`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:48:31
+   |
+48 | pub fn check_system_integrity(app_handle: 
+AppHandle) -> Result<Value, String> {
+   |                               ^^^^^^^^^^ h
+elp: if this is intentional, prefix it with an 
+underscore: `_app_handle`
+
+error[E0382]: borrow of moved value: `units`
+   --> src\simulator.rs:214:91
+    |
+ 39 |     let units: Vec<UnitProfile> = stmt.qu
+ery_map([], |row| {
+    |         ----- move occurs because `units`
+ has type `Vec<UnitProfile>`, which does not im
+plement the `Copy` trait
+...
+ 94 |     for unit in units {
+    |                 ----- `units` moved due t
+o this implicit call to `.into_iter()`
+...
+214 |     Ok(format!("Simulation Complete. Gene
+rated {} events across {} units.", total_events
+, units.len()))
+    |                                          
+                                               
+  ^^^^^ value borrowed here after move
+    |
+note: `into_iter` takes ownership of the receiv
+er `self`, which moves `units`
+   --> /rustc/254b59607d4417e9dffbc307138ae5c86
+280fe4c\library\core\src\iter\traits\collect.rs
+:310:18
+help: consider iterating over a slice of the `V
+ec<UnitProfile>`'s content to avoid moving into
+ the `for` loop
+    |
+ 94 |     for unit in &units {
+    |                 +
+
+warning: unused variable: `cat_lower`
+   --> src\simulator.rs:220:9
+    |
+220 |     let cat_lower = scenario.category.to_
+lowercase();
+    |         ^^^^^^^^^ help: if this is intent
+ional, prefix it with an underscore: `_cat_lowe
+r`
+
+For more information about this error, try `rus
+tc --explain E0382`.
+warning: `auditflow` (bin "auditflow") generate
+d 14 warnings
+error: could not compile `auditflow` (bin "audi
+tflow") due to 1 previous error; 14 warnings em
+itted
+

@@ -37,6 +37,7 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
             due_date TEXT,
             remediation_plan TEXT,
             manager_comment TEXT,
+            entity_id INTEGER,
             detected_at TEXT DEFAULT CURRENT_TIMESTAMP
         )", 
         params![]
@@ -54,6 +55,7 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN verdict_mode TEXT DEFAULT 'MANUAL_REVIEW'", params![]);
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN logic_chain TEXT", params![]);
     let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN grade TEXT DEFAULT 'B'", params![]);
+    let _ = conn.execute("ALTER TABLE audit_issues ADD COLUMN entity_id INTEGER", params![]);
 
     // 1. Audit Projects (Renovated for Command Center)
     conn.execute(
@@ -275,6 +277,92 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     
     // Run modular adaptive seeder with dynamic column mapping
     AuditUniverseSeeder::seed(&mut conn).ok();
+
+    // [PHASE 1] Audit Memory Layer (Audit Objects)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS audit_object (
+            id TEXT PRIMARY KEY,
+            object_type TEXT NOT NULL,
+            source TEXT NOT NULL,
+            extracted_fields TEXT,
+            ingested_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            version INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'ACTIVE',
+            project_id TEXT,
+            FOREIGN KEY(project_id) REFERENCES audit_projects(id)
+        )", 
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [PHASE 3] Relation Candidate Engine
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS relation_candidate (
+            from_object_id TEXT,
+            to_object_id TEXT,
+            reason_codes TEXT,
+            confidence TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(from_object_id, to_object_id),
+            FOREIGN KEY(from_object_id) REFERENCES audit_object(id),
+            FOREIGN KEY(to_object_id) REFERENCES audit_object(id)
+        )", 
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [PHASE 4] Re-evaluation Trigger
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS re_evaluation_event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trigger_object_id TEXT,
+            affected_object_id TEXT,
+            reason TEXT,
+            logged_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(trigger_object_id) REFERENCES audit_object(id),
+            FOREIGN KEY(affected_object_id) REFERENCES audit_object(id)
+        )", 
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    println!(">>> [INIT] Audit Memory Layer Initialized.");
+
+    // [PHASE 5] Audit Session & Review Loop
+    // conn.execute("DROP TABLE IF EXISTS review_item", params![]).ok();
+    // conn.execute("DROP TABLE IF EXISTS audit_session", params![]).ok();
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS audit_session (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            period_start TEXT,
+            period_end TEXT,
+            included_object_types TEXT,
+            status TEXT DEFAULT 'OPEN',
+            final_report TEXT,
+            reviewer_name TEXT,
+            reviewer_ack TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(project_id) REFERENCES audit_projects(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS review_tasks (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            object_id TEXT,
+            relation_candidate_id TEXT,
+            reason TEXT,
+            status TEXT DEFAULT 'PENDING',
+            snapshot_data TEXT,
+            reviewer_note TEXT,
+            reviewer_final_note TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(session_id) REFERENCES audit_session(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
 
     Ok(())
 }

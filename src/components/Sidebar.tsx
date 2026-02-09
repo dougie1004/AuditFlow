@@ -17,25 +17,69 @@ import {
 
 const menuItems = [
     { path: "/", label: "대시보드", icon: LayoutDashboard },
-    { path: "/upload", label: "데이터 업로드", icon: Upload },
-    { path: "/tasks", label: "진단 업무 관리", icon: Briefcase }, 
-    { path: "/issues", label: "탐지 리스크 관리", icon: ShieldAlert }, 
-    { path: "/scenarios", label: "진단 시나리오", icon: Activity }, 
-    { path: "/process", label: "프로세스 진단", icon: Activity },
-    { path: "/production", label: "공정 운영 예측", icon: Box },
-    { path: "/corp-card", label: "법인카드 오남용", icon: CreditCard },
-    { path: "/ai-assistant", label: "AI 어시스턴트", icon: Bot },
-    { path: "/knowledge-base", label: "지식 베이스 (RAG)", icon: BookOpen },
-    { path: "/audit-report", label: "최종 보고서", icon: FileText },
+    { path: "/upload", label: "증거 자료 업로드", icon: Upload },
+    { path: "/tasks", label: "감사 워크플로우", icon: Briefcase },
+    { path: "/issues", label: "감사 이슈 (Findings)", icon: ShieldAlert },
+    { path: "/scenarios", label: "감사 시나리오", icon: Activity },
+    { path: "/process", label: "프로세스 통제 진단", icon: Activity },
+    { path: "/production", label: "운영 리스크 예측", icon: Box },
+    { path: "/corp-card", label: "법인카드 상시 감사", icon: CreditCard },
+    { path: "/ai-assistant", label: "AI 감사 어시스턴트", icon: Bot },
+    { path: "/knowledge-base", label: "감사 지식 베이스", icon: BookOpen },
+    { path: "/audit-report", label: "감사 결론 및 보고서", icon: FileText },
+    { path: "/history", label: "감사 이력 (History)", icon: BookOpen }, // Added Audit History
 ];
+
+const ActiveAuditWidget = () => {
+    // This would typically come from a context or API
+    // For now, we mock the concept of "Multiple Active Sessions" as requested
+    const auditSessions = [
+        { id: '2025-Legal', name: 'Legal Team Annual Review', status: 'Active', updated: '2m ago' },
+        { id: '2025-Sales', name: 'Sales HQ (Domestic)', status: 'Escalated', updated: '1h ago' },
+        { id: '2024-Closing', name: 'FY2024 Closing Audit', status: 'Reviewing', updated: '1d ago' }
+    ];
+
+    return (
+        <div className="mb-6 px-4">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex justify-between items-center">
+                <span>Active Context</span>
+                <span className="text-blue-400 cursor-pointer hover:text-blue-300">+ New</span>
+            </div>
+            <div className="space-y-2">
+                {auditSessions.map(session => (
+                    <div key={session.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 hover:bg-slate-800 hover:border-blue-500/30 transition-all cursor-pointer group">
+                        <div className="flex justify-between items-start mb-1">
+                            <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate max-w-[140px]">{session.name}</span>
+                            <div className={`w-1.5 h-1.5 rounded-full ${session.status === 'Active' ? 'bg-amber-500 animate-pulse' :
+                                    session.status === 'Escalated' ? 'bg-rose-500' : 'bg-blue-400'
+                                }`} />
+                        </div>
+                        <div className="flex justify-between items-center text-[9px]">
+                            <span className={`${session.status === 'Escalated' ? 'text-rose-400' : 'text-slate-500'
+                                }`}>{session.status}</span>
+                            <span className="text-slate-600 font-mono">{session.updated}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export default function Sidebar() {
     const location = useLocation();
 
     return (
         <div style={{ width: "260px", background: "#1e293b", color: "white", height: "100vh", display: "flex", flexDirection: "column", padding: "20px 0", flexShrink: 0 }}>
-            <div style={{ padding: "0 24px 30px", textAlign: "center" }}>
-                <h1 style={{ fontSize: "22px", fontWeight: "900", color: "#3b82f6", margin: 0 }}>ComplianceFlow AI</h1>
+            <div style={{ padding: "0 24px 20px", textAlign: "center" }}>
+                <h1 style={{ fontSize: "20px", fontWeight: "900", color: "#3b82f6", margin: 0, letterSpacing: "-0.5px" }}>AuditFlow <span className="text-slate-500 font-light">Intelligence</span></h1>
+                <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-widest">Enterprise Risk Operating System</p>
+            </div>
+
+            <ActiveAuditWidget />
+
+            <div className="px-4 mb-2">
+                <div className="h-px bg-slate-700/50 w-full" />
             </div>
 
             <nav style={{ flex: 1, padding: "0 12px", overflowY: "auto" }}>

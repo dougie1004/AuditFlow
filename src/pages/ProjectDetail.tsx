@@ -47,7 +47,16 @@ export default function ProjectDetail() {
     const handleSave = async () => {
         await safeInvoke("update_project_metadata", {
             projectId: id,
-            ...editData
+            planningStart: editData.planning_start,
+            planningEnd: editData.planning_end,
+            fieldworkStart: editData.fieldwork_start,
+            fieldworkEnd: editData.fieldwork_end,
+            reportingStart: editData.reporting_start,
+            reportingEnd: editData.reporting_end,
+            auditScope: editData.audit_scope,
+            startDate: editData.start_date,
+            endDate: editData.end_date,
+            valuationTier: editData.valuation_tier
         });
         setIsEditing(false);
         // Refresh
@@ -70,7 +79,7 @@ export default function ProjectDetail() {
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-blue-600">
                             <Briefcase size={16} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">프로젝트 실사 관리 (DD Management)</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">감사 프로젝트 상세 관리 (Project Management)</span>
                         </div>
                         <h1 className="text-4xl font-black text-white tracking-tighter leading-none">
                             {project.title}
@@ -79,7 +88,7 @@ export default function ProjectDetail() {
                             <span className="bg-slate-900 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{project.id}</span>
                             <span className="flex items-center gap-3 text-slate-500 text-xs font-bold bg-white/5 px-3 py-1 rounded-lg border border-white/5">
                                 <Calendar size={14} className="text-blue-500" />
-                                <span className="uppercase tracking-tighter opacity-70 mr-1">실사 대상 기간:</span>
+                                <span className="uppercase tracking-tighter opacity-70 mr-1">감사 대상 기간:</span>
                                 {project.start_date} ~ {project.end_date}
                             </span>
                             <span className="flex items-center gap-1.5 text-slate-500 text-sm font-bold">
@@ -89,10 +98,10 @@ export default function ProjectDetail() {
                     </div>
                     <div className="flex gap-4">
                         <button
-                            onClick={() => navigate(`/data-upload/${id}`)}
+                            onClick={() => navigate(`/workspace`)}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-200 flex items-center gap-3 active:scale-95"
                         >
-                            <ShieldCheck size={18} /> 실사 작업 환경 실행 (Execution)
+                            <ShieldCheck size={18} /> 감사 실행 워크스페이스로 이동
                         </button>
                     </div>
                 </div>

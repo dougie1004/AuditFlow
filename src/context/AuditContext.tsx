@@ -10,6 +10,8 @@ interface AuditState {
     currentProjectId: string | null;
     cardData: any[]; // [CRITICAL] Corporate card transaction data session
     dataType: 'general' | 'card' | 'mixed'; // Track data source type
+    uploadStep: number;
+    isMasked: boolean;
 }
 
 interface AuditContextType {
@@ -29,7 +31,9 @@ export const AuditProvider = ({ children }: { children: React.ReactNode }) => {
         isInitialized: true,
         currentProjectId: null,
         cardData: [],
-        dataType: 'general'
+        dataType: 'general',
+        uploadStep: 1,
+        isMasked: false
     });
 
     const startNewAudit = (dept: string) => {
@@ -41,7 +45,9 @@ export const AuditProvider = ({ children }: { children: React.ReactNode }) => {
             isInitialized: true,
             currentProjectId: newId,
             cardData: [],
-            dataType: 'general'
+            dataType: 'general',
+            uploadStep: 1,
+            isMasked: false
         });
         return newId;
     };
@@ -65,7 +71,9 @@ export const AuditProvider = ({ children }: { children: React.ReactNode }) => {
                     isInitialized: true,
                     currentProjectId: projectId,
                     cardData: [],
-                    dataType: 'general'
+                    dataType: 'general',
+                    uploadStep: files && files.length > 0 ? 2 : 1,
+                    isMasked: false
                 });
                 console.log(`>>> [Session] Hydrated project ${projectId} with ${files.length} files and ${issues.length} findings.`);
                 return true;

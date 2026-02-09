@@ -10,7 +10,7 @@ export default function IssueTracker() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const data: AuditIssue[] = await safeInvoke("get_audit_issues");
+                const data: AuditIssue[] = await safeInvoke("get_audit_issues", { projectType: "ALL" });
                 setIssues(data);
             } catch (err) { console.error(err); }
         };

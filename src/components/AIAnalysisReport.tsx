@@ -32,6 +32,33 @@ interface SignalDetail {
     metadata: any;
 }
 
+// [Mapping] 영어 메타데이터 키를 한국어로 변환하는 맵
+const METADATA_LABELS: Record<string, string> = {
+    "actor_type": "수행 주체",
+    "amount": "결제 금액",
+    "context_score": "맥락 괴리도",
+    "date": "결제 일시",
+    "final_hybrid_score": "최종 위험 점수",
+    "location": "결제 장소",
+    "purpose": "지출 목적",
+    "semantic_score": "의미 분석 점수",
+    "stats_score": "통계적 이상도",
+    "source": "분석 출처",
+    "reason": "필터링 사유",
+    "final_hybrid_score_normalized": "정규화 점수"
+};
+
+// 숫자를 읽기 좋게 포맷팅 (소수점 2자리 또는 콤마)
+const formatValue = (key: string, val: any) => {
+    if (typeof val === 'number') {
+        if (key.toLowerCase().includes('score')) {
+            return val.toFixed(2);
+        }
+        return val.toLocaleString();
+    }
+    return String(val);
+};
+
 interface AdjudicationStep {
     rule_id: string;
     criterion: string;
@@ -117,7 +144,7 @@ export default function AIAnalysisReport() {
                 <div>
                     <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
                         <ShieldCheck className="text-blue-500 w-8 h-8" />
-                        Risk Intelligence Report
+                        리스크 인텔리전스 보고서
                     </h2>
                     <p className="text-slate-400 mt-2 font-medium">검출된 리스크 시그널에 대한 정량적 분석 및 처리 현황</p>
                 </div>
@@ -127,7 +154,7 @@ export default function AIAnalysisReport() {
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-blue-500/25 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {generatingSummary ? <Loader2 className="animate-spin w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                    Executive Summary
+                    경영진 요약 보고 (Executive Summary)
                 </button>
             </div>
 
@@ -145,9 +172,9 @@ export default function AIAnalysisReport() {
                         <div className="p-2 bg-slate-700/50 rounded-lg text-slate-400">
                             <Search size={20} />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Observations</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-500">전체 관측 데이터 (Observations)</span>
                     </div>
-                    <div className="text-4xl font-black text-white">{stats.total_scanned}</div>
+                    <div className="text-4xl font-black text-white">{stats.total_scanned.toLocaleString()}</div>
                     <p className="text-xs text-slate-500 mt-2">AI가 관측한 모든 특이 패턴 (전체)</p>
                 </div>
 
@@ -164,9 +191,9 @@ export default function AIAnalysisReport() {
                         <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
                             <CheckCircle size={20} />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest text-emerald-500/70">Safe / Compliant</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-emerald-500/70">정상 / 준수 항목 (Compliant)</span>
                     </div>
-                    <div className="text-4xl font-black text-emerald-400">{stats.dismissed_count} <span className="text-lg font-bold text-emerald-600/50 ml-1">({safeRatio}%)</span></div>
+                    <div className="text-4xl font-black text-emerald-400">{stats.dismissed_count.toLocaleString()} <span className="text-lg font-bold text-emerald-600/50 ml-1">({safeRatio}%)</span></div>
                     <p className="text-xs text-emerald-600/70 mt-2">규정 위반 없음으로 자동 종결된 건</p>
                 </div>
 
@@ -183,9 +210,9 @@ export default function AIAnalysisReport() {
                         <div className="p-2 bg-red-500/20 rounded-lg text-red-400">
                             <AlertTriangle size={20} />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest text-red-500/70">Confirmed Violations</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-red-500/70">위반 의심 항목 (Violations)</span>
                     </div>
-                    <div className="text-4xl font-black text-red-500">{stats.confirmed_count}</div>
+                    <div className="text-4xl font-black text-red-500">{stats.confirmed_count.toLocaleString()}</div>
                     <p className="text-xs text-red-600/70 mt-2 font-bold">즉시 조치가 필요한 위반 사항</p>
                 </div>
             </div>
@@ -202,7 +229,7 @@ export default function AIAnalysisReport() {
                         {activeFilter === 'VIOLATION' && "🚩 규정 위반 탐지 상세 (Violations)"}
                     </h3>
                     <span className="text-[10px] font-black bg-slate-800 px-4 py-1.5 rounded-full text-slate-400 border border-slate-700 uppercase tracking-widest">
-                        {filteredSignals.length} Entries Filtered
+                        {filteredSignals.length.toLocaleString()}건 필터링됨
                     </span>
                 </div>
 
@@ -250,7 +277,7 @@ export default function AIAnalysisReport() {
                                                 {/* Adjudication Matrix (The Reasoning) */}
                                                 <div>
                                                     <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 block">
-                                                        {isViolation ? "🔴 Adjudication Logic (Confirmed)" : "🟢 Compliance Logic (Cleared)"}
+                                                        {isViolation ? "🔴 판정 로직 (Adjudication Logic)" : "🟢 준수 로직 (Compliance Logic)"}
                                                     </span>
                                                     <div className="space-y-3">
                                                         {sig.reasoning.map((step, sidx) => (
@@ -272,23 +299,25 @@ export default function AIAnalysisReport() {
                                                         ))}
                                                         {sig.reasoning.length === 0 && (
                                                             <div className="text-xs text-slate-500 p-4 bg-black/20 rounded-xl border border-dashed border-slate-800">
-                                                                No specific rule triggers observed. Manual verification suggested if anomaly score is high.
+                                                                특이한 규칙 트리거가 발견되지 않았습니다. 이상 징후 점수가 높을 경우에만 수동 검토를 권장합니다.
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* Transaction Metadata */}
+                                                {/* Transaction Metadata (Filtered Scores) */}
                                                 {sig.metadata && (
                                                     <div>
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Transaction Metadata</span>
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">거래 상세 정보 (Transaction Details)</span>
                                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                            {Object.entries(sig.metadata).map(([key, val]: [string, any]) => (
-                                                                <div key={key} className="bg-slate-800/50 p-3 rounded-lg border border-white/5">
-                                                                    <p className="text-[8px] font-black text-slate-600 uppercase mb-1">{key}</p>
-                                                                    <p className="text-[11px] font-bold text-white truncate">{String(val)}</p>
-                                                                </div>
-                                                            ))}
+                                                            {Object.entries(sig.metadata)
+                                                                .filter(([key]) => !key.includes('score')) // [CONSTITUTION] Hide unexplained scores
+                                                                .map(([key, val]: [string, any]) => (
+                                                                    <div key={key} className="bg-slate-800/50 p-3 rounded-lg border border-white/5">
+                                                                        <p className="text-[8px] font-black text-slate-600 uppercase mb-1">{METADATA_LABELS[key] || key}</p>
+                                                                        <p className="text-[11px] font-bold text-white truncate">{formatValue(key, val)}</p>
+                                                                    </div>
+                                                                ))}
                                                         </div>
                                                     </div>
                                                 )}

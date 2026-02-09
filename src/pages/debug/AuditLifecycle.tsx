@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { safeInvoke } from "../../lib/tauri-bridge";
-import { Terminal, Play, RefreshCw, Trash2, ShieldAlert, Activity } from "lucide-react";
+import { Terminal, Play, RefreshCw, Trash2, ShieldAlert, Activity, Box, BrainCircuit, ShieldCheck } from "lucide-react";
 
 export default function AuditLifecycleDashboard() {
-    const [logs, setLogs] = useState<string[]>([]);
+    // [FIX] Use SessionStorage to persist logs across navigation
+    const [logs, setLogs] = useState<string[]>(() => {
+        const saved = sessionStorage.getItem("audit_debug_logs");
+        return saved ? JSON.parse(saved) : [];
+    });
     const [stats, setStats] = useState({ total: 0, pending: 0 });
     const [loading, setLoading] = useState(false);
 
@@ -15,6 +19,11 @@ export default function AuditLifecycleDashboard() {
     };
 
     useEffect(() => { refreshStats(); }, []);
+
+    // Auto-save logs to session storage
+    useEffect(() => {
+        sessionStorage.setItem("audit_debug_logs", JSON.stringify(logs));
+    }, [logs]);
 
     const addLog = (msg: string) => {
         const time = new Date().toLocaleTimeString();
@@ -31,16 +40,43 @@ export default function AuditLifecycleDashboard() {
         setLoading(false);
     };
 
-    const handleProcessNext = async () => {
+    const handleInjectProjects = async () => {
         setLoading(true);
         try {
-            const res = await safeInvoke<string>("debug_process_next");
-            addLog(`${res}`);
+            const res = await safeInvoke<string>("debug_inject_sample_projects");
+            addLog(`📁 PROJECTS: ${res}`);
+        } catch (e) { addLog(`❌ ERROR: ${e}`); }
+        setLoading(false);
+    };
+
+    const handleLaunchDeepTest = async () => {
+        setLoading(true);
+        addLog("📖 INITIALIZING DEEP CONTEXT VALIDATION (HIGH-FIDELITY)...");
+        try {
+            const res = await safeInvoke<string>("debug_launch_deep_context_test");
+            addLog(`✅ SCENARIOS READY: ${res}`);
             refreshStats();
-        } catch (e: any) {
-            if (e.includes && e.includes("No Pending")) addLog("💤 Idle: No pending signals.");
-            else addLog(`❌ ERROR: ${e}`);
-        }
+        } catch (e) { addLog(`❌ ERROR: ${e}`); }
+        setLoading(false);
+    };
+
+    const handleRunDeepAnalysis = async () => {
+        setLoading(true);
+        addLog("🕵️ EXECUTING DEEP CONTEXT CROSS-CHECK (3-Way Verification)...");
+        const start = Date.now();
+        try {
+            const res = await safeInvoke<any>("debug_run_deep_analysis");
+            const duration = ((Date.now() - start) / 1000).toFixed(2);
+
+            res.logs.forEach((l: string) => addLog(l));
+            addLog(`----------------------------------------`);
+            addLog(`📝 ANALYSIS REPORT:`);
+            addLog(`⏱ Execution Time: ${duration}s (Simulated Deep Thought)`);
+            addLog(`🔗 Cross-References Checked: ${res.cross_checks_total} Documents`);
+            addLog(`✅ Status: ${res.status}`);
+            addLog(`----------------------------------------`);
+            refreshStats();
+        } catch (e) { addLog(`❌ ERROR: ${e}`); }
         setLoading(false);
     };
 
@@ -88,6 +124,22 @@ export default function AuditLifecycleDashboard() {
                         </button>
                     </div>
 
+                    <div className="space-y-4">
+                        <h3 className="text-white font-bold opacity-80 border-b border-green-900 pb-2">0. Preparation (Setup Baseline)</h3>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={handleInjectProjects} disabled={loading} className="w-full py-3 px-4 bg-blue-900/20 border border-blue-800 hover:bg-blue-900/40 text-blue-300 rounded transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+                                <Box size={14} /> Inject 5 Basic Sample Projects
+                            </button>
+                            <button onClick={handleLaunchDeepTest} disabled={loading} className="w-full py-4 px-4 bg-slate-900 border-2 border-slate-700 hover:bg-black text-slate-100 font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 flex flex-col items-center justify-center shadow-xl group">
+                                <div className="flex items-center gap-3">
+                                    <BrainCircuit size={20} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                                    <span>DEEP CONTEXT VALIDATION</span>
+                                </div>
+                                <span className="text-[10px] text-slate-500 mt-1 uppercase tracking-tighter">High-fidelity cross-silo scenarios (Rules, HR, Ledgers)</span>
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Injector */}
                     <div className="space-y-4">
                         <h3 className="text-white font-bold opacity-80 border-b border-green-900 pb-2">1. Inject Signal (Detection Simulation)</h3>
@@ -107,10 +159,10 @@ export default function AuditLifecycleDashboard() {
 
                     {/* Adjudicator */}
                     <div className="space-y-4">
-                        <h3 className="text-white font-bold opacity-80 border-b border-green-900 pb-2">2. Run Adjudication (Rule Engine)</h3>
-                        <div className="flex gap-2">
-                            <button onClick={handleProcessNext} disabled={loading || stats.pending === 0} className="flex-1 py-4 bg-indigo-900/30 border border-indigo-800 hover:bg-indigo-900/50 text-indigo-300 font-bold rounded flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed">
-                                <Play size={16} /> Process Next Evidence
+                        <h3 className="text-white font-bold opacity-80 border-b border-green-900 pb-2">2. Run Adjudication (Deep Engine)</h3>
+                        <div className="flex flex-col gap-2">
+                            <button onClick={handleRunDeepAnalysis} disabled={loading || stats.pending === 0} className="w-full py-4 bg-purple-900/30 border border-purple-800 hover:bg-purple-900/50 text-purple-300 font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                                <ShieldCheck size={18} /> EXECUTE DEEP CONTEXT CROSS-CHECK
                             </button>
                         </div>
                     </div>
@@ -133,9 +185,9 @@ export default function AuditLifecycleDashboard() {
                         {logs.length === 0 && <div className="text-green-900 italic text-center mt-10">System Ready. Waiting for signals...</div>}
                         {logs.map((log, i) => (
                             <div key={i} className={`border-b border-green-900/20 pb-1 break-words ${log.includes("CONFIRMED") ? "text-red-400 font-bold" :
-                                    log.includes("DISMISSED") ? "text-slate-500" :
-                                        log.includes("INJECTED") ? "text-blue-400" :
-                                            log.includes("RESET") ? "text-orange-500" : ""
+                                log.includes("DISMISSED") ? "text-slate-500" :
+                                    log.includes("INJECTED") ? "text-blue-400" :
+                                        log.includes("RESET") ? "text-orange-500" : ""
                                 }`}>
                                 {log}
                             </div>

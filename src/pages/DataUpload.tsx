@@ -7,9 +7,11 @@ import {
     FileText,
     BrainCircuit, BarChart3, Database, MoveRight,
     ShieldCheck, Search, ChevronDown,
-    XCircle, FileBox, Mail
+    XCircle, FileBox, Mail, Eye // Added Eye icon
 } from 'lucide-react';
+import VectorPreviewModal from '../components/VectorPreviewModal'; // Import Modal
 import { useApp } from '../App';
+import { useAudit } from '../context/AuditContext';
 
 interface AuditFinding {
     id: string;
@@ -49,15 +51,34 @@ export default function DataUpload() {
     const { activeProject, setActiveProject } = useApp();
 
     const [projects, setProjects] = useState<any[]>([]);
-    const [step, setStep] = useState(1);
+    const { state, setState } = useAudit();
     const [isMasking, setIsMasking] = useState(false);
-    const [isMasked, setIsMasked] = useState(false);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
-    const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+    // Sync with global state
+    const uploadedFiles = state.files as UploadedFile[];
+    const setUploadedFiles = (files: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[])) => {
+        if (typeof files === 'function') {
+            setState(s => ({ ...s, files: files(s.files as UploadedFile[]) }));
+        } else {
+            setState(s => ({ ...s, files: files }));
+        }
+    };
+
+    const isMasked = state.isMasked;
+    const setIsMasked = (val: boolean) => setState(s => ({ ...s, isMasked: val }));
+
+    const step = state.uploadStep;
+    const setStep = (val: number) => setState(s => ({ ...s, uploadStep: val }));
+
+    const [isIngesting, setIsIngesting] = useState(false);
+    const [ingestionStatus, setIngestionStatus] = useState<string | null>(null);
+
     const [selectedFileIdx, setSelectedFileIdx] = useState<number>(0);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // [VECTOR PREVIEW STATE]
+    const [previewText, setPreviewText] = useState("");
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const setActiveSheet = (fileIdx: number, sheetIdx: number) => {
         setUploadedFiles(prev => {
@@ -84,14 +105,14 @@ export default function DataUpload() {
                 const preview: string[][] = await safeInvoke('get_file_preview', {
                     filePath: file.path,
                     limit: 100,
-                    enable_masking: isMasked
+                    enableMasking: isMasked
                 });
 
                 let multiSheets = file.multiSheets;
                 if (file.ext === 'xlsx') {
                     const sheetDetails: { name: string, data: string[][] }[] = await safeInvoke('get_workbook_details', {
                         filePath: file.path,
-                        enable_masking: isMasked
+                        enableMasking: isMasked
                     });
                     multiSheets = sheetDetails.map(s => ({
                         name: s.name,
@@ -105,7 +126,7 @@ export default function DataUpload() {
         };
 
         syncPreviews();
-    }, [isMasked]);
+    }, [isMasked, uploadedFiles.length]);
 
     const handlePickFiles = async () => {
         if (!activeProject) return;
@@ -201,7 +222,7 @@ export default function DataUpload() {
             const updatedFiles = await Promise.all(uploadedFiles.map(async (file) => {
                 const previewRows: string[][] = await safeInvoke('get_file_preview', {
                     filePath: file.path,
-                    limit: 10,
+                    limit: 100, // Balanced limit for preview
                     enableMasking: true
                 });
 
@@ -252,25 +273,20 @@ export default function DataUpload() {
         }
     };
 
-    const handleAnalyze = async () => {
-        setIsAnalyzing(true);
+    const handleIngest = async () => {
+        setIsIngesting(true);
         try {
-            const aggregatedContent = uploadedFiles
-                .filter(f => f.fullContent)
-                .map(f => `--- FILE: ${f.name} ---\n${f.fullContent}`)
-                .join("\n\n");
-
-            const dept = activeProject?.includes("MKT") ? "Marketing" : activeProject?.includes("SAL") ? "Sales" : activeProject?.includes("FACT") ? "Vietnam Factory" : "General";
-            const result: AnalysisResult = await safeInvoke('execute_project_analysis', {
-                projectId: activeProject,
-                department: dept,
-                fullContent: aggregatedContent || null
-            });
-            setAnalysisResult(result);
-            setIsAnalyzing(false);
+            for (const file of uploadedFiles) {
+                await safeInvoke('ingest_material', {
+                    projectId: activeProject,
+                    filePath: file.path
+                });
+            }
+            setIngestionStatus("MEMORIZED");
+            setIsIngesting(false);
         } catch (err) {
             console.error(err);
-            setIsAnalyzing(false);
+            setIsIngesting(false);
         }
     };
 
@@ -314,6 +330,10 @@ export default function DataUpload() {
                         <table className="min-w-full text-left border-collapse">
                             <thead className="sticky top-0 bg-[#0B1221] z-10 shadow-sm border-b border-white/10">
                                 <tr>
+                                    {/* Vector Preview Action Column */}
+                                    <th className="p-3 w-12 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-b border-white/10 bg-[#0B1221]">
+                                        AI
+                                    </th>
                                     {tableData[0]?.map((col, i) => (
                                         <th key={i} className="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-b border-white/10 bg-[#0B1221]">
                                             {col || `Col ${i + 1}`}
@@ -324,6 +344,19 @@ export default function DataUpload() {
                             <tbody className="divide-y divide-white/5">
                                 {tableData.slice(1, 150).map((row, ri) => (
                                     <tr key={ri} className="group hover:bg-blue-500/5 transition-colors">
+                                        {/* Vector Preview Button */}
+                                        <td className="p-2 border-r border-white/5 text-center">
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewText(row.join(", "));
+                                                    setIsPreviewOpen(true);
+                                                }}
+                                                className="text-slate-600 hover:text-cyan-400 hover:bg-cyan-500/10 p-1.5 rounded transition-all opacity-50 group-hover:opacity-100"
+                                                title="View Signal Vector (AI Transparency)"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                        </td>
                                         {row.map((cell, ci) => (
                                             <td key={ci} className="p-3 text-xs font-medium text-slate-400 border-r border-white/5 last:border-0 whitespace-nowrap max-w-[400px] truncate" title={cell}>
                                                 <span className={isMasked && (cell.includes('*') || cell.includes('***')) ? "bg-blue-500/10 text-blue-400 font-bold px-1 rounded-sm border border-blue-500/20" : ""}>
@@ -370,10 +403,7 @@ export default function DataUpload() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start mb-12 gap-8">
                 <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                        <div className="bg-blue-500/10 border border-blue-500/20 p-2 rounded-xl text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                            <Zap size={20} />
-                        </div>
-                        <h1 className="text-3xl font-black text-white tracking-tight italic uppercase">Universal Auditor Workspace</h1>
+                        <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">감사 데이터 업로드 (Data Upload)</h1>
                     </div>
 
                     <div className="relative group">
@@ -382,7 +412,7 @@ export default function DataUpload() {
                             onChange={(e) => {
                                 setActiveProject(e.target.value);
                                 setStep(1);
-                                setAnalysisResult(null);
+                                setIngestionStatus(null);
                                 setIsMasked(false);
                                 setUploadedFiles([]);
                             }}
@@ -440,10 +470,10 @@ export default function DataUpload() {
                                                 <Upload size={52} />
                                             </div>
                                             <div className="space-y-6">
-                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">Local Data Upload</h2>
+                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">감사 데이터 업로드 (Collect)</h2>
                                                 <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
-                                                    Select <span className="text-blue-400 underline decoration-blue-500/40">Real Files</span> from your Local PC. <br />
-                                                    Supports Excel, CSV, PDF, Docx, and Emails (EML/MSG).
+                                                    분석 대상이 되는 컴퓨터의 증거 자료(파일)를 선택해 주세요. <br />
+                                                    시스템이 내용을 분석하고 "Audit Memory"에 동기화합니다.
                                                 </p>
                                             </div>
                                             <div className="max-w-md mx-auto py-8">
@@ -465,9 +495,10 @@ export default function DataUpload() {
                             <div className="animate-in fade-in slide-in-from-right-8 duration-700 space-y-8">
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-2">
-                                        <h3 className="text-3xl font-black text-white tracking-tighter italic uppercase flex items-center gap-4">
-                                            <ShieldCheck className="text-blue-500" size={32} /> Asset Verification
-                                        </h3>
+                                        <h2 className="text-4xl font-black text-white tracking-tighter italic flex items-center gap-4">
+                                            감사 데이터 업로드 (DATA UPLOAD)
+                                            <div className="h-1 flex-1 bg-gradient-to-r from-blue-500 to-transparent opacity-20 ml-4 rounded-full" />
+                                        </h2>
                                         <p className="text-slate-500 font-medium">Real-time content extraction and verification pipeline.</p>
                                     </div>
 
@@ -546,48 +577,51 @@ export default function DataUpload() {
                             </div>
                         )}
 
-                        {/* PHASE 3: AI Activation */}
+                        {/* PHASE 3: AI Activation (Refined UI) */}
                         {step === 3 && (
-                            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[64px] p-24 text-center space-y-16 relative overflow-hidden shadow-2xl">
-                                    {!analysisResult ? (
-                                        <div className="space-y-12">
-                                            <div className="w-48 h-48 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center mx-auto shadow-2xl relative group">
-                                                <div className="absolute inset-0 bg-blue-500 animate-ping opacity-20 rounded-full" />
-                                                <BrainCircuit className="text-white relative z-10 group-hover:scale-110 transition-transform" size={96} />
+                            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 flex justify-center items-center h-[600px]">
+                                <div className="max-w-2xl w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-10 text-center space-y-8 relative overflow-hidden shadow-2xl ring-1 ring-white/5">
+                                    {!ingestionStatus ? (
+                                        <div className="space-y-8">
+                                            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto shadow-lg relative group ring-4 ring-black/40">
+                                                <div className="absolute inset-0 bg-blue-500 animate-ping opacity-20 rounded-2xl" />
+                                                <Database className="text-white relative z-10" size={32} />
                                             </div>
-                                            <div className="space-y-4">
-                                                <h2 className="text-6xl font-black text-white tracking-tighter italic uppercase">Activate Discovery Engine</h2>
-                                                <p className="text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed text-xl">
-                                                    Analysis payload: <span className="text-blue-400 font-mono">[{uploadedFiles.length}] Real PC Assets</span>. <br />
-                                                    Ready to deploy Gemini 3.0 Pro for multi-modal risk triangulation.
+                                            <div className="space-y-2">
+                                                <h2 className="text-2xl font-bold text-white tracking-tight">증거 자료 동기화</h2>
+                                                <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                                                    현재 수집된 <span className="text-blue-400 font-bold">[{uploadedFiles.length}]개</span>의 파일을<br />
+                                                    AuditFlow 보안 저장소로 이관합니다.
                                                 </p>
                                             </div>
-                                            <button onClick={handleAnalyze} disabled={isAnalyzing} className="bg-white text-black px-24 py-8 rounded-[40px] font-black text-2xl uppercase tracking-[0.2em] hover:bg-blue-50 transition-all flex items-center gap-6 mx-auto shadow-2xl hover:scale-105 active:scale-95 disabled:opacity-50">
-                                                {isAnalyzing ? <Loader2 className="animate-spin" size={32} /> : <Zap size={32} className="text-blue-600" />}
-                                                {isAnalyzing ? "triangulating risks..." : "Activate AI Core"}
+                                            <button
+                                                onClick={handleIngest}
+                                                disabled={isIngesting}
+                                                className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-all flex items-center justify-center gap-3 mx-auto shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 min-w-[200px]"
+                                            >
+                                                {isIngesting ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} className="text-blue-600" />}
+                                                {isIngesting ? "동기화 진행 중..." : "동기화 시작"}
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="space-y-16 animate-in zoom-in-95 duration-500">
-                                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-20 rounded-[48px] space-y-12 relative overflow-hidden">
-                                                <h3 className="text-5xl font-black text-white tracking-tighter italic uppercase">Discovery Phase Complete</h3>
-                                                <div className="grid grid-cols-2 gap-12 mt-12 relative z-10">
-                                                    <div className="bg-white/5 p-12 rounded-[40px] border border-white/10 backdrop-blur-md shadow-2xl">
-                                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Anomalies Detected</p>
-                                                        <p className="text-8xl font-black text-emerald-400 tracking-tighter">{analysisResult.findings.length}</p>
-                                                    </div>
-                                                    <div className="bg-white/5 p-12 rounded-[40px] border border-white/10 backdrop-blur-md shadow-2xl">
-                                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Aggregated Risk</p>
-                                                        <p className="text-8xl font-black text-rose-500 tracking-tighter">{analysisResult.risk_score}</p>
+                                        <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-8 rounded-2xl space-y-4 relative overflow-hidden">
+                                                <div className="flex justify-center mb-2">
+                                                    <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                                        <ShieldCheck className="text-emerald-500" size={24} />
                                                     </div>
                                                 </div>
-                                                <p className="text-slate-400 text-lg italic mt-8">"Neural scan detected significant correlations across uploaded assets. Proceed to Management View."</p>
+                                                <h3 className="text-xl font-bold text-white tracking-tight">Ingestion Complete</h3>
+                                                <div className="space-y-1">
+                                                    <p className="text-slate-300 text-sm font-medium">자료가 Audit Memory Layer에 안전하게 저장되었습니다.</p>
+                                                    <p className="text-slate-500 text-xs italic">"데이터 간의 유기적 연결 준비 완료"</p>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-8 justify-center">
-                                                <button onClick={() => navigate('/ai-discovery')} className="bg-blue-600 text-white px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-[0.3em] hover:bg-blue-700 transition-all flex items-center gap-4"><BrainCircuit size={20} /> Go to Discovery Report</button>
-                                                <button onClick={() => navigate('/portfolio')} className="bg-white text-black px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-[0.3em] hover:bg-slate-100 transition-all flex items-center gap-4"><BarChart3 size={20} /> View Portfolio</button>
-                                                <button onClick={() => navigate('/report')} className="bg-white/5 border border-white/10 text-white px-12 py-6 rounded-3xl font-black text-sm uppercase tracking-[0.3em] hover:bg-white/10 transition-all flex items-center gap-4"><FileText size={20} /> Final AI Report</button>
+                                            <div className="flex gap-3 justify-center">
+                                                <button onClick={() => setStep(1)} className="bg-white/5 border border-white/10 text-slate-300 px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all">추가 업로드</button>
+                                                <button onClick={() => navigate('/workspace')} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all flex items-center gap-2">
+                                                    Workspace 이동 <MoveRight size={14} />
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -606,6 +640,11 @@ export default function DataUpload() {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.2); }
             `}</style>
+            <VectorPreviewModal
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+                rawText={previewText}
+            />
         </div>
     );
 }
