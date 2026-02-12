@@ -17,7 +17,7 @@ const tiers = [
         value: "진입 장벽 최소화",
         features: [
             "기본 룰셋 및 챗봇 감사",
-            "Gemini 3.0 (100%)",
+            "GenAI Core (100%)",
             "전표 월 1,000행 제한",
             "문서 월 10건 제한"
         ],
@@ -31,7 +31,7 @@ const tiers = [
         target: "시리즈 A~B 스타트업",
         value: "AI 심층 분석 제공",
         features: [
-            "AI (Gemini 3.0) 심층 분석",
+            "AI (Generative Core) 심층 분석",
             "Profit Guard (이상징후 탐지)",
             "전표 월 5,000행 제한",
             "문서 월 50건 제한"

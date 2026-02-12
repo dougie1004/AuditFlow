@@ -109,7 +109,7 @@ export default function DataUpload() {
                 });
 
                 let multiSheets = file.multiSheets;
-                if (file.ext === 'xlsx') {
+                if (file.ext === 'xlsx' || file.ext === 'xls') {
                     const sheetDetails: { name: string, data: string[][] }[] = await safeInvoke('get_workbook_details', {
                         filePath: file.path,
                         enableMasking: isMasked
@@ -146,13 +146,13 @@ export default function DataUpload() {
                 try {
                     // Phase 1: Basic Preview (First sheet or text content)
                     const preview: string[][] = await safeInvoke('get_file_preview', { filePath, limit: 100, enableMasking: isMasked });
-                    const isTable = ext === 'xlsx' || ext === 'csv' || ext === 'log';
+                    const isTable = ext === 'xlsx' || ext === 'xls' || ext === 'csv' || ext === 'log';
 
                     let fullContent = "";
                     let multiSheets: SheetPreview[] = [];
 
                     // Phase 2: Authentic Multi-Sheet Deep Read (Backend)
-                    if (ext === 'xlsx') {
+                    if (ext === 'xlsx' || ext === 'xls') {
                         try {
                             const sheetDetails: { name: string, data: string[][] }[] = await safeInvoke('get_workbook_details', { filePath, enableMasking: isMasked });
                             if (sheetDetails && sheetDetails.length > 0) {
@@ -393,7 +393,7 @@ export default function DataUpload() {
     const getFileIcon = (ext: string) => {
         if (ext === 'pdf') return <FileText className="text-rose-500" />;
         if (ext === 'eml' || ext === 'msg') return <Mail className="text-blue-400" />;
-        if (ext === 'xlsx' || ext === 'csv') return <Database className="text-emerald-500" />;
+        if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') return <Database className="text-emerald-500" />;
         return <FileBox className="text-slate-400" />;
     };
 

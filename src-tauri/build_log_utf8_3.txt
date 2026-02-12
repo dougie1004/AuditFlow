@@ -1,0 +1,740 @@
+﻿cargo :     Blocking waiting 
+for file lock on build direct
+ory
+위치 줄:1 문자:1
++ cargo check > build_log_3.t
+xt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Blo  
+  cking wa...build directo   
+ ry:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+    Checking auditflow v0.1.0
+ (C:\Users\user\.gemini\antig
+ravity\playground\AuditFlow\s
+rc-tauri)
+warning: unused import: `call
+_gemini_chat`
+  --> src\commands.rs:12:37
+   |
+12 | use crate::ai::{call_gem
+ini_direct, call_gemini_chat,
+ extract_json};
+   |                         
+            ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imp
+orts)]` (part of `#[warn(unus
+ed)]`) on by default
+
+warning: unused import: `rege
+x::Regex`
+ --> src\audit_engine.rs:5:5
+  |
+5 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `Path
+`
+ --> src\compliance_dd_flow.r
+s:3:17
+  |
+3 | use std::path::{Path, Pat
+hBuf};
+  |                 ^^^^
+
+warning: unused import: `Valu
+e`
+ --> src\debug_api.rs:3:24
+  |
+3 | use serde_json::{json, Va
+lue};
+  |                        ^^
+^^^
+
+warning: unused import: `Mana
+ger`
+ --> src\constitution.rs:1:24
+  |
+1 | use tauri::{AppHandle, Ma
+nager};
+  |                        ^^
+^^^^^
+
+warning: unused import: `std:
+:path::Path`
+ --> src\constitution.rs:3:5
+  |
+3 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `chro
+no::Datelike`
+ --> src\simulator.rs:4:5
+  |
+4 | use chrono::Datelike;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused variable: `pi
+llar_culture`
+   --> src\commands.rs:327:9
+    |
+327 |     let pillar_culture 
+= conn.query_row(
+    |         ^^^^^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_pillar_culture`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+warning: unused variable: `pr
+ojectType`
+    --> src\commands.rs:1142:
+61
+     |
+1142 | pub async fn analyze_p
+rocess_mining(_app_handle: Ap
+pHandle, projectType: String)
+ -> Result<Value, String> {
+     |                       
+                             
+         ^^^^^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_proj
+ectType`
+
+warning: unused variable: `am
+ounts_new`
+   --> src\audit_engine.rs:20
+1:22
+    |
+201 |                  let am
+ounts_new: Vec<String> = amou
+nt_regex.find_iter(&content_l
+ower).map(|m| m.as_str().repl
+ace(",", "")).collect();
+    |                      ^^
+^^^^^^^^^ help: if this is in
+tentional, prefix it with an 
+underscore: `_amounts_new`
+
+warning: unused variable: `do
+main`
+  --> src\debug_api.rs:45:21
+   |
+45 |     for (id, title, doma
+in, risk) in sample_projects 
+{
+   |                     ^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_domain`
+
+warning: unused variable: `ap
+p_handle`
+  --> src\constitution.rs:18:
+34
+   |
+18 | pub fn validate_executio
+n_safety(app_handle: &AppHand
+le, scope: &str) -> Result<()
+, String> {
+   |                         
+         ^^^^^^^^^^ help: if 
+this is intentional, prefix i
+t with an underscore: `_app_h
+andle`
+
+warning: unused variable: `fo
+rbidden_literals`
+  --> src\constitution.rs:22:
+9
+   |
+22 |     let forbidden_litera
+ls = vec!["15420", "placehold
+er", "mock_user"];
+   |         ^^^^^^^^^^^^^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_forbidden_literals`
+
+warning: unused variable: `ap
+p_handle`
+  --> src\constitution.rs:48:
+31
+   |
+48 | pub fn check_system_inte
+grity(app_handle: AppHandle) 
+-> Result<Value, String> {
+   |                         
+      ^^^^^^^^^^ help: if thi
+s is intentional, prefix it w
+ith an underscore: `_app_hand
+le`
+
+warning: unused variable: `re
+l_id`
+   --> src\simulator.rs:233:2
+9
+    |
+233 |                        
+ let rel_id = format!("REL-{}
+", Uuid::new_v4().to_string()
+.split('-').next().unwrap());
+    |                        
+     ^^^^^^ help: if this is 
+intentional, prefix it with a
+n underscore: `_rel_id`
+
+warning: variable `success_co
+unt` is assigned to, but neve
+r used
+  --> src\simulator.rs:91:9
+   |
+91 |     let mut success_coun
+t = 0;
+   |         ^^^^^^^^^^^^^^^^
+^
+   |
+   = note: consider using `_s
+uccess_count` instead
+
+warning: value assigned to `s
+uccess_count` is never read
+   --> src\simulator.rs:276:2
+2
+    |
+276 |             Ok(_) => su
+ccess_count += 1,
+    |                      ^^
+^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+    = note: `#[warn(unused_as
+signments)]` (part of `#[warn
+(unused)]`) on by default
+
+warning: unused variable: `ca
+t_lower`
+   --> src\simulator.rs:302:9
+    |
+302 |     let cat_lower = sce
+nario.category.to_lowercase()
+;
+    |         ^^^^^^^^^ help:
+ if this is intentional, pref
+ix it with an underscore: `_c
+at_lower`
+
+warning: struct `ReEvaluation
+Event` is never constructed
+   --> src\models.rs:210:12
+    |
+210 | pub struct ReEvaluation
+Event {
+    |            ^^^^^^^^^^^^
+^^^^^
+    |
+    = note: `#[warn(dead_code
+)]` (part of `#[warn(unused)]
+`) on by default
+
+warning: function `is_word_bo
+undary` is never used
+  --> src\file_utils.rs:74:4
+   |
+74 | fn is_word_boundary(text
+: &str, idx: usize) -> bool {
+   |    ^^^^^^^^^^^^^^^^
+
+warning: function `score_cand
+idate` is never used
+  --> src\file_utils.rs:90:8
+   |
+90 | pub fn score_candidate(t
+ext: &str, name: &str, start:
+ usize, end: usize) -> i32 {
+   |        ^^^^^^^^^^^^^^^
+
+warning: function `mask_hangu
+l_name` is never used
+   --> src\file_utils.rs:128:
+4
+    |
+128 | fn mask_hangul_name(nam
+e: &str) -> String {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: method `unmask_strin
+g` is never used
+   --> src\file_utils.rs:311:
+12
+    |
+283 | impl MaskingSession {
+    | ------------------- met
+hod in this implementation
+...
+311 |     pub fn unmask_strin
+g(&self, text: &str) -> Strin
+g {
+    |            ^^^^^^^^^^^^
+^
+
+warning: function `count_pii_
+entities` is never used
+   --> src\file_utils.rs:429:
+8
+    |
+429 | pub fn count_pii_entiti
+es(text: &str) -> usize {
+    |        ^^^^^^^^^^^^^^^^
+^^
+
+warning: function `geocode_ad
+dress` is never used
+   --> src\file_utils.rs:513:
+14
+    |
+513 | pub async fn geocode_ad
+dress(address: &str, api_key:
+ &str) -> Option<(f64, f64, S
+tring)> {
+    |              ^^^^^^^^^^
+^^^^^
+
+warning: function `compress_e
+xcel_data` is never used
+   --> src\file_utils.rs:598:
+8
+    |
+598 | pub fn compress_excel_d
+ata(range: &Range<Data>) -> (
+String, Vec<String>) {
+    |        ^^^^^^^^^^^^^^^^
+^^^
+
+warning: function `compress_c
+sv_data` is never used
+   --> src\file_utils.rs:609:
+8
+    |
+609 | pub fn compress_csv_dat
+a(content: String) -> (String
+, Vec<String>) {
+    |        ^^^^^^^^^^^^^^^^
+^
+
+warning: variant `Analysis` i
+s never constructed
+  --> src\ai.rs:20:5
+   |
+19 | pub enum TaskType {
+   |          -------- varian
+t in this enum
+20 |     Analysis,
+   |     ^^^^^^^^
+   |
+   = note: `TaskType` has der
+ived impls for the traits `De
+bug` and `Clone`, but these a
+re intentionally ignored duri
+ng dead code analysis
+
+warning: function `call_gemin
+i_api` is never used
+  --> src\ai.rs:91:14
+   |
+91 | pub async fn call_gemini
+_api(data: String, system_pro
+mpt: &str) -> Result<Value, S
+tring> {
+   |              ^^^^^^^^^^^
+^^^^
+
+warning: function `upload_aud
+it_file` is never used
+  --> src\commands.rs:25:8
+   |
+25 | pub fn upload_audit_file
+(app_handle: AppHandle, proje
+ctType: String, filePath: Str
+ing) -> Result<Value, String>
+ {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `run_audit_
+analysis` is never used
+  --> src\commands.rs:50:14
+   |
+50 | pub async fn run_audit_a
+nalysis(app_handle: AppHandle
+, projectType: String, enable
+Masking: Option<bool>, _exter
+nalContext: Option<String>...
+   |              ^^^^^^^^^^^
+^^^^^^^
+
+warning: function `reset_syst
+em_data` is never used
+    --> src\commands.rs:1040:
+8
+     |
+1040 | pub fn reset_system_da
+ta(app_handle: AppHandle) -> 
+Result<String, String> {
+     |        ^^^^^^^^^^^^^^^
+^^
+
+warning: function `generate_f
+allback_report` is never used
+    --> src\commands.rs:1185:
+4
+     |
+1185 | fn generate_fallback_r
+eport(project_id: &str, findi
+ngs: &[AuditIssue], high: i32
+, medium: i32, low: i32) -> S
+tring {
+     |    ^^^^^^^^^^^^^^^^^^^
+^^^^^
+
+warning: function `execute_pr
+oject_analysis` is never used
+    --> src\commands.rs:1398:
+14
+     |
+1398 | pub async fn execute_p
+roject_analysis(app_handle: A
+ppHandle, project_id: Option<
+String>, department: String, 
+full_content: Option<String>.
+..
+     |              ^^^^^^^^^
+^^^^^^^^^^^^^^^
+
+warning: function `perform_au
+dit_analysis` is never used
+    --> src\commands.rs:1588:
+14
+     |
+1588 | pub async fn perform_a
+udit_analysis(app_handle: App
+Handle, file_path: String) ->
+ Result<crate::models::AuditA
+nalysisResult, String> {
+     |              ^^^^^^^^^
+^^^^^^^^^^^^^
+
+warning: function `calculate_
+total_amount` is never used
+  --> src\parser.rs:32:8
+   |
+32 | pub fn calculate_total_a
+mount(rows: &[Vec<String>], a
+mount_idx: usize) -> f64 {
+   |        ^^^^^^^^^^^^^^^^^
+^^^^^
+
+warning: function `find_amoun
+t_column` is never used
+  --> src\parser.rs:51:8
+   |
+51 | pub fn find_amount_colum
+n(headers: &[String]) -> Opti
+on<usize> {
+   |        ^^^^^^^^^^^^^^^^^
+^
+
+warning: function `normalize_
+term` is never used
+  --> src\domain_map.rs:41:8
+   |
+41 | pub fn normalize_term(te
+rm: &str) -> String {
+   |        ^^^^^^^^^^^^^^
+
+warning: field `row_indices` 
+is never read
+  --> src\compliance_dd_flow.
+rs:19:24
+   |
+ 8 | pub struct ComplianceFin
+ding {
+   |            -------------
+---- field in this struct
+...
+19 |     #[serde(skip)] pub r
+ow_indices: Vec<usize>,
+   |                        ^
+^^^^^^^^^^
+   |
+   = note: `ComplianceFinding
+` has derived impls for the t
+raits `Clone` and `Debug`, bu
+t these are intentionally ign
+ored during dead code analysi
+s
+
+warning: struct `AICommentary
+` is never constructed
+  --> src\compliance_dd_flow.
+rs:24:12
+   |
+24 | pub struct AICommentary 
+{
+   |            ^^^^^^^^^^^^
+
+warning: struct `TransactionR
+ow` is never constructed
+  --> src\compliance_dd_flow.
+rs:31:12
+   |
+31 | pub struct TransactionRo
+w {
+   |            ^^^^^^^^^^^^^
+^
+
+warning: struct `RuleEngine` 
+is never constructed
+   --> src\compliance_dd_flow
+.rs:145:12
+    |
+145 | pub struct RuleEngine; 
+    |            ^^^^^^^^^^
+
+warning: associated functions
+ `detect_split_payments` and 
+`detect_restricted_vendors` a
+re never used
+   --> src\compliance_dd_flow
+.rs:147:12
+    |
+146 | impl RuleEngine {
+    | --------------- associa
+ted functions in this impleme
+ntation
+147 |     pub fn detect_split
+_payments(_rows: &Vec<Transac
+tionRow>) -> Vec<ComplianceFi
+nding> { vec![] }
+    |            ^^^^^^^^^^^^
+^^^^^^^^^
+148 |     pub fn detect_restr
+icted_vendors(_rows: &Vec<Tra
+nsactionRow>) -> Vec<Complian
+ceFinding> { vec![] }
+    |            ^^^^^^^^^^^^
+^^^^^^^^^^^^^
+
+warning: struct `AIWitness` i
+s never constructed
+   --> src\compliance_dd_flow
+.rs:151:12
+    |
+151 | pub struct AIWitness;
+    |            ^^^^^^^^^
+
+warning: associated function 
+`testify` is never used
+   --> src\compliance_dd_flow
+.rs:153:18
+    |
+152 | impl AIWitness {
+    | -------------- associat
+ed function in this implement
+ation
+153 |     pub async fn testif
+y(finding: &ComplianceFinding
+) -> AICommentary {
+    |                  ^^^^^^
+^
+
+warning: enum `SignalSource` 
+is never used
+  --> src\ai_detection.rs:15:
+10
+   |
+15 | pub enum SignalSource {
+   |          ^^^^^^^^^^^^
+
+warning: enum `SignalScope` i
+s never used
+  --> src\ai_detection.rs:22:
+10
+   |
+22 | pub enum SignalScope {
+   |          ^^^^^^^^^^^
+
+warning: struct `SuspicionSig
+nal` is never constructed
+  --> src\ai_detection.rs:29:
+12
+   |
+29 | pub struct SuspicionSign
+al {
+   |            ^^^^^^^^^^^^^
+^^
+
+warning: associated functions
+ `new` and `from_scenario` ar
+e never used
+  --> src\ai_detection.rs:42:
+12
+   |
+41 | impl SuspicionSignal {
+   | -------------------- ass
+ociated functions in this imp
+lementation
+42 |     pub fn new(observati
+on: String, anomaly_score: f3
+2, related_tx_ids: Vec<i64>, 
+scope: SignalScope, source: S
+ignalSource, metadata: Opt...
+   |            ^^^
+...
+55 |     pub fn from_scenario
+(scenario_id: &str, observati
+on: String, score: f32, relat
+ed_tx_ids: Vec<i64>) -> Self 
+{
+   |            ^^^^^^^^^^^^^
+
+warning: struct `AiObservatio
+nOutput` is never constructed
+  --> src\ai_detection.rs:72:
+8
+   |
+72 | struct AiObservationOutp
+ut {
+   |        ^^^^^^^^^^^^^^^^^
+^^
+
+warning: constant `CONSTITUTI
+ONAL_PROMPT` is never used
+  --> src\ai_detection.rs:84:
+7
+   |
+84 | const CONSTITUTIONAL_PRO
+MPT: &str = r#"
+   |       ^^^^^^^^^^^^^^^^^^
+^^^
+
+warning: function `perform_ve
+ctor_analysis` is never used
+   --> src\ai_detection.rs:24
+6:14
+    |
+246 | pub async fn perform_ve
+ctor_analysis(rows_with_index
+: Vec<(usize, String)>) -> Ve
+c<SuspicionSignal> {
+    |              ^^^^^^^^^^
+^^^^^^^^^^^^^
+
+warning: function `perform_ai
+_detection_batch` is never us
+ed
+   --> src\ai_detection.rs:40
+8:14
+    |
+408 | pub async fn perform_ai
+_detection_batch(rows: Vec<(u
+size, String)>) -> Vec<Suspic
+ionSignal> {
+    |              ^^^^^^^^^^
+^^^^^^^^^^^^^^^^
+
+warning: function `debug_inje
+ct_sample_projects` is never 
+used
+  --> src\debug_api.rs:33:8
+   |
+33 | pub fn debug_inject_samp
+le_projects(app_handle: AppHa
+ndle) -> Result<String, Strin
+g> {
+   |        ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
+
+warning: function `debug_laun
+ch_deep_context_test` is neve
+r used
+  --> src\debug_api.rs:63:8
+   |
+63 | pub fn debug_launch_deep
+_context_test(app_handle: App
+Handle) -> Result<String, Str
+ing> {
+   |        ^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
+
+warning: function `debug_run_
+deep_analysis` is never used
+   --> src\debug_api.rs:138:8
+    |
+138 | pub fn debug_run_deep_a
+nalysis(app_handle: AppHandle
+) -> Result<serde_json::Value
+, String> {
+    |        ^^^^^^^^^^^^^^^^
+^^^^^^^
+
+warning: function `debug_inje
+ct_signals` is never used
+   --> src\debug_api.rs:204:8
+    |
+204 | pub fn debug_inject_sig
+nals(app_handle: AppHandle, c
+ount: i32, scenario: String) 
+-> Result<String, String> {
+    |        ^^^^^^^^^^^^^^^^
+^^^^
+
+warning: function `debug_run_
+calibration_test` is never us
+ed
+   --> src\debug_api.rs:368:8
+    |
+368 | pub fn debug_run_calibr
+ation_test(app_handle: AppHan
+dle) -> Result<serde_json::Va
+lue, String> {
+    |        ^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+
+warning: enum `Constitutional
+SafeHarbor` is never used
+ --> src\constitution.rs:8:10
+  |
+8 | pub enum ConstitutionalSa
+feHarbor {
+  |          ^^^^^^^^^^^^^^^^
+^^^^^^^^
+
+warning: function `guard_fiel
+d` is never used
+  --> src\constitution.rs:41:
+8
+   |
+41 | pub fn guard_field<T>(fi
+eld: Option<T>, field_name: &
+str) -> Result<T, String> {
+   |        ^^^^^^^^^^^
+
+warning: `auditflow` (bin "au
+ditflow") generated 60 warnin
+gs (run `cargo fix --bin "aud
+itflow" -p auditflow` to appl
+y 15 suggestions)
+    Finished `dev` profile [u
+noptimized + debuginfo] targe
+t(s) in 14.73s

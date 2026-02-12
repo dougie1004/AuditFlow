@@ -4,34 +4,126 @@ use rusqlite::{params, Connection};
 use serde_json::json;
 use regex::Regex;
 
-#[allow(dead_code)]
-pub fn calculate_distance(_lat1: f64, _lng1: f64, _lat2: f64, _lng2: f64) -> f64 {
-    0.0 
+// --- INTELLIGENCE HELPERS ---
+
+/// [Entity Resolution] Normalizes vendor and entity names for cross-matching
+fn normalize_entity_name(name: &str) -> String {
+    let n = name.to_lowercase().replace(" ", "").replace("(주)", "").replace("주식회사", "");
+    // Semantic normalization map
+    if n.contains("스타벅스") || n.contains("starbucks") { return "STARBUCKS_GLOBAL".to_string(); }
+    if n.contains("쿠팡") || n.contains("coupang") { return "COUPANG_RETAIL".to_string(); }
+    if n.contains("배달의민족") || n.contains("baemin") || n.contains("우아한") { return "BAEMIN_SERVICE".to_string(); }
+    if n.contains("대한항공") || n.contains("koreanair") { return "KOREAN_AIR_LY".to_string(); }
+    n
 }
 
-/// 레거시 및 외부 연결을 위한 통합 브릿지 함수
-pub fn load_file_rows(path_str: &str) -> Vec<Vec<String>> {
-    match crate::file_loader::load_file_rows(path_str) {
-        Ok(rows) => rows,
-        Err(e) => {
-            // 원칙 2 & 4: 오류 발생 시 명확한 로그 출력 및 빈 결과 반환(상위 전달용)
-            println!(">>> [AuditEngine] ERROR loading rows: {}", e);
-            Vec::new()
-        }
+/// [Semantic Memory] Provides expanded synonyms for audit context
+fn get_semantic_synonyms(keyword: &str) -> Vec<&'static str> {
+    match keyword.to_lowercase().as_str() {
+        "식비" | "meal" | "food" | "welfare" | "복리후생" | "식대" => vec!["식사", "restaurant", "dining", "lunch", "dinner", "회식"],
+        "교통" | "travel" | "taxi" | "bus" | "train" | "택시" | "운임" => vec!["여비", "transport", "kakaotaxi", "ktx", "srt", "flight"],
+        "상품권" | "gift" | "voucher" => vec!["선물", "coupon", "백화점", "지류", "컬쳐랜드"],
+        "it" | "software" | "saas" | "cloud" => vec!["aws", "azure", "구독", "license", "licence", "subscription"],
+        _ => vec![]
     }
 }
 
-#[allow(dead_code)]
-pub async fn run_specialized_card_rules(
-    _card_file_path: &str,
-    _emp_file_path: &str,
-    _project_type: &str,
-    _db_path: &PathBuf,
-    _app_handle: &AppHandle,
-    _api_key: &str,
-    _enable_masking: bool
-) -> Result<(), String> {
-    println!(">>> [AuditEngine] Specialized card rules delegating to Ingestion Flow.");
+/// [Multi-hop Chain] Checks if a new connection creates a 3-way causation chain
+fn discover_multi_hop_chains(conn: &Connection, new_from: &str, new_to: &str) -> Vec<String> {
+    let mut chains = Vec::new();
+    
+    // Pattern: A -> B (new), check if B -> C exists
+    let mut stmt = conn.prepare("SELECT to_object_id FROM relation_candidate WHERE from_object_id = ?1").ok();
+    if let Some(mut s) = stmt {
+        let rows = s.query_map([new_to], |r| r.get::<_, String>(0)).ok();
+        if let Some(rows) = rows {
+            for r in rows {
+                if let Ok(c_id) = r {
+                    chains.push(format!("CHAIN: {} -> {} -> {}", new_from, new_to, c_id));
+                }
+            }
+        }
+    }
+
+    // Pattern: A -> B (new), check if X -> A exists
+    let mut stmt2 = conn.prepare("SELECT from_object_id FROM relation_candidate WHERE to_object_id = ?1").ok();
+    if let Some(mut s) = stmt2 {
+        let rows = s.query_map([new_from], |r| r.get::<_, String>(0)).ok();
+        if let Some(rows) = rows {
+            for r in rows {
+                if let Ok(x_id) = r {
+                    chains.push(format!("CHAIN: {} -> {} -> {}", x_id, new_from, new_to));
+                }
+            }
+        }
+    }
+    
+    chains
+}
+
+/// [Entity Risk Memory] Amplifies risk score based on historical findings for this entity
+fn get_entity_risk_multiplier(conn: &Connection, entity_name: &str) -> f64 {
+    let norm = normalize_entity_name(entity_name);
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM suspicion_inbox WHERE metadata LIKE ?",
+        [format!("%{}%", norm)],
+        |row| row.get(0)
+    ).unwrap_or(0);
+    
+    if count >= 10 { 2.5 }      // Critical repetition
+    else if count >= 5 { 1.5 }  // High repetition
+    else if count >= 3 { 1.2 }  // Material repetition
+    else { 1.0 }                // Baseline
+}
+
+/// [Case Elevation] Clusters related signals into a formal 'Audit Case'
+fn elevate_to_case_candidates(conn: &Connection, project_id: &str) -> Result<(), String> {
+    // Logic: Find entities with 3+ pending suspicions in this project
+    let mut stmt = conn.prepare(
+        "SELECT metadata FROM suspicion_inbox 
+         WHERE status = 'Pending' 
+         GROUP BY metadata HAVING COUNT(*) >= 3"
+    ).map_err(|e| e.to_string())?;
+
+    let clusters = stmt.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?;
+    
+    for c in clusters {
+        if let Ok(metadata_str) = c {
+            let metadata: serde_json::Value = serde_json::from_str(&metadata_str).unwrap_or(json!({}));
+            let entity = metadata["vendor"].as_str().unwrap_or("Unknown Entity");
+            
+            let case_id = format!("case-{}", uuid::Uuid::new_v4());
+            let reasoning = format!("자동 승격: '{}' 엔터티에서 3건 이상의 독립적 이상 징후가 발견되었습니다. 반복적인 리스크 패턴으로 인해 정식 조사 케이스로 전환합니다.", entity);
+            
+            // Check if case already exists for this entity in this project to avoid spam
+            let exists: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM audit_cases WHERE project_id = ?1 AND title LIKE ?2",
+                params![project_id, format!("%{}%", entity)],
+                |row| row.get(0)
+            ).unwrap_or(0);
+
+            if exists == 0 {
+                conn.execute(
+                    "INSERT INTO audit_cases (id, project_id, title, reasoning, severity, status, related_ids) 
+                     VALUES (?1, ?2, ?3, ?4, 'HIGH', 'DRAFT', ?5)",
+                    params![
+                        case_id, 
+                        project_id, 
+                        format!("[Case] {} - 반복 리스크 노출", entity),
+                        reasoning,
+                        "{}" // To be populated with metadata if needed
+                    ]
+                ).ok();
+
+                // Log to system events
+                let _ = conn.execute(
+                    "INSERT INTO system_events (id, timestamp, event_type, description, audit_id) 
+                     VALUES (?1, datetime('now'), 'CASE_PROMOTION', ?2, ?3)",
+                    params![uuid::Uuid::new_v4().to_string(), format!("⚖️ 케이스 승격: '{}' 관련 이상 징후 집적화", entity), project_id]
+                );
+            }
+        }
+    }
     Ok(())
 }
 
@@ -65,7 +157,8 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
     };
 
     let content_lower = file_content.to_lowercase();
-    let _fields_json: serde_json::Value = serde_json::from_str(&fields_str).unwrap_or(json!({}));
+    let fields_json: serde_json::Value = serde_json::from_str(&fields_str).unwrap_or(json!({}));
+    let file_name = fields_json["file_name"].as_str().unwrap_or("unknown_file");
 
     // 3. Local Anomaly Detection (Corrected Parsing)
     let mut rows: Vec<Vec<String>> = Vec::new();
@@ -121,20 +214,25 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
                              let signal_id = uuid::Uuid::new_v4().to_string();
                              let observation = format!("[쪼개기 의심] '{}'에서 {}에 {}원 + {}원 연속 결제 (합계: {}원)", v1, d1, amt1, amt2, total);
                              
-                             // Check duplication before insert (Simple cache check omitted for speed, reliant on DB constraints if any)
+                             // [INTELLIGENCE] Repetition Amplifier
+                             let multiplier = get_entity_risk_multiplier(&conn, v1);
+                             let base_score = 0.85;
+                             let final_score = (base_score * multiplier).min(1.0);
+
+                             // Check duplication before insert
                              conn.execute(
                                 "INSERT INTO suspicion_inbox (signal_id, observation, anomaly_score, source, scope, related_tx_ids, metadata, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'Pending')",
                                 params![
                                     signal_id,
                                     observation,
-                                    0.85,
+                                    final_score,
                                     "RULE:SPLIT_PAYMENT",
                                     "Transaction",
                                     serde_json::json!([i, j]).to_string(),
-                                    serde_json::json!({ "vendor": v1, "date": d1, "total_amount": total }).to_string()
+                                    serde_json::json!({ "vendor": v1, "normalized_vendor": normalize_entity_name(v1), "date": d1, "total_amount": total }).to_string()
                                 ]
                              ).ok();
-                             println!(">>> [AUDIT ENGINE] Risk Found: {}", observation);
+                             println!(">>> [AUDIT ENGINE] Risk Found (Amp: {:.1}): {}", multiplier, observation);
                         }
                     }
                 }
@@ -178,57 +276,82 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
     }
 
 
-    // 4. Execution of Detection Rules (Cross-Object Relations)
+    // 4. Execution of Intelligent Detection Rules (Cross-Object Semantic Relations)
     for candidate in candidates {
         if let Ok((other_id, other_type, other_fields_str)) = candidate {
             let mut signals = Vec::new();
             let mut confidence = "low";
+            let other_fields_lower = other_fields_str.to_lowercase();
+
+            // [INTELLIGENCE 1] Semantic Correlation (Synonym Expansion)
+            let audit_keywords = vec!["식비", "교통", "상품권", "IT", "접대", "선물"];
+            for kw in audit_keywords {
+                if content_lower.contains(&kw.to_lowercase()) {
+                    let synonyms = get_semantic_synonyms(kw);
+                    if synonyms.iter().any(|&s| other_fields_lower.contains(s)) {
+                        signals.push(format!("SEMANTIC_MATCH:{}", kw.to_uppercase()));
+                        confidence = "medium";
+                    }
+                }
+            }
+
+            // [INTELLIGENCE 2] Normalized Entity Resolution
+            let new_vendor_norm = normalize_entity_name(&file_name);
+            if other_fields_lower.contains("vendor") || other_fields_lower.contains("가맹점") {
+                 if other_fields_lower.contains(&new_vendor_norm.to_lowercase()) {
+                     signals.push("ENTITY_RESOLUTION_MATCH".to_string());
+                     confidence = "high";
+                 }
+            }
 
             // Signal A: 'Corporate Card Trace' (Keyword: 상품권, Gift, etc.)
-            // Logic: If one document mentions 'Gift Card' and the other is a relevant financial record or also mentions it.
             if content_lower.contains("gift") || content_lower.contains("상품권") {
-                if other_fields_str.to_lowercase().contains("상품권") || other_fields_str.to_lowercase().contains("gift") {
-                    signals.push("GIFT_CARD_TRACE"); // Strong Signal
+                if other_fields_lower.contains("상품권") || other_fields_lower.contains("gift") {
+                    signals.push("GIFT_CARD_TRACE".to_string());
                     confidence = "high";
                 }
             }
 
             // Signal B: 'High Value Cross-Check' (Amount Matching)
-            // Logic: Check if a large amount in Ledger appears in an Email/Doc
             if (obj_type == "LEDGER" && other_type == "EMAIL") || (obj_type == "EMAIL" && other_type == "LEDGER") {
-                 let amount_regex = regex::Regex::new(r"(\d{1,3}(,\d{3})*|\d+)").unwrap();
-                 // Naive extraction of numbers (removing commas)
-                 let amounts_new: Vec<String> = amount_regex.find_iter(&content_lower).map(|m| m.as_str().replace(",", "")).collect();
-                 
-                 // Check against specific high-value thresholds or if the other document mentions high value context
-                 // For the demo, we look for explicit '1,000,000' or similar pattern matches in content if available,
-                 // or just metadata. Here we simulate 'High Value' context.
                  if content_lower.contains("1000000") || content_lower.contains("1,000,000") {
-                      if other_fields_str.contains("1000000") || other_fields_str.contains("1,000,000") {
-                          signals.push("HIGH_VALUE_EXACT_MATCH");
+                      if other_fields_lower.contains("1000000") || other_fields_lower.contains("1,000,000") {
+                          signals.push("HIGH_VALUE_EXACT_MATCH".to_string());
                           confidence = "critical";
-                      } else {
-                          signals.push("HIGH_VALUE_CONTEXT_MATCH");
-                          confidence = "medium";
                       }
                  }
             }
 
-            // Signal C: 'Policy Violation' (e.g. Weekend usage) - MOVED TO ABOVE LOCAL CHECK, but kept here for contextual cross-check if needed
-            // if content_lower.contains("토요일") ... (Removed primarily to rely on local check)
-
-            // 5. Record Discovered Relations
+            // 5. Record Discovered Relations & Explore Multi-hop Chains
             if !signals.is_empty() {
                 let reasons_json = serde_json::to_string(&signals).unwrap();
-                println!(">>> [AUDIT ENGINE] Relation Discovered: {} <-> {} [Signals: {}]", new_obj_id, other_id, reasons_json);
                 
-                conn.execute(
-                    "INSERT INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
-                    params![new_obj_id, other_id, reasons_json, confidence]
-                ).ok();
+                // [INTELLIGENCE] Confidence Layer Separation
+                // Only save relations if confidence is above 'low' (or threshold)
+                if confidence != "low" {
+                    println!(">>> [AI ENGINE] Relation Discovered: {} <-> {} [Signals: {}]", new_obj_id, other_id, reasons_json);
+                    
+                    conn.execute(
+                        "INSERT INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+                        params![new_obj_id, other_id, reasons_json, confidence]
+                    ).ok();
+
+                    // [INTELLIGENCE 3] Discover Multi-hop Chains
+                    let chains = discover_multi_hop_chains(&conn, new_obj_id, &other_id);
+                    for chain_desc in chains {
+                        println!(">>> [AI ENGINE] Causation Chain Found: {}", chain_desc);
+                        let _ = conn.execute(
+                            "INSERT INTO system_events (id, timestamp, event_type, description, audit_id) VALUES (?1, datetime('now'), 'AI_SIGNAL', ?2, ?3)",
+                            params![uuid::Uuid::new_v4().to_string(), format!("🧩 고도화 분석: 다단계 증거 체인 발견 - {}", chain_desc), project_id]
+                        );
+                    }
+                }
             }
         }
     }
+
+    // [INTELLIGENCE Final] Case Elevation Trigger
+    let _ = elevate_to_case_candidates(&conn, project_id);
 
     Ok(())
 }

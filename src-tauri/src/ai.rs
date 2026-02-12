@@ -149,7 +149,7 @@ pub async fn call_gemini_direct(prompt: &str) -> Result<String, String> {
     
     let body = json!({
         "contents": [{ "parts": [{ "text": prompt }] }],
-        "generationConfig": { "temperature": 0.2, "topP": 0.95 },
+        "generationConfig": { "temperature": 0.0, "topP": 0.95 },
         "safetySettings": [
             { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
             { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },

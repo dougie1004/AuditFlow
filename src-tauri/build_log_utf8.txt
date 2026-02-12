@@ -1,0 +1,286 @@
+﻿cargo :     Blocking waiting 
+for file lock on package cach
+e
+위치 줄:1 문자:1
++ cargo check > build_log.txt
+ 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Blo  
+  cking wa...n package cac   
+ he:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+    Checking auditflow v0.1.0
+ (C:\Users\user\.gemini\antig
+ravity\playground\AuditFlow\s
+rc-tauri)
+warning: unused import: `call
+_gemini_chat`
+  --> src\commands.rs:12:37
+   |
+12 | use crate::ai::{call_gem
+ini_direct, call_gemini_chat,
+ extract_json};
+   |                         
+            ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imp
+orts)]` (part of `#[warn(unus
+ed)]`) on by default
+
+warning: unused import: `rege
+x::Regex`
+ --> src\audit_engine.rs:5:5
+  |
+5 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+
+warning: unused import: `Path
+`
+ --> src\compliance_dd_flow.r
+s:3:17
+  |
+3 | use std::path::{Path, Pat
+hBuf};
+  |                 ^^^^
+
+warning: unused import: `Valu
+e`
+ --> src\debug_api.rs:3:24
+  |
+3 | use serde_json::{json, Va
+lue};
+  |                        ^^
+^^^
+
+warning: unused import: `Mana
+ger`
+ --> src\constitution.rs:1:24
+  |
+1 | use tauri::{AppHandle, Ma
+nager};
+  |                        ^^
+^^^^^
+
+warning: unused import: `std:
+:path::Path`
+ --> src\constitution.rs:3:5
+  |
+3 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `chro
+no::Datelike`
+ --> src\simulator.rs:4:5
+  |
+4 | use chrono::Datelike;
+  |     ^^^^^^^^^^^^^^^^
+
+error[E0382]: borrow of moved
+ value: `db_path`
+   --> src\commands.rs:407:85
+    |
+304 |     let db_path = app_h
+andle.path().app_data_dir().u
+nwrap().join("audit_data_v4.d
+b");
+    |         ------- move oc
+curs because `db_path` has ty
+pe `PathBuf`, which does not 
+implement the `Copy` trait
+305 |     let conn = Connecti
+on::open(db_path).map_err(|e|
+ e.to_string())?;
+    |                        
+         ------- value moved 
+here
+...
+407 |                 if let 
+Ok(verdict) = crate::complian
+ce_judge::judge_commercial_ri
+sk(&db_path, entity_id, &seve
+rity) {
+    |                        
+                             
+                             
+   ^^^^^^^^ value borrowed he
+re after move
+    |
+help: consider borrowing `db_
+path`
+    |
+305 |     let conn = Connecti
+on::open(&db_path).map_err(|e
+| e.to_string())?;
+    |                        
+         +
+
+warning: unused variable: `pi
+llar_culture`
+   --> src\commands.rs:327:9
+    |
+327 |     let pillar_culture 
+= conn.query_row(
+    |         ^^^^^^^^^^^^^^ 
+help: if this is intentional,
+ prefix it with an underscore
+: `_pillar_culture`
+    |
+    = note: `#[warn(unused_va
+riables)]` (part of `#[warn(u
+nused)]`) on by default
+
+warning: unused variable: `pr
+ojectType`
+    --> src\commands.rs:1142:
+61
+     |
+1142 | pub async fn analyze_p
+rocess_mining(_app_handle: Ap
+pHandle, projectType: String)
+ -> Result<Value, String> {
+     |                       
+                             
+         ^^^^^^^^^^^ help: if
+ this is intentional, prefix 
+it with an underscore: `_proj
+ectType`
+
+warning: unused variable: `am
+ounts_new`
+   --> src\audit_engine.rs:20
+1:22
+    |
+201 |                  let am
+ounts_new: Vec<String> = amou
+nt_regex.find_iter(&content_l
+ower).map(|m| m.as_str().repl
+ace(",", "")).collect();
+    |                      ^^
+^^^^^^^^^ help: if this is in
+tentional, prefix it with an 
+underscore: `_amounts_new`
+
+warning: unused variable: `do
+main`
+  --> src\debug_api.rs:45:21
+   |
+45 |     for (id, title, doma
+in, risk) in sample_projects 
+{
+   |                     ^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_domain`
+
+warning: unused variable: `ap
+p_handle`
+  --> src\constitution.rs:18:
+34
+   |
+18 | pub fn validate_executio
+n_safety(app_handle: &AppHand
+le, scope: &str) -> Result<()
+, String> {
+   |                         
+         ^^^^^^^^^^ help: if 
+this is intentional, prefix i
+t with an underscore: `_app_h
+andle`
+
+warning: unused variable: `fo
+rbidden_literals`
+  --> src\constitution.rs:22:
+9
+   |
+22 |     let forbidden_litera
+ls = vec!["15420", "placehold
+er", "mock_user"];
+   |         ^^^^^^^^^^^^^^^^
+^^ help: if this is intention
+al, prefix it with an undersc
+ore: `_forbidden_literals`
+
+warning: unused variable: `ap
+p_handle`
+  --> src\constitution.rs:48:
+31
+   |
+48 | pub fn check_system_inte
+grity(app_handle: AppHandle) 
+-> Result<Value, String> {
+   |                         
+      ^^^^^^^^^^ help: if thi
+s is intentional, prefix it w
+ith an underscore: `_app_hand
+le`
+
+warning: unused variable: `re
+l_id`
+   --> src\simulator.rs:233:2
+9
+    |
+233 |                        
+ let rel_id = format!("REL-{}
+", Uuid::new_v4().to_string()
+.split('-').next().unwrap());
+    |                        
+     ^^^^^^ help: if this is 
+intentional, prefix it with a
+n underscore: `_rel_id`
+
+warning: variable `success_co
+unt` is assigned to, but neve
+r used
+  --> src\simulator.rs:91:9
+   |
+91 |     let mut success_coun
+t = 0;
+   |         ^^^^^^^^^^^^^^^^
+^
+   |
+   = note: consider using `_s
+uccess_count` instead
+
+warning: value assigned to `s
+uccess_count` is never read
+   --> src\simulator.rs:276:2
+2
+    |
+276 |             Ok(_) => su
+ccess_count += 1,
+    |                      ^^
+^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overw
+ritten before being read?
+    = note: `#[warn(unused_as
+signments)]` (part of `#[warn
+(unused)]`) on by default
+
+warning: unused variable: `ca
+t_lower`
+   --> src\simulator.rs:302:9
+    |
+302 |     let cat_lower = sce
+nario.category.to_lowercase()
+;
+    |         ^^^^^^^^^ help:
+ if this is intentional, pref
+ix it with an underscore: `_c
+at_lower`
+
+For more information about th
+is error, try `rustc --explai
+n E0382`.
+warning: `auditflow` (bin "au
+ditflow") generated 18 warnin
+gs
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 1 previous error; 18 warn
+ings emitted

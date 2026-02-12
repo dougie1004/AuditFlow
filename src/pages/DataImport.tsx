@@ -42,7 +42,7 @@ const AnalysisOverlay = ({ isOpen, onClose, selectedFileIds, onComplete, project
     const steps = [
         "데이터 무결성 검증 및 포맷 확인",
         "비정형 텍스트 추출 (OCR/Parsing)",
-        "Google Gemini 3.0 Pro AI 파이프라인 연결",
+        "Generative AI Intelligence Core 파이프라인 연결",
         "감사 시나리오 매핑 중...",
         "부정 징후 패턴 매칭 및 스코어링",
         "최종 리포트 생성 중"
@@ -403,7 +403,7 @@ export default function DataImport() {
 
     const getFileIcon = (fileName: string) => {
         const ext = fileName.split('.').pop()?.toLowerCase();
-        if (['xlsx', 'csv'].includes(ext || '')) return <FileSpreadsheet className="w-5 h-5" />;
+        if (['xlsx', 'xls', 'csv'].includes(ext || '')) return <FileSpreadsheet className="w-5 h-5" />;
         return <File className="w-5 h-5" />;
     };
 
@@ -457,7 +457,7 @@ export default function DataImport() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 md:p-10 bg-white/5 rounded-[40px] shadow-2xl border border-white/10">
                 <div className="space-y-2">
                     <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">실사 데이터 업로드 <span className="text-blue-500">.</span></h1>
-                    <p className="text-sm md:text-base text-slate-400 font-medium">데이터 무결성 검증 및 Google Gemini 3.0 Pro AI 파이프라인 연결</p>
+                    <p className="text-sm md:text-base text-slate-400 font-medium">데이터 무결성 검증 및 Generative AI Intelligence Core 파이프라인 연결</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 md:gap-4 w-full md:w-auto">
                     <button onClick={handleUpload} disabled={isLoading} className="flex items-center justify-center gap-3 bg-white text-black px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-100 transition-all shadow-2xl disabled:opacity-70 active:scale-95 w-full md:w-auto cursor-pointer">

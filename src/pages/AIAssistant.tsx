@@ -6,6 +6,7 @@ import {
     ArrowRight, Loader2, ShieldCheck
 } from "lucide-react";
 import { useApp } from "../App";
+import { useAudit } from "../context/AuditContext";
 
 interface Message {
     role: "bot" | "user";
@@ -25,12 +26,9 @@ const SuggestionChip = ({ label, onClick, icon: Icon }: any) => (
 
 export default function AIAssistant() {
     const { activeProject } = useApp();
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            role: "bot",
-            content: "반갑습니다. AI 감사 분석관입니다. 대량의 데이터에서 리스크 패턴을 찾거나, 경영진 보고를 위한 핵심 요약이 필요하시면 언제든 말씀해 주세요."
-        }
-    ]);
+    const { state, setState } = useAudit();
+    const messages = state.aiChatHistory;
+
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,7 +44,13 @@ export default function AIAssistant() {
         if (!text.trim()) return;
 
         const userMsg: Message = { role: "user", content: text };
-        setMessages(prev => [...prev, userMsg]);
+
+        // Update global state immediately for UI feedback
+        setState(prev => ({
+            ...prev,
+            aiChatHistory: [...prev.aiChatHistory, userMsg]
+        }));
+
         setInput("");
         setIsTyping(true);
 
@@ -58,12 +62,18 @@ export default function AIAssistant() {
 
             // 시뮬레이션 지연 (AI 느낌)
             setTimeout(() => {
-                setMessages(prev => [...prev, { role: "bot", content: response }]);
+                setState(prev => ({
+                    ...prev,
+                    aiChatHistory: [...prev.aiChatHistory, { role: "bot", content: response }]
+                }));
                 setIsTyping(false);
             }, 800);
         } catch (err) {
             console.error(err);
-            setMessages(prev => [...prev, { role: "bot", content: "죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다." }]);
+            setState(prev => ({
+                ...prev,
+                aiChatHistory: [...prev.aiChatHistory, { role: "bot", content: "죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다." }]
+            }));
             setIsTyping(false);
         }
     };

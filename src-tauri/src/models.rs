@@ -44,6 +44,7 @@ pub struct AuditProject {
     pub risk_score: i32,
     pub created_at: Option<String>,
     pub valuation_tier: Option<String>, // seed, startup, enterprise
+    pub entity_id: Option<i64>,
 }
 
 // AuditFinding removed as it is currently unused and causing warnings.

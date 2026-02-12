@@ -8,9 +8,9 @@ pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
     let mut scenarios: Vec<(String, &str, &str, &str, &str)> = Vec::new();
 
     // --- Procurement (PR) 10 ---
-    scenarios.push(("PR-01".to_string(), "Procurement", "Bid-rigging Suspicion", "High", "Identifying vendors with the same IP address or similar proposal patterns."));
-    scenarios.push(("PR-02".to_string(), "Procurement", "Split PO for Approval Override", "Medium", "Splitting a single contract into smaller POs to bypass approval limits."));
-    scenarios.push(("PR-03".to_string(), "Procurement", "Market Price Gap", "High", "Purchasing at prices significantly higher than market benchmarks."));
+    scenarios.push(("PR-01".to_string(), "Procurement", "담합 의심 (Bid-rigging)", "High", "동일 IP 또는 유사 제안서 패턴을 가진 업체 식별."));
+    scenarios.push(("PR-02".to_string(), "Procurement", "품의 분할 (Split PO)", "Medium", "결재 한도를 회피하기 위해 단일 계약을 소액 PO로 분할."));
+    scenarios.push(("PR-03".to_string(), "Procurement", "시장가 격차 (Market Price Gap)", "High", "시장 기준가보다 현저히 높은 가격으로 구매."));
     scenarios.push(("PR-04".to_string(), "Procurement", "Conflict of Interest", "High", "Vendor registered by employee's relative or friend."));
     scenarios.push(("PR-05".to_string(), "Procurement", "Sole Source Overreliance", "Medium", "Excessive reliance on a single vendor without competitive bidding."));
     scenarios.push(("PR-06".to_string(), "Procurement", "Zombie Vendor Payments", "High", "Payments to inactive or non-existent vendors."));
@@ -164,9 +164,9 @@ pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
     scenarios.push(("RV-10".to_string(), "Revenue/Accounting", "Related Party Pricing", "High", "Transfer pricing deviations not at arm's length."));
 
     // --- Supply Chain & Collusion (PC) ---
-    scenarios.push(("PC-01".to_string(), "Supply Chain", "Bid Rotation Pattern", "High", "Winning vendors rotating in a predictable sequence (A->B->A)."));
-    scenarios.push(("PC-02".to_string(), "Supply Chain", "Phantom Bids", "High", "Losing bids physically created by the winning vendor (Check metadata)."));
-    scenarios.push(("PC-03".to_string(), "Supply Chain", "Change Order Abuse", "High", "Low bid win followed by immediate 'unforeseen' cost increase orders."));
+    scenarios.push(("PC-01".to_string(), "Supply Chain", "입찰 로테이션 (Bid Rotation)", "High", "낙찰 업체가 특정 순서(A->B->A)로 순환되는 패턴."));
+    scenarios.push(("PC-02".to_string(), "Supply Chain", "유령 입찰 (Phantom Bids)", "High", "낙찰업체가 허위로 생성한 들러리 입찰 징후 식별."));
+    scenarios.push(("PC-03".to_string(), "Supply Chain", "설계 변경 남용 (Change Order)", "High", "저가 투찰 후 즉각적인 설계 변경을 통한 단가 상승."));
     scenarios.push(("PC-04".to_string(), "Supply Chain", "Exclusive Distributor Mockery", "Medium", "Sole source justification letter copied from previous year."));
     scenarios.push(("PC-05".to_string(), "Supply Chain", "Inventory Parking", "High", "Suppliers holding conflicting inventory records to hide obsolescence."));
     scenarios.push(("PC-06".to_string(), "Supply Chain", "Product Substitution", "High", "Delivering lower grade specs than contracted/invoiced."));

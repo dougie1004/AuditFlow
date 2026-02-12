@@ -18,6 +18,7 @@ mod debug_api;
 mod constitution;
 mod assurance;
 mod simulator;
+mod compliance_judge;
 
 use database::initialize_database;
 use std::fs;
@@ -139,6 +140,8 @@ fn main() {
             commands::preview_vectorization,
             commands::promote_risk_v2,
             commands::update_status_v2,
+            commands::update_audit_universe_field,
+            commands::judge_risk_exposure,
             simulator::generate_annual_audit_data
         ])
         .on_window_event(|window, event| {

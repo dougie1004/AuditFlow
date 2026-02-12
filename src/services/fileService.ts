@@ -16,7 +16,7 @@ export const pickFiles = async (): Promise<string[] | FileList | null> => {
                 multiple: true,
                 filters: [{
                     name: 'Audit Files',
-                    extensions: ['xlsx', 'csv', 'pdf', 'docx', 'txt', 'eml', 'msg', 'log']
+                    extensions: ['xlsx', 'xls', 'csv', 'pdf', 'docx', 'txt', 'eml', 'msg', 'log']
                 }]
             });
             return Array.isArray(selected) ? selected : selected ? [selected] : null;
@@ -30,7 +30,7 @@ export const pickFiles = async (): Promise<string[] | FileList | null> => {
             const input = document.createElement('input');
             input.type = 'file';
             input.multiple = true;
-            input.accept = '.xlsx,.csv,.pdf,.docx,.txt,.eml,.msg,.log';
+            input.accept = '.xlsx,.xls,.csv,.pdf,.docx,.txt,.eml,.msg,.log';
             input.onchange = (e: any) => {
                 const files = e.target.files;
                 resolve(files && files.length > 0 ? files : null);

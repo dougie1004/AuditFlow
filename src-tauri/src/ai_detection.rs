@@ -269,32 +269,32 @@ pub async fn perform_vector_analysis(rows_with_index: Vec<(usize, String)>) -> V
     let vector_json = serde_json::to_string_pretty(&vectors).unwrap_or_default();
     
     let system_vector_prompt = r#"
-You occupy the role of [Evidence AI] in the AuditFlow system.
+You occupy the role of [Evidence Juror] in the AuditFlow system.
 Your input is a list of [AuditSignalVector] objects.
-Your task is to analyze these VECTORS (combinations of signals) and identify potential risks.
+Your task is NOT to judge 'Risk', but to DETECT phenomena and EXTRACT evidence.
 
 [INPUT SPEC]
-- evidence_hash: Unique ID of original data (do not ask for source).
+- evidence_hash: Unique ID of original data.
 - extracted_signals: Tags like "AMOUNT_BUCKET:HIGH", "CTX:GIFT_CARD".
 
-[RULES]
-1. You CANNOT see the original text. Do not hallucinate names or details.
-2. Rely ONLY on the signals provided.
-3. If "CTX:GIFT_CARD" AND "AMOUNT_BUCKET:HIGH" appear, flag as "High Risk Gift Card Purchase".
-4. If "CTX:CONSULTING" appears without "AMOUNT_BUCKET:HIGH", flag as "Low Risk Routine Consulting".
-
-[S-Score Guidelines]
-- 0.0 ~ 0.2: Normal connection (e.g. 'Consulting' tag + 'Office' context)
-- 0.3 ~ 0.6: Ambiguous (e.g. 'Consulting' tag with no clear context)
-- 0.7 ~ 1.0: HIGH Semantic Anomaly (e.g. 'Consulting' tag + 'CTX:ENTERTAINMENT' or 'CTX:GOLF')
+[JUROR INSTRUCTIONS]
+1. Do not use words like "Risk", "Violation", "High", "Low".
+2. Check against the following criteria checklist:
+   - [ ] Split Payment Suspected (SPLIT_PAYMENT tag present?)
+   - [ ] High Value Entertainment (ENTERTAINMENT + HIGH_AMOUNT?)
+   - [ ] Off-Hour Activity (AFTER_HOURS tag?)
+   - [ ] Gift/Voucher Purchase (GIFT_PURCHASE tag?)
+3. If criteria matched, set 'criteria_matched' to TRUE.
+4. Provide 'evidence_quote' from the signals (e.g., "Observed CTX:GOLF and TIME:AFTER_HOURS").
 
 [OUTPUT FORMAT]
 JSON Array of:
 {
   "row_index": <int from metadata>,
-  "risk_label": "High | Medium | Low",
-  "reasoning": "<Explanation based on signals>",
-  "semantic_score": <0.0 to 1.0>
+  "criteria_matched": <boolean>,
+  "matched_criterion": "<e.g. Off-Hour Entertainment | None>",
+  "evidence_quote": "<Concise factual observation>",
+  "semantic_score": <0.0 to 1.0 (Degree of Anomaly)>
 }
 "#;
 
@@ -313,8 +313,9 @@ JSON Array of:
     #[derive(serde::Deserialize)]
     struct VectorResponse {
         row_index: usize,
-        risk_label: String,
-        reasoning: String,
+        criteria_matched: Option<bool>,
+        matched_criterion: Option<String>,
+        evidence_quote: Option<String>,
         semantic_score: f32, // S-Score
     }
 
@@ -368,7 +369,10 @@ JSON Array of:
         // C. S-Score (Semantic): From AI
         let s_res = ai_map.get(&row_idx);
         let s_score = s_res.map(|r| r.semantic_score).unwrap_or(0.0);
-        let reasoning = s_res.map(|r| r.reasoning.clone()).unwrap_or("Analysis failed".to_string());
+        
+        // [JUROR LOGIC] Use Evidence Quote, fall back to composed string
+        let evidence = s_res.and_then(|r| r.evidence_quote.clone()).unwrap_or_else(|| "No specific evidence cited".to_string());
+        let criterion = s_res.and_then(|r| r.matched_criterion.clone()).unwrap_or_else(|| "General Anomaly".to_string());
         
         // D. Final Integrated Score
         // Formula: S(40%) + V(40%) + C(20%)
@@ -376,11 +380,11 @@ JSON Array of:
 
         if final_score > 0.4 {
              signals.push(SuspicionSignal::new(
-                format!("[Hybrid Analysis] Score {:.2} (S:{:.1}, V:{:.1}, C:{:.1}) - {}", final_score, s_score, v_score, c_score, &reasoning),
+                format!("[Audit Observation] {:.2} (S:{:.1}) - Found: {} | Evidence: {}", final_score, s_score, criterion, evidence),
                 final_score,
                 vec![row_idx as i64],
                 SignalScope::Transaction,
-                SignalSource::AI("HYBRID_ENGINE_V2".to_string()),
+                SignalSource::AI("JUROR_ENGINE_V1".to_string()),
                 Some(serde_json::json!({
                     "s_score": s_score,
                     "v_score": v_score,
@@ -389,7 +393,8 @@ JSON Array of:
                     "amount": amount,
                     "batch_mean": mean,
                     "batch_std_dev": std_dev,
-                    "vector_reasoning": reasoning,
+                    "evidence_quote": evidence,
+                    "matched_criterion": criterion,
                     "risk_label": if final_score > 0.8 { "High" } else { "Medium" }
                 }))
             ));

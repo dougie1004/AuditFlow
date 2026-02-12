@@ -2,6 +2,8 @@ use serde::{Serialize, Deserialize};
 use rusqlite::{params, Connection};
 use std::path::{Path, PathBuf};
 
+use crate::file_loader::load_file_rows;
+
 // --- DATA STRUCTURES ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -172,12 +174,12 @@ pub async fn run_compliance_check_flow(
     let mut findings_saved = 0;
 
     for (path, _) in target_files {
-        let rows = crate::audit_engine::load_file_rows(&path);
-        total_processed += rows.len();
-        
         // Simple Deterministic Scan on Raw Rows
         // Rule: Restricted Vendor
         let restricted_keywords = vec!["Bar", "Club", "유흥", "주점", "단란"];
+        let rows: Vec<Vec<String>> = load_file_rows(&path)?;
+        total_processed += rows.len();
+
         for (i, row) in rows.iter().enumerate() {
             let row_text = row.join(" | ");
             if restricted_keywords.iter().any(|&kw| row_text.contains(kw)) {

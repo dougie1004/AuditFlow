@@ -83,6 +83,7 @@ export interface AuditProject {
     created_at?: string | null;
     audit_type?: string | null;
     valuation_tier?: 'seed' | 'startup' | 'enterprise' | null;
+    entity_id?: number | null;
 }
 
 export interface SystemEvent {
@@ -152,6 +153,15 @@ export interface DashboardSummary {
     critical_risks: number; // Step 3: Aggregated management risks (the ~12 count)
     risk_exposure_score: number;
     potential_impact_value: number; // Added: Estimated financial impact for DD
+    exposure_breakdown?: {
+        governance_pct: number;
+        process_pct: number;
+        behavioral_pct: number;
+        governance_val: number;
+        process_val: number;
+        behavioral_val: number;
+    };
+    key_drivers?: { label: string; val: string; exposure: number }[];
     trends: { day: string; value: number }[];
 }
 

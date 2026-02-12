@@ -20,6 +20,7 @@ export default function AuditTask() {
     const { activeProject, setActiveProject } = useApp();
     const navigate = useNavigate();
     const [projects, setProjects] = useState<AuditProject[]>([]);
+    const [universe, setUniverse] = useState<any[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -43,7 +44,8 @@ export default function AuditTask() {
         target_period: '',
         execution_period: '',
         audit_scope: '',
-        valuation_tier: 'startup'
+        valuation_tier: 'startup',
+        entity_id: ''
     });
     const [idSuffix, setIdSuffix] = useState("");
 
@@ -52,6 +54,10 @@ export default function AuditTask() {
         try {
             const res: AuditProject[] = await safeInvoke('get_audit_projects');
             setProjects(res);
+
+            // Also fetch universe for the selector
+            const u: any[] = await safeInvoke('get_audit_universe');
+            setUniverse(u);
         } catch (err) {
             console.error(err);
         } finally {
@@ -114,7 +120,8 @@ export default function AuditTask() {
             audit_scope: formData.audit_scope,
             audit_type: formData.audit_type,
             created_at: new Date().toISOString(),
-            valuation_tier: formData.valuation_tier as 'seed' | 'startup' | 'enterprise'
+            valuation_tier: formData.valuation_tier as 'seed' | 'startup' | 'enterprise',
+            entity_id: (formData.entity_id && formData.entity_id !== 'new') ? parseInt(formData.entity_id) : null
         };
 
         try {
@@ -219,14 +226,34 @@ export default function AuditTask() {
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">감사대상 부문 (Department)</label>
-                                <input
-                                    type="text"
-                                    placeholder="예: 재무팀, 인사팀, IT솔루션팀..."
-                                    value={formData.department}
-                                    onChange={e => setFormData({ ...formData, department: e.target.value })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-600"
-                                />
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">감사대상 사업부/부문 (Business Unit Context)</label>
+                                <select
+                                    value={formData.entity_id}
+                                    onChange={e => {
+                                        const unit = universe.find(u => u.id.toString() === e.target.value);
+                                        setFormData({
+                                            ...formData,
+                                            entity_id: e.target.value,
+                                            department: unit ? unit.unit_name : ''
+                                        });
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all [&>option]:bg-[#0B1221] [&>option]:text-white"
+                                >
+                                    <option value="">-- 사업부 선택 (Universe Selection) --</option>
+                                    {universe.map(u => (
+                                        <option key={u.id} value={u.id}>{u.unit_name} ({u.category})</option>
+                                    ))}
+                                    <option value="new">+ 신규 부서 직접 입력 (Manual Input)</option>
+                                </select>
+                                {formData.entity_id === 'new' && (
+                                    <input
+                                        type="text"
+                                        placeholder="신규 부서명을 입력하세요..."
+                                        value={formData.department}
+                                        onChange={e => setFormData({ ...formData, department: e.target.value })}
+                                        className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-bold text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-slate-600 animate-in slide-in-from-top-2"
+                                    />
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Target Period (Month)</label>

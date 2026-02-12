@@ -76,7 +76,7 @@ const KnowledgeBase: React.FC = () => {
         try {
             const selected = await open({
                 multiple: false,
-                filters: [{ name: 'Documents', extensions: ['pdf', 'txt', 'md', 'docx', 'pptx', 'xlsx', 'csv', 'html'] }]
+                filters: [{ name: 'Documents', extensions: ['pdf', 'txt', 'md', 'docx', 'pptx', 'xlsx', 'xls', 'csv', 'html'] }]
             });
 
             if (selected && typeof selected === 'string') {

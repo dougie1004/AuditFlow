@@ -56,7 +56,6 @@ lazy_static! {
             "서울시", "서류", "서비스", "서명", "서로", "서신",
             "강남구", "강조", "강화", "강의", "강당",
             "한도", "한국", "한정", "한번", "한계",
-            "이상", "이하", "이번", "이동", "이유", "이제", "이용", "이전", "이해",
             "정상", "정기", "정리", "정보", "정책", "정부", "정산",
             "조사", "조치", "조정", "조직", "조회",
             "문서", "문제", "문화", "문의",
@@ -69,9 +68,20 @@ lazy_static! {
         for w in words { s.insert(w); }
         s
     };
+    
+    pub static ref BINARY_STR_RE: Regex = Regex::new(r"[\u{AC00}-\u{D7A3}a-zA-Z0-9\s\.,!\?@#$%&\(\)\-]{3,}").unwrap();
 }
 
-fn is_word_boundary(text: &str, idx: usize) -> bool {
+pub fn safe_truncate(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        return s.to_string();
+    }
+    let mut result: String = s.chars().take(max_chars).collect();
+    result.push_str("...");
+    result
+}
+
+pub fn is_word_boundary(text: &str, idx: usize) -> bool {
     if idx == 0 || idx >= text.len() { return true; }
     if !text.is_char_boundary(idx) { return false; }
     
@@ -143,19 +153,20 @@ fn mask_hangul_name(name: &str) -> String {
 
 
 pub fn apply_deidentification(input: &str) -> String {
-    // [PERMANENT] 2-Stage Masking Architecture
+    // [SAFETY] 입력 길이 제한 (정규표현식 스택 부하 방지 및 UTF-8 안전 처리)
+    let safe_input = safe_truncate(input, 5000);
     // Stage 1: Statutory Hard Masking (Legal Safety Belt)
     // - RRN, Credit Cards, Phone Numbers, Emails
     // - Deterministic, No AI Judgment involved.
-    let stage1 = mask_statutory_pii(input);
+    let stage1 = mask_statutory_pii(&safe_input);
 
     // Stage 2: Context-Aware Inference (Audit Context)
     // - Names, Positions, Entities
     // - Protects privacy while PRESERVING audit evidence (e.g. "Gift Cards", "Vendors")
     let stage2 = mask_contextual_inference(&stage1);
 
-    if &stage2 != input {
-        println!(">>> [DE-ID] Masked content: '{}' -> '{}'", input, stage2);
+    if &stage2 != &safe_input {
+    // println!(">>> [DE-ID] Masked content: '{}' -> '{}'", safe_input, stage2);
     }
 
     stage2
@@ -578,6 +589,7 @@ pub fn extract_text_from_zip(path: &Path, file_patterns: Vec<&str>) -> Result<St
         if let Ok(mut file) = archive.by_name(&name) {
             let mut content = String::new();
             if file.read_to_string(&mut content).is_ok() {
+                full_text.reserve(content.len());
                 let mut is_tag = false;
                 for c in content.chars() {
                     if c == '<' { is_tag = true; }
@@ -614,9 +626,68 @@ pub fn compress_csv_data(content: String) -> (String, Vec<String>) {
     ("Full Scan Ready".to_string(), row_store)
 }
 
+fn extract_strings_from_binary(path: &Path) -> Result<String, String> {
+    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    let mut file = File::open(path).map_err(|e| e.to_string())?;
+    
+    // [SAFETY] 프리뷰용 바이너리 스캔은 최대 2MB로 더 축소 (메모리 스파이크 방지)
+    let read_size = std::cmp::min(metadata.len(), 2 * 1024 * 1024) as usize;
+    let mut buffer = vec![0u8; read_size];
+    file.read_exact(&mut buffer).map_err(|e| e.to_string())?;
+
+    let mut result = String::new();
+    
+    // 1. 인코딩 디코딩 (전체 버퍼 한꺼번에)
+    let (cow_euc, _, _) = EUC_KR.decode(&buffer);
+    let (cow_u16, _, _) = encoding_rs::UTF_16LE.decode(&buffer);
+
+    let mut combined_content = Vec::new();
+    
+    // 2. 정규표현식 기반 단어 추출 (최대 수집 개수 제한)
+    for text in &[cow_euc, cow_u16] {
+        for mat in BINARY_STR_RE.find_iter(text) {
+            let s = mat.as_str().trim();
+            if s.chars().count() >= 4 && s.chars().any(|c| c.is_alphanumeric()) {
+                combined_content.push(s.to_string());
+                if combined_content.len() > 500 { break; } // 너무 많이 수집하지 않음
+            }
+        }
+        if combined_content.len() > 500 { break; }
+    }
+
+    // [SAFETY] 중복 제거 전 필터링
+    combined_content.sort();
+    combined_content.dedup();
+    
+    for s in combined_content.into_iter().take(150) {
+        let line = safe_truncate(&s, 200);
+        result.push_str(&line);
+        result.push('\n');
+    }
+
+    if result.is_empty() {
+        return Err("의미 있는 데이터를 찾을 수 없습니다.".into());
+    }
+    Ok(result)
+}
+
 pub fn read_any_file(path: &Path, ext: &str) -> Result<String, String> {
+    // [SAFETY] 프리뷰용 파일 읽기 통합 제한 (10MB)
+    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    if metadata.len() > 10 * 1024 * 1024 && ext != "xlsx" && ext != "xls" {
+        return Err("파일이 너무 커서 미리보기를 생성할 수 없습니다. (10MB 제한)".into());
+    }
+
     match ext {
-        "pdf" => extract_text(path).map_err(|e| format!("PDF Error: {}", e)),
+        "pdf" => {
+            if metadata.len() > 5 * 1024 * 1024 {
+                return Err("대용량 PDF는 미리보기를 지원하지 않습니다.".into());
+            }
+            match extract_text(path) {
+                Ok(t) => Ok(t),
+                Err(_) => extract_strings_from_binary(path).map(|s| format!("[PDF 텍스트 추출 폴백]\n(구조화된 추출에 실패하여 바이너리에서 복구된 데이터입니다)\n\n{}", s))
+            }
+        },
         "docx" => extract_text_from_zip(path, vec!["word/document"]),
         "pptx" => extract_text_from_zip(path, vec!["ppt/slides/slide"]),
         "xlsx" => extract_text_from_zip(path, vec!["xl/sharedStrings", "xl/worksheets/sheet"]),
@@ -628,12 +699,20 @@ pub fn read_any_file(path: &Path, ext: &str) -> Result<String, String> {
             let body = parsed.get_body().unwrap_or("[EMPTY_EMAIL_BODY]".to_string());
             Ok(format!("[EMAIL]\nFrom: {}\nSubject: {}\nBody:\n{}", from, subject, body))
         },
+        "msg" => extract_strings_from_binary(path).map(|s| format!("[MS-OUTLOOK .MSG 미리보기]\n(바이너리에서 텍스트만 추출되었습니다)\n\n{}", s)),
         "txt" | "md" | "json" | "xml" | "log" | "sql" | "csv" | "html" | "htm" => {
             read_file_with_encoding(path)
         },
+        "exe" | "dll" | "zip" | "7z" | "rar" | "bin" | "dat" => {
+            Err(format!("바이너리 파일로 감지되었습니다 (.{}), 안전을 위해 미리보기를 생략합니다.", ext))
+        },
         _ => {
+            let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+            if metadata.len() > 1 * 1024 * 1024 { // Strict 1MB limit for unknown types
+                 return Err(format!("Unknown binary or large file ({} bytes), preview skipped.", metadata.len()));
+            }
             if let Ok(text) = read_file_with_encoding(path) {
-                if text.len() > 0 && text.chars().take(100).all(|c| !c.is_control() || c.is_whitespace()) {
+                if text.len() > 0 && text.chars().take(200).all(|c| !c.is_control() || c.is_whitespace()) {
                     return Ok(text);
                 }
             }

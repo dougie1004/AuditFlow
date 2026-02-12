@@ -102,14 +102,14 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                 "INSERT OR REPLACE INTO audit_projects (id, title, status, progress_pct, start_date, end_date, lead_auditor, valuation_tier, risk_score) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 params![
                     &project_id, 
-                    format!("FY{} {} Detailed Audit", config.year, &unit.name), 
+                    format!("{}년 {} 정밀 감사 (FY{})", config.year, &unit.name, config.year), 
                     "Fieldwork", 
-                    rng.gen_range(30..80), // Varied progress
+                    rng.gen_range(30..80), 
                     format!("{}-01-01", config.year), 
                     format!("{}-12-31", config.year), 
                     "AI_SIMULATOR",
                     format!("Tier: {}", if unit.id % 2 == 0 { "Enterprise" } else { "Standard" }),
-                    rng.gen_range(5..85) // Simulated risk score
+                    rng.gen_range(5..85)
                 ]
             ).map_err(|e| e.to_string())?;
 
@@ -120,7 +120,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                 params![
                     &session_id, 
                     &project_id, 
-                    format!("{} Annual Review", &unit.name),
+                    format!("{} 연간 정기 검토", &unit.name),
                     format!("{}-01-01", config.year), 
                     format!("{}-12-31", config.year),
                     "OPEN"
@@ -176,7 +176,8 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
 
                     let day = rng.gen_range(1..28);
                     let date_str = format!("{}-{:02}-{:02} 14:30:00", config.year, month, day);
-                    let amount = rng.gen_range(1000.0..5000000.0);
+                    let amount: f64 = rng.gen_range(10000.0..5000000.0);
+                    let amount = amount.round();
 
                     // [LINKAGE FIX] Generate a source Audit Object to anchor the task
                     let object_id = format!("OBJ-{}", Uuid::new_v4().to_string().split('-').next().unwrap());
@@ -229,10 +230,26 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                     total_events += 1;
 
                     if status == "CONFIRMED" || status == "PENDING" {
+                        // [FORENSIC UPGRADE] Linkage: Find another transaction in the same project to link to
+                        // To keep it simple, we link to the previous transaction if it exists
+                        let prev_object_id = format!("OBJ-PREV-{}", unit.id);
+                        let _ = conn.execute(
+                            "INSERT OR IGNORE INTO audit_object (id, object_type, source, extracted_fields, ingested_at, status, project_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                            params![
+                                &prev_object_id,
+                                "LEDGER_ENTRY",
+                                "SIMULATED_DATA_SOURCE",
+                                json!({"description": "Base Transaction for Linkage", "amount": 0.0}).to_string(),
+                                &date_str,
+                                "ACTIVE",
+                                &project_id
+                            ]
+                        );
+
                         // [LINKAGE FIX] Create a Relation Candidate to fuel the "Insights" tab
                         let rel_id = format!("REL-{}", Uuid::new_v4().to_string().split('-').next().unwrap());
                         
-                        // Use ignore or log error to prevent crash
+                        // Relationship Type 1: Policy Violation
                         let _ = conn.execute(
                             "INSERT INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
                             params![
@@ -244,11 +261,29 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                             ]
                         );
 
+                        // Relationship Type 2: Entity Resolution (Cluster)
+                        let _ = conn.execute(
+                            "INSERT OR IGNORE INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                            params![
+                                &object_id, 
+                                &prev_object_id,
+                                json!(["ENTITY_RESOLUTION", "IDENTICAL_MERCHANT"]).to_string(),
+                                "pattern",
+                                &date_str
+                            ]
+                        );
+
+                        let issue_title = if count >= 3 {
+                            format!("🚨 [Repeated] {}", &scenario.name)
+                        } else {
+                            scenario.name.clone()
+                        };
+
                         let _ = conn.execute(
                             "INSERT INTO audit_issues (issue_title, description, severity, project_type, audit_id, status, detected_at, row_index, entity_id, manager_comment) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                             params![
-                                &scenario.name,
-                                format!("Simulated issue: {} (Recurrence: {})", &scenario.name, count),
+                                &issue_title,
+                                format!("{}원 상당의 의심 거래 탐지 (분기 내 {}회 반복됨)", amount, count),
                                 risk_tag,
                                 &unit.category,
                                 &project_id,
@@ -260,11 +295,59 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                             ]
                         );
 
+                        // [PHASE 6] Case Elevation & Forensic Clusters
+                        if count >= 3 {
+                            let case_id = format!("CASE-{}-{}", unit.id, scenario.id);
+                            let _ = conn.execute(
+                                "INSERT OR REPLACE INTO audit_cases (id, project_id, title, reasoning, severity, status, entity_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                                params![
+                                    &case_id,
+                                    &project_id,
+                                    format!("⚖️ Investigation: Repeated Risk in {}", unit.name),
+                                    format!("자동 승격: 동일 엔티티({})에서 3회 이상 반복되는 시나리오({}) 발견. 고의적 부정 가능성 높음.", unit.name, scenario.name),
+                                    "HIGH",
+                                    "DRAFT",
+                                    unit.id,
+                                    &date_str
+                                ]
+                            );
+
+                            // Emit Forensic Event
+                            let _ = conn.execute(
+                                "INSERT INTO system_events (id, event_type, description, audit_id) VALUES (?1, ?2, ?3, ?4)",
+                                params![
+                                    Uuid::new_v4().to_string(),
+                                    "AI_SIGNAL",
+                                    format!("⚖️ 케이스 승격: '{}' 부서의 [{}] 리스크 반복 노출로 정식 조사 케이스 자동 생성", unit.name, scenario.name),
+                                    &project_id
+                                ]
+                            );
+                        }
+
+                        if count == 2 {
+                             // Emit Repetition Amplifier Event
+                             let _ = conn.execute(
+                                "INSERT INTO system_events (id, event_type, description, audit_id) VALUES (?1, ?2, ?3, ?4)",
+                                params![
+                                    Uuid::new_v4().to_string(),
+                                    "RISK_CHANGE",
+                                    format!("🚩 반복 탐지: '{}' 부서의 [{}] 리스크 추적 결과 이상 징후 반복 확인", unit.name, scenario.name),
+                                    &project_id
+                                ]
+                            );
+                        }
+
                         // [DASHBOARD SYNC] Update findings_count and risk_score for the project
                         let increment = match risk_tag { "Critical" => 10, "High" => 5, _ => 2 };
                         let _ = conn.execute(
                             "UPDATE audit_projects SET findings_count = findings_count + 1, risk_score = risk_score + ?1 WHERE id = ?2",
                             params![increment, &project_id]
+                        );
+
+                        // [UNIVERSE SYNC] Reflect risk back to the Audit Universe
+                        let _ = conn.execute(
+                            "UPDATE audit_universe SET impact_score = impact_score + ?1, likelihood_score = likelihood_score + 1 WHERE id = ?2",
+                            params![increment, unit.id]
                         );
                     }
                 }
@@ -288,7 +371,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
         params![
             format!("sim-evt-{}", Uuid::new_v4()),
             "SYSTEM_INFO",
-            format!("FY2025 Annual Audit Simulation Completed. {} entities, {} incidents generated.", units.len(), total_events),
+            format!("{}년 연간 감사 시뮬레이션 완료. {}개 부서, {}건의 리스크 시그널 생성됨.", config.year, units.len(), total_events),
             "GLOBAL_SIM"
         ]
     ).map_err(|e| e.to_string())?;
@@ -303,18 +386,18 @@ fn is_scenario_relevant(unit: &UnitProfile, scenario: &ScenarioDef) -> bool {
     let id_prefix = &scenario.id.split('-').next().unwrap_or("").to_lowercase();
 
     match unit_name_lower.as_str() {
-        name if name.contains("procurement") => id_prefix == "pr" || id_prefix == "pc" || id_prefix == "ab",
-        name if name.contains("it") || name.contains("security") => id_prefix == "it" || id_prefix == "itx",
-        name if name.contains("hr") || name.contains("payroll") || name.contains("human") => id_prefix == "hr",
-        name if name.contains("treasury") || name.contains("finance") || name.contains("accounting") => id_prefix == "fa" || id_prefix == "aml" || id_prefix == "ff" || id_prefix == "rv",
-        name if name.contains("logistics") || name.contains("inventory") => id_prefix == "in",
-        name if name.contains("sales") => id_prefix == "sa" || id_prefix == "rv",
-        name if name.contains("r&d") || name.contains("research") => id_prefix == "itx" || id_prefix == "pq",
-        name if name.contains("compliance") || name.contains("legal") => id_prefix == "cl" || id_prefix == "es" || id_prefix == "ab",
-        name if name.contains("marketing") => id_prefix == "ex" || id_prefix == "cc",
-        name if name.contains("general affairs") => id_prefix == "cc" || id_prefix == "ex",
-        name if name.contains("production") || name.contains("quality") => id_prefix == "pq",
-        name if name.contains("branch") || name.contains("subsidiary") => id_prefix == "sa" || id_prefix == "ex" || id_prefix == "cc" || id_prefix == "ab",
+        name if name.contains("구매") || name.contains("procurement") => id_prefix == "pr" || id_prefix == "pc" || id_prefix == "ab",
+        name if name.contains("it") || name.contains("보안") || name.contains("security") => id_prefix == "it" || id_prefix == "itx",
+        name if name.contains("인사") || name.contains("급여") || name.contains("hr") || name.contains("payroll") => id_prefix == "hr",
+        name if name.contains("자금") || name.contains("재무") || name.contains("회계") || name.contains("treasury") || name.contains("finance") || name.contains("accounting") => id_prefix == "fa" || id_prefix == "aml" || id_prefix == "ff" || id_prefix == "rv",
+        name if name.contains("물류") || name.contains("재고") || name.contains("logistics") || name.contains("inventory") => id_prefix == "in",
+        name if name.contains("영업") || name.contains("sales") => id_prefix == "sa" || id_prefix == "rv",
+        name if name.contains("연구") || name.contains("개발") || name.contains("r&d") || name.contains("research") => id_prefix == "itx" || id_prefix == "pq",
+        name if name.contains("준수") || name.contains("법무") || name.contains("compliance") || name.contains("legal") => id_prefix == "cl" || id_prefix == "es" || id_prefix == "ab",
+        name if name.contains("마케팅") || name.contains("marketing") => id_prefix == "ex" || id_prefix == "cc",
+        name if name.contains("총무") || name.contains("general affairs") => id_prefix == "cc" || id_prefix == "ex",
+        name if name.contains("생산") || name.contains("품질") || name.contains("production") || name.contains("quality") => id_prefix == "pq",
+        name if name.contains("지사") || name.contains("법인") || name.contains("branch") || name.contains("subsidiary") => id_prefix == "sa" || id_prefix == "ex" || id_prefix == "cc" || id_prefix == "ab",
         _ => id_prefix == "ex" || id_prefix == "cc" // Fallback: Everyone has expenses
     }
 }

@@ -38,5 +38,5 @@ pub fn remove_duplicate_issues(app_handle: AppHandle, project_id: String) -> Res
         conn.execute("DELETE FROM audit_issues WHERE id = ?1", params![id]).ok();
     }
 
-    Ok(format!("{}媛쒖쓽 以묐났 ?댁뒋瑜??쒓굅?덉뒿?덈떎.", deleted_count))
+    Ok(format!("{}개의 중복 이슈를 제거했습니다.", deleted_count))
 }

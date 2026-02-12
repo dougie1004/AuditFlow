@@ -9,30 +9,38 @@ import {
     Layers, ClipboardList, Clock, Plus
 } from 'lucide-react';
 import { useApp } from '../App';
+import { useAudit } from '../context/AuditContext';
 import { AuditSession, ReviewItem } from '../types';
 
 export default function AuditWorkspace() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { activeProject, setActiveProject } = useApp();
+    const { state, setState } = useAudit();
+
+    const { activeTab, role, currentSessionId } = state.workspaceState;
 
     const [projects, setProjects] = useState<any[]>([]);
     const [auditObjects, setAuditObjects] = useState<any[]>([]);
     const [relationCandidates, setRelationCandidates] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-
     const [sessions, setSessions] = useState<AuditSession[]>([]);
-    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [reviewQueue, setReviewQueue] = useState<ReviewItem[]>([]);
 
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState<'explorer' | 'queue'>('explorer');
-    const [role, setRole] = useState<'Auditor' | 'Reviewer'>('Auditor');
+
+    // Helper to update workspace state
+    const setWorkspaceState = (patch: Partial<typeof state.workspaceState>) => {
+        setState(prev => ({
+            ...prev,
+            workspaceState: { ...prev.workspaceState, ...patch }
+        }));
+    };
 
     useEffect(() => {
-        const state = location.state as any;
-        if (state?.metric === "Pending Reviews") {
-            setActiveTab('queue');
+        const routeState = location.state as any;
+        if (routeState?.metric === "Pending Reviews") {
+            setWorkspaceState({ activeTab: 'queue' });
         }
     }, [location]);
 
@@ -58,24 +66,43 @@ export default function AuditWorkspace() {
         ]).then(([objs, candidates, sess, riskData]: [any, any, any, any]) => {
             setAuditObjects(objs);
 
-            // [CRITICAL FIX] Merge New AI Risks into Legacy Candidate View
-            // Mapping 'suspicion_inbox' items to 'relation_candidate' structure for display
-            const newRisks = (riskData?.items || []).map((r: any) => ({
-                // Make it look like a relation for the UI
-                from_object_id: r.source || "AI_ENGINE",
-                to_object_id: "RISK_FOUND", // Shortened from RISK_DETECTED to fit UI 12-char limit
-                reason_codes: r.observation,
-                confidence: (r.score || 0) >= 0.8 ? 'exact' : 'high',
-                // Preserve original ID for traceability if needed
-                original_id: r.id
-            }));
+            const newRisks = (riskData?.items || []).map((r: any) => {
+                let parsedMeta = {};
+                try { parsedMeta = JSON.parse(r.metadata || '{}'); } catch (e) { }
+                return {
+                    from_object_id: r.source || "AI_JUROR",
+                    to_object_id: "RISK_FOUND",
+                    reason_codes: r.observation,
+                    confidence: (r.score || 0) >= 0.8 ? 'exact' : 'high',
+                    original_id: r.id,
+                    meta: parsedMeta
+                };
+            });
 
-            // Prepend risks so they appear first
             setRelationCandidates([...newRisks, ...candidates]);
-
             setSessions(sess);
-            if (sess.length > 0 && !currentSessionId) {
-                setCurrentSessionId(sess[0].id);
+
+            if (activeProject) {
+                const relevantSession = sess.find((s: any) => s.project_id === activeProject);
+                if (relevantSession) {
+                    setWorkspaceState({ currentSessionId: relevantSession.id });
+                } else {
+                    console.log("No session found for project, auto-creating...");
+                    safeInvoke("create_audit_session", {
+                        projectId: activeProject,
+                        name: "Default Audit Session (Auto-Generated)",
+                        periodStart: "2026-01-01",
+                        periodEnd: "2026-12-31",
+                        includedObjectTypes: "ALL"
+                    }).then((newSessId: any) => {
+                        setWorkspaceState({ currentSessionId: newSessId });
+                        safeInvoke("get_audit_sessions", { projectId: activeProject }).then((updatedSess: any) => setSessions(updatedSess));
+                    });
+                }
+            } else {
+                if (sess.length > 0 && !currentSessionId) {
+                    setWorkspaceState({ currentSessionId: sess[0].id });
+                }
             }
             setIsLoading(false);
         });
@@ -101,9 +128,7 @@ export default function AuditWorkspace() {
             periodEnd: "2026-03-31",
             includedObjectTypes: "LEDGER,POLICY,EMAIL"
         }).then((sessId: any) => {
-            setCurrentSessionId(sessId);
-            setActiveTab('queue');
-            // Refresh sessions
+            setWorkspaceState({ currentSessionId: sessId, activeTab: 'queue' });
             safeInvoke("get_audit_sessions", { projectId: activeProject }).then((sess: any) => setSessions(sess));
         });
     };
@@ -144,11 +169,25 @@ export default function AuditWorkspace() {
         });
     };
 
-    const handleResolveEscalation = (itemId: string, status: 'CONFIRMED' | 'DISMISSED') => {
-        const note = prompt("Reviewer Final Decision Note (ESCALATION RESOLUTION):");
+    const handleResolveEscalation = (itemId: string, status: 'CONFIRMED' | 'DISMISSED' | 'SEALED') => {
+        // If SEALED, we map it to CONFIRMED for backend but add a special note or handle local state to hide it
+        const effectiveStatus = status === 'SEALED' ? 'CONFIRMED' : status;
+
+        // For SEALED, we auto-generate the note to speed up workflow
+        const note = status === 'SEALED'
+            ? "Final Approval Granted. Sealed by Reviewer."
+            : prompt("Reviewer Final Decision Note (ESCALATION RESOLUTION):");
+
         if (!note) return;
-        safeInvoke("resolve_escalation", { itemId, status, finalNote: note }).then(() => {
-            setReviewQueue(prev => prev.map(item => item.id === itemId ? { ...item, status, reviewer_final_note: note } : item));
+
+        safeInvoke("resolve_escalation", { itemId, status: effectiveStatus, finalNote: note }).then(() => {
+            setReviewQueue(prev => prev.map(item => item.id === itemId ? {
+                ...item,
+                status: effectiveStatus,
+                // If sealed, we artificially add a flag or just rely on the note/status combination. 
+                // Ideally, we update the local state to reflect 'SEALED' behavior visually immediately.
+                reviewer_final_note: note
+            } : item));
         });
     };
 
@@ -214,13 +253,13 @@ export default function AuditWorkspace() {
 
                         <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
                             <button
-                                onClick={() => setRole('Auditor')}
+                                onClick={() => setWorkspaceState({ role: 'Auditor' })}
                                 className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Auditor' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-white'}`}
                             >
                                 감사인 (Auditor)
                             </button>
                             <button
-                                onClick={() => setRole('Reviewer')}
+                                onClick={() => setWorkspaceState({ role: 'Reviewer' })}
                                 className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Reviewer' ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/40' : 'text-slate-500 hover:text-white'}`}
                             >
                                 검토 책임자 (Reviewer)
@@ -229,13 +268,13 @@ export default function AuditWorkspace() {
 
                         <div className="flex items-center gap-3 bg-white/5 p-1 rounded-2xl border border-white/5">
                             <button
-                                onClick={() => setActiveTab('explorer')}
+                                onClick={() => setWorkspaceState({ activeTab: 'explorer' })}
                                 className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'explorer' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-white'}`}
                             >
                                 <Zap size={14} /> 증거 저장소 (Repository)
                             </button>
                             <button
-                                onClick={() => setActiveTab('queue')}
+                                onClick={() => setWorkspaceState({ activeTab: 'queue' })}
                                 className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'queue' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-white'}`}
                             >
                                 <ClipboardList size={14} /> {currentSession?.status === 'CLOSED' ? '감사 결과 보고서' : (role === 'Reviewer' ? '이슈 최종 승인' : '이슈 검토 목록')}
@@ -249,11 +288,11 @@ export default function AuditWorkspace() {
 
                 <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 flex flex-col gap-4 w-full md:w-auto min-w-[320px]">
                     <div className="flex justify-between items-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Active Audit Session</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">활성 감사 세션 (Active Session)</p>
                         <div className="flex gap-4">
                             {currentSession?.status === 'OPEN' && (
                                 <button onClick={handleCloseSession} className="text-emerald-500 hover:text-emerald-400 text-[10px] font-black uppercase tracking-widest">
-                                    Close Session
+                                    세션 종료 (Close)
                                 </button>
                             )}
                             <button onClick={handleCreateSession} className="text-blue-400 hover:text-blue-300 transition-colors">
@@ -265,13 +304,11 @@ export default function AuditWorkspace() {
                         <select
                             value={currentSessionId || ""}
                             onChange={(e) => {
-                                setCurrentSessionId(e.target.value);
-                                // Default to queue/report tab when switching session
-                                setActiveTab('queue');
+                                setWorkspaceState({ currentSessionId: e.target.value, activeTab: 'queue' });
                             }}
                             className="appearance-none bg-black/40 border border-white/5 text-slate-200 font-bold text-sm py-3 px-4 pr-10 rounded-xl outline-none w-full cursor-pointer hover:bg-black/60 transition-all font-mono"
                         >
-                            <option value="" disabled>No Active Session</option>
+                            <option value="" disabled>진행 중인 세션 없음</option>
                             {sessions.map(s => (
                                 <option key={s.id} value={s.id}>{s.status === 'CLOSED' ? "🔒" : "🔓"} {s.name}</option>
                             ))}
@@ -321,11 +358,19 @@ export default function AuditWorkspace() {
                                                             {obj.object_type === 'POLICY' ? <ShieldCheck size={16} /> : obj.object_type === 'EMAIL' ? <Search size={16} /> : <FileText size={16} />}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-black text-white">{obj.object_type}</p>
+                                                            <p className="text-sm font-black text-white">
+                                                                {obj.object_type === 'POLICY' ? '감사 규정 (Policy)' :
+                                                                    obj.object_type === 'EMAIL' ? '이메일 (Email)' :
+                                                                        obj.object_type === 'LEDGER' ? '원장 (Ledger)' :
+                                                                            obj.object_type === 'COMMUNICATION' ? '커뮤니케이션 (Comm.)' :
+                                                                                obj.object_type}
+                                                            </p>
                                                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{obj.id}</p>
                                                         </div>
                                                     </div>
-                                                    <span className={`text-[9px] font-black px-2 py-1 rounded ${obj.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/5 text-slate-500'}`}>{obj.status}</span>
+                                                    <span className={`text-[9px] font-black px-2 py-1 rounded ${obj.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/5 text-slate-500'}`}>
+                                                        {obj.status === 'ACTIVE' ? '활성 (Active)' : '비활성'}
+                                                    </span>
                                                 </div>
                                                 <div className="bg-black/20 rounded-2xl p-4 font-mono text-[10px] text-slate-400 max-h-32 overflow-hidden relative">
                                                     {obj.extracted_fields}
@@ -356,7 +401,7 @@ export default function AuditWorkspace() {
                                         relationCandidates.map((rel, i) => (
                                             <div key={i} className="bg-emerald-500/5 border border-emerald-500/10 rounded-[40px] p-8 flex items-center gap-8 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
                                                 <div className="flex-1 space-y-2">
-                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Candidate #{i + 1}</p>
+                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">분석 후보 (Candidate) #{i + 1}</p>
                                                     <div className="flex items-center gap-4">
                                                         <div className="text-xs font-black text-white px-2 py-1 bg-white/5 rounded">{rel.from_object_id}</div>
                                                         <MoveRight className="text-emerald-500/40" size={16} />
@@ -364,12 +409,14 @@ export default function AuditWorkspace() {
                                                     </div>
                                                 </div>
                                                 <div className="flex-[2]">
-                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Reason Context</p>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">탐지 근거 (Reason)</p>
                                                     <p className="text-xs text-slate-300 font-bold leading-relaxed">{rel.reason_codes}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Confidence</p>
-                                                    <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${rel.confidence === 'exact' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-slate-400'}`}>{rel.confidence}</span>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">신뢰도 (Confidence)</p>
+                                                    <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${rel.confidence === 'exact' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-slate-400'}`}>
+                                                        {rel.confidence === 'exact' ? '정밀 일치' : rel.confidence === 'high' ? '높음' : '패턴 매칭'}
+                                                    </span>
                                                 </div>
                                                 {role === 'Auditor' && rel.original_id && (
                                                     <button
@@ -382,7 +429,41 @@ export default function AuditWorkspace() {
                                             </div>
                                         ))
                                     )}
+
                                 </div>
+
+                                {/* [New] Audit Evidence Detail Modal Logic Placeholder */}
+                                {/* Implementing inline for now to avoid large refactor */}
+                                {relationCandidates.map((rel, i) => (
+                                    (rel.meta?.evidence_quote) && (
+                                        <div key={`evidence-${i}`} className="hidden group-hover:block absolute z-50 bg-slate-800 border border-emerald-500/30 p-6 rounded-2xl shadow-2xl w-[400px] right-full mr-4 top-0 animate-in fade-in zoom-in-95">
+                                            <h5 className="text-emerald-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
+                                                <BrainCircuit size={12} /> 배심원(AI) 제보 증거 (Evidence)
+                                            </h5>
+                                            <div className="bg-black/40 p-3 rounded-lg border border-white/5 mb-4">
+                                                <p className="text-white text-xs italic">"{rel.meta.evidence_quote}"</p>
+                                            </div>
+
+                                            <h5 className="text-blue-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
+                                                <Database size={12} /> 판심(Engine) 산출 근거 (Logic)
+                                            </h5>
+                                            <div className="space-y-1 text-[10px] text-slate-400 font-mono">
+                                                <div className="flex justify-between">
+                                                    <span>일치 기준 (Matched Criterion):</span>
+                                                    <span className="text-white">{rel.meta.matched_criterion}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>이상 점수 (Anomaly Score):</span>
+                                                    <span className="text-white">{rel.meta.s_score?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
+                                                    <span>최종 판결 (Verdict):</span>
+                                                    <span className="text-emerald-400 font-bold">{rel.meta.risk_label === 'HIGH' ? '심각' : rel.meta.risk_label === 'MEDIUM' ? '주의' : '낮음'} 위험 (RISK)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                ))}
                             </div>
                         </div>
                     ) : currentSession?.status === 'CLOSED' ? (
@@ -390,12 +471,12 @@ export default function AuditWorkspace() {
                         <div className="max-w-4xl mx-auto bg-slate-900/80 border border-white/10 rounded-[48px] p-16 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
                             <div className="flex justify-between items-start mb-12">
                                 <div className="space-y-2">
-                                    <span className="bg-emerald-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Final Audit Report</span>
+                                    <span className="bg-emerald-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">감사 최종 보고서 (Final Report)</span>
                                     <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">{currentSession.name}</h2>
                                     <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Session ID: {currentSession.id}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Closed Date</p>
+                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">종료 일자 (Closed Date)</p>
                                     <p className="text-lg font-black text-white">{currentSession.created_at.split(' ')[0]}</p>
                                 </div>
                             </div>
@@ -458,12 +539,12 @@ export default function AuditWorkspace() {
                                 <div className="flex gap-4">
                                     <div className="bg-white/5 px-6 py-3 rounded-2xl border border-white/5 flex items-center gap-6 shadow-2xl">
                                         <div className="text-center">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase">Pending</p>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase">검토 대기 (Pending)</p>
                                             <p className="text-xl font-black text-white">{reviewQueue.filter(i => i.status === 'PENDING').length}</p>
                                         </div>
                                         <div className="w-px h-8 bg-white/10" />
                                         <div className="text-center">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase">Confirmed</p>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase">조사 확정 (Confirmed)</p>
                                             <p className="text-xl font-black text-emerald-500">{reviewQueue.filter(i => i.status === 'CONFIRMED').length}</p>
                                         </div>
                                     </div>
@@ -497,7 +578,10 @@ export default function AuditWorkspace() {
                                                                     item.status === 'ESCALATED' ? 'bg-rose-500/20 text-rose-500' :
                                                                         'bg-slate-500/20 text-slate-500'
                                                                 }`}>
-                                                                {item.status}
+                                                                {item.status === 'PENDING' ? '검토 대기 (Pending)' :
+                                                                    item.status === 'CONFIRMED' ? '이슈 확정 (Confirmed)' :
+                                                                        item.status === 'ESCALATED' ? '상신 (Escalated)' :
+                                                                            item.status === 'DISMISSED' ? '기각 (Dismissed)' : item.status}
                                                             </span>
                                                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ID: #{item.id}</span>
                                                         </div>
@@ -545,27 +629,41 @@ export default function AuditWorkspace() {
                                                                     onClick={() => handleResolveEscalation(item.id, 'CONFIRMED')}
                                                                     className="w-full bg-rose-600 text-white py-5 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-rose-500 shadow-xl shadow-rose-950/20 transition-all flex items-center justify-center gap-3 active:scale-95"
                                                                 >
-                                                                    <ShieldCheck size={18} /> Resolve as CONFIRMED
+                                                                    <ShieldCheck size={18} /> 조사 확정 (Confirm issues)
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleResolveEscalation(item.id, 'DISMISSED')}
                                                                     className="w-full bg-white/5 border border-white/10 text-slate-400 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
                                                                 >
-                                                                    Dismiss Escalation
+                                                                    상신 기각 (Dismiss Escalation)
                                                                 </button>
                                                             </>
+
                                                         ) : role === 'Reviewer' && item.status === 'CONFIRMED' ? (
-                                                            <>
-                                                                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-2 text-center">
-                                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Auditor Verified</p>
+                                                            // Check if it's already "Sealed" (has a final note from reviewer)
+                                                            item.reviewer_final_note ? (
+                                                                <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] text-center flex flex-col items-center justify-center gap-3 animate-in fade-in zoom-in w-full h-full">
+                                                                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                                                        <Lock size={20} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">최종 승인 및 봉출됨 (Sealed)</p>
+                                                                        <p className="text-[9px] text-slate-500 font-bold mt-1">Status Locked</p>
+                                                                    </div>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => handleResolveEscalation(item.id, 'CONFIRMED')}
-                                                                    className="w-full bg-emerald-600 text-white py-5 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-500 shadow-xl shadow-emerald-950/20 transition-all flex items-center justify-center gap-3 active:scale-95"
-                                                                >
-                                                                    <CheckCircle2 size={18} /> Final Approve & Seal
-                                                                </button>
-                                                            </>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-2 text-center">
+                                                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">감사인 검증 완료</p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleResolveEscalation(item.id, 'SEALED')}
+                                                                        className="w-full bg-emerald-500 text-white py-5 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-400 shadow-xl shadow-emerald-500/50 hover:shadow-emerald-500/70 transition-all flex items-center justify-center gap-3 active:scale-95 animate-pulse hover:animate-none"
+                                                                    >
+                                                                        <CheckCircle2 size={18} /> 최종 승인 및 봉출 (Seal)
+                                                                    </button>
+                                                                </>
+                                                            )
                                                         ) : role === 'Auditor' && item.status === 'PENDING' ? (
                                                             <>
                                                                 <button
@@ -579,20 +677,20 @@ export default function AuditWorkspace() {
                                                                         onClick={() => handleUpdateStatus(item.id, 'ESCALATED')}
                                                                         className="bg-rose-500/10 border border-rose-500/20 text-rose-500 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-rose-500/20 transition-all flex items-center justify-center gap-2"
                                                                     >
-                                                                        <ShieldAlert size={14} /> Escalate
+                                                                        <ShieldAlert size={14} /> 상신 (Escalate)
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleUpdateStatus(item.id, 'DEFERRED')}
                                                                         className="bg-slate-500/10 border border-slate-500/20 text-slate-400 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-slate-500/20 transition-all flex items-center justify-center gap-2"
                                                                     >
-                                                                        <Clock size={14} /> Defer
+                                                                        <Clock size={14} /> 보류 (Defer)
                                                                     </button>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(item.id, 'DISMISSED')}
                                                                     className="w-full bg-white/5 border border-white/10 text-slate-500 py-3 rounded-[24px] font-black text-[9px] uppercase tracking-widest hover:bg-white/10 transition-all"
                                                                 >
-                                                                    Dismiss Item
+                                                                    기각 처리 (Dismiss)
                                                                 </button>
                                                             </>
                                                         ) : (

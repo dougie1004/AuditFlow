@@ -11,6 +11,7 @@ use crate::database::get_active_universe_column;
 use crate::file_utils::{read_any_file, apply_deidentification};
 use crate::ai::{call_gemini_direct, call_gemini_chat, extract_json};
 use crate::scenarios_seeder::seed_master_scenarios;
+use crate::file_loader::load_file_rows;
 
 // [CONSTITUTIONAL RULE: WRAPPER ONLY]
 // This file must ONLY contain thin wrappers that delegate to specific modules.
@@ -64,6 +65,18 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
         if !is_incremental {
             // [RESET ALL] If no specific targets, wipe everything for this project (Legacy Behavior)
             conn.execute("DELETE FROM audit_issues WHERE project_type = ?1 OR audit_id = ?1", params![&projectType]).ok();
+            
+            // [A-Z RESET] Reset Universe Risk Score to Baseline for this project entity (Both Likelihood & Impact)
+            // This ensures re-runs don't infinitely inflate the financial exposure.
+            let safe_project_name = projectType.replace("'", "''");
+            let reset_sql = format!(
+                "UPDATE audit_universe 
+                 SET likelihood_score = 0, impact_score = 0 
+                 WHERE (UPPER(unit_name) LIKE '%' || UPPER('{}') || '%' OR UPPER('{}') LIKE '%' || UPPER(unit_name) || '%')",
+                safe_project_name, safe_project_name
+            );
+            conn.execute(&reset_sql, []).ok();
+            println!(">>> [RESET] Risk Score (Likelihood/Impact) reset to CLEAN SLATE (0/0) for: {}", projectType);
         } 
         // Else: We simply don't delete *everything*. specific deletions happen later.
     }
@@ -150,11 +163,11 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
         
         for (path, _) in &target_files {
              
-             let rows = crate::audit_engine::load_file_rows(path);
+             let rows = load_file_rows(path)?;
              if rows.is_empty() { continue; }
              
              // [CONSTITUTIONAL FILTER] 가격/금액 컬럼이 없으면 마스터 데이터로 간주하고 스킵
-             let has_amount_col = rows[0].iter().any(|h| {
+             let has_amount_col = rows[0].iter().any(|h: &String| {
                  let hl = h.to_lowercase();
                  hl.contains("금액") || hl.contains("가격") || hl.contains("amount") || hl.contains("price") || hl.contains("합계")
              });
@@ -290,7 +303,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
 #[allow(non_snake_case)]
 pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -> Result<Value, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
     let mut filter_base = " WHERE 1=1".to_string();
     if let Some(ref id) = projectId {
@@ -366,72 +379,75 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
 
     let total_ai_issues = relation_candidates_count + suspicion_count;
     
-    // [ORGANIC REFACTOR] Bind Financial Exposure to Real Data (Audit Universe Budget * Risk Score)
-    // This replaces the hardcoded "Tier" multiplier which caused the Global < Individual paradox.
+    // [ORGANIC REFACTOR] Bind Financial Exposure to REAL Issues and Entity Budgets.
+    // This removes the "29.3억" hardcoded paradox by evaluating actual confirmed findings.
     
-    // 1. Define Scope for Universe Calculation
-    let universe_filter = if let Some(ref id) = projectId {
+    let mut total_exposure: f64 = 0.0;
+    let mut exposure_by_category: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+
+    // 1. Fetch all 'Critical' and 'High' issues in the current scope with category join
+    let issues_query = if let Some(ref id) = projectId {
         if id.is_empty() {
-            "WHERE 1=1".to_string()
+            "SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High')".to_string()
         } else {
-             // Link projects to universe via title
-             let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![id], |r| r.get(0)).unwrap_or_default();
-             let safe_title = title.replace("'", "''");
-             format!(
-                "WHERE (UPPER(unit_name) LIKE '%' || UPPER('{}') || '%' OR UPPER('{}') LIKE '%' || UPPER(unit_name) || '%')", 
-                safe_title, safe_title
-             ) 
+            format!("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE (i.audit_id = '{}' OR i.project_type = '{}') AND i.severity IN ('Critical', 'High')", id, id)
         }
     } else {
-        "WHERE 1=1".to_string()
+        "SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High')".to_string()
     };
 
-    // 2. Fetch Budgets & Risk Scores from Universe
-    let mut exposure_stmt = conn.prepare(&format!(
-        "SELECT budget_size, (impact_score + likelihood_score) as risk_factor FROM audit_universe {}", 
-        universe_filter
-    )).map_err(|e| e.to_string())?;
-
-    let exposure_rows = exposure_stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
+    let mut issues_stmt = conn.prepare(&issues_query).map_err(|e| e.to_string())?;
+    let issues_rows = issues_stmt.query_map([], |row| {
+        Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
     }).map_err(|e| e.to_string())?;
 
-    let mut total_exposure: f64 = 0.0;
-
-    for r in exposure_rows {
-        if let Ok((budget_str, score)) = r {
-            // normalizing score (0-200 generally) to a risk probability (0.0 - 1.0)
-            // Conservative estimate: Max risk is 20% of budget if score is super high (200)
-            // factor = score / 1000.0
-            let risk_factor = (score as f64).max(0.0) / 1000.0; 
-            
-            // Parse Budget String (Naive Parser for KRW/USD)
-            let raw_budget = budget_str.replace(",", "").replace(" ", "").to_lowercase();
-            let amount: f64 = if raw_budget.contains("억") {
-                raw_budget.replace("krw", "").replace("억", "").parse::<f64>().unwrap_or(0.0) * 100_000_000.0
-            } else if raw_budget.contains("천만") {
-                raw_budget.replace("천만", "").parse::<f64>().unwrap_or(0.0) * 10_000_000.0
-            } else if raw_budget.contains("백만") {
-                raw_budget.replace("백만", "").parse::<f64>().unwrap_or(0.0) * 1_000_000.0
-            } else if raw_budget.contains("m") && raw_budget.contains("$") {
-                raw_budget.replace("$", "").replace("m", "").parse::<f64>().unwrap_or(0.0) * 1_300_000_000.0 // approx $1M = 1.3B KRW
+    for r in issues_rows {
+        if let Ok((entity_id_opt, severity, category_opt)) = r {
+            let exposure = if let Some(entity_id) = entity_id_opt {
+                if let Ok(verdict) = crate::compliance_judge::judge_commercial_risk(&db_path, entity_id, &severity) {
+                    verdict.calculated_exposure
+                } else {
+                    50_000_000.0
+                }
             } else {
-                raw_budget.parse::<f64>().unwrap_or(0.0)
+                50_000_000.0
             };
-
-            total_exposure += amount * risk_factor;
+            
+            total_exposure += exposure;
+            let cat = category_opt.unwrap_or_else(|| "General Compliance".to_string());
+            *exposure_by_category.entry(cat).or_insert(0.0) += exposure;
         }
     }
 
-    // Default Fallback if Universe is empty (Cold Start)
-    if total_exposure == 0.0 {
-        // Fallback to legacy heuristic to prevent "0" on dashboard during demo
-        let legacy_weight = if let Some(ref id) = projectId {
-             if id.is_empty() { 500_000_000 } else { 50_000_000 }
-        } else { 500_000_000 };
-        total_exposure = (pillar_governance * legacy_weight) as f64;
+    // Sort categories by exposure to find top drivers
+    let mut sorted_cats: Vec<_> = exposure_by_category.iter().collect();
+    sorted_cats.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
+    
+    let key_drivers: Vec<Value> = sorted_cats.iter().take(3).map(|(cat, exp)| {
+        let pct = if total_exposure > 0.0 { (*exp / total_exposure * 100.0) as i64 } else { 0 };
+        json!({ "label": cat, "val": format!("{}%", pct), "exposure": exp })
+    }).collect();
+
+    // Group into Governance vs Process vs Behavioral for the chart breakdown
+    let mut gov_exp = 0.0;
+    let mut proc_exp = 0.0;
+    let mut beh_exp = 0.0;
+
+    for (cat, exp) in &exposure_by_category {
+        match cat.as_str() {
+            "Compliance/Legal" | "ESG" | "IT/Security" | "AML" | "IT Security" | "Anti-Bribery" => gov_exp += exp,
+            "Procurement" | "Sales/AR" | "Inventory" | "Production/Quality" | "Finance/Accounting" | "Revenue/Accounting" | "Supply Chain" => proc_exp += exp,
+            "HR/Payroll" | "Expense/Travel" | "Corp Card" | "EX Sector" | "Financial Integrity" => beh_exp += exp,
+            _ => proc_exp += exp,
+        }
     }
 
+    let gov_pct = if total_exposure > 0.0 { (gov_exp / total_exposure * 100.0) as i64 } else { 0 };
+    let proc_pct = if total_exposure > 0.0 { (proc_exp / total_exposure * 100.0) as i64 } else { 0 };
+    let beh_pct = if total_exposure > 0.0 { (beh_exp / total_exposure * 100.0) as i64 } else { 0 };
+
+    // [NO GHOST VALUE] If no issues, exposure is strictly 0. 
+    // This satisfies the "User Reset -> 0" requirement.
     let impact_value = total_exposure as i64;
     
     let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, (pillar_governance * 10 / 100) + (pillar_process * 5 / 100)) }; 
@@ -470,6 +486,15 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         "critical_risks": total_ai_issues, // Updated to include suspicion_inbox count
         "risk_exposure_score": risk_score, 
         "potential_impact_value": impact_value,
+        "exposure_breakdown": {
+            "governance_pct": gov_pct,
+            "process_pct": proc_pct,
+            "behavioral_pct": beh_pct,
+            "governance_val": gov_exp as i64,
+            "process_val": proc_exp as i64,
+            "behavioral_val": beh_exp as i64
+        },
+        "key_drivers": key_drivers,
         "trends": trends,
         "signal_summary": if raw_signals > 0 { format!("{} forensic signals identified in current scope.", raw_signals) } else { "No significant signals in current scope.".to_string() }
     }))
@@ -645,6 +670,28 @@ pub fn update_audit_plan_status(app_handle: AppHandle, id: i64, status: String) 
 }
 
 #[tauri::command]
+pub fn update_audit_universe_field(app_handle: AppHandle, id: i64, field: String, value: String) -> Result<(), String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    // [CONSTITUTIONAL CHECK] Only allow specific fields to be edited
+    let col_name = match field.as_str() {
+        "budget_size" => "budget_size",
+        "impact_score" => "impact_score",
+        "likelihood_score" => "likelihood_score",
+        "headcount" => "headcount",
+        "category" => "category",
+        _ => return Err("Field not editable via this API".to_string())
+    };
+
+    let sql = format!("UPDATE audit_universe SET {} = ?1 WHERE id = ?2", col_name);
+    conn.execute(&sql, params![value, id]).map_err(|e| e.to_string())?;
+
+    println!(">>> [UNIVERSE UPDATE] Updated Entity {} -> {} = {}", id, field, value);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn add_audit_universe_entity(app_handle: AppHandle, unit_name: String, category: String, last_audit_year: i32) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
@@ -695,25 +742,22 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
     let query_sql = format!(
         "SELECT 
             u.id, u.{}, u.category, 
-            u.impact_score + CO_COUNT.high*15 + CO_COUNT.med*5 as impact_score,
-            u.likelihood_score + CO_COUNT.total*2 as likelihood_score,
+            u.impact_score as impact_score,
+            u.likelihood_score as likelihood_score,
             u.last_audit_year, u.budget_size, u.headcount, u.last_audit_rating, u.key_systems, u.ai_analysis_data,
-            CO_COUNT.total as findings_count
+            COALESCE(CO_COUNT.total, 0) as findings_count
          FROM audit_universe u
          LEFT JOIN (
             SELECT 
-                project_type,
+                entity_id,
                 COUNT(*) as total,
-                SUM(CASE WHEN severity = 'High' THEN 1 ELSE 0 END) as high,
+                SUM(CASE WHEN severity = 'High' OR severity = 'Critical' THEN 1 ELSE 0 END) as high,
                 SUM(CASE WHEN severity = 'Medium' THEN 1 ELSE 0 END) as med
             FROM audit_issues
-            {}
-            GROUP BY project_type
-         ) CO_COUNT ON 
-            INSTR(UPPER(u.{}), UPPER(CO_COUNT.project_type)) > 0 OR 
-            INSTR(UPPER(CO_COUNT.project_type), UPPER(u.{})) > 0
+            GROUP BY entity_id
+         ) CO_COUNT ON u.id = CO_COUNT.entity_id
          {}", 
-         active_col, issue_filter, active_col, active_col, dept_filter
+         active_col, dept_filter
     );
     
     let mut list = Vec::new();
@@ -791,7 +835,37 @@ pub fn get_files_by_type(app_handle: AppHandle, projectType: String) -> Result<V
 pub fn delete_audit_file(app_handle: AppHandle, id: i64) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    
+    // Get project_type before deleting
+    let project_type: String = conn.query_row(
+        "SELECT project_type FROM audit_data WHERE id = ?1", 
+        params![id], 
+        |r| r.get(0)
+    ).unwrap_or_default();
+
     conn.execute("DELETE FROM audit_data WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
+
+    // [FIX] If no files remain for this project type, reset the universe exposure
+    if !project_type.is_empty() {
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM audit_data WHERE project_type = ?1", 
+            params![&project_type], 
+            |r| r.get(0)
+        ).unwrap_or(0);
+
+        if count == 0 {
+            let safe_project = project_type.replace("'", "''");
+            let reset_sql = format!(
+                "UPDATE audit_universe 
+                 SET likelihood_score = 0, impact_score = 0, ai_analysis_data = NULL
+                 WHERE (UPPER(unit_name) LIKE '%' || UPPER('{}') || '%' OR UPPER('{}') LIKE '%' || UPPER(unit_name) || '%')",
+                safe_project, safe_project
+            );
+            conn.execute(&reset_sql, []).ok();
+            println!(">>> [DELETE FILE] Last file removed. Universe exposure reset for: {}", project_type);
+        }
+    }
+    
     Ok("Deleted".into())
 }
 
@@ -800,8 +874,23 @@ pub fn delete_audit_file(app_handle: AppHandle, id: i64) -> Result<String, Strin
 pub fn delete_audit_project(app_handle: AppHandle, projectId: String) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![&projectId], |r| r.get(0)).unwrap_or_default();
+    
     let _ = conn.execute("DELETE FROM audit_issues WHERE project_type = ?1 OR audit_id = ?1", params![&projectId]);
     let _ = conn.execute("DELETE FROM audit_projects WHERE id = ?1", params![&projectId]);
+
+    // [FIX] Also reset the Universe Exposure for this project scope
+    if !title.is_empty() {
+        let safe_title = title.replace("'", "''");
+        let reset_sql = format!(
+            "UPDATE audit_universe 
+             SET likelihood_score = 0, impact_score = 0, ai_analysis_data = NULL
+             WHERE (UPPER(unit_name) LIKE '%' || UPPER('{}') || '%' OR UPPER('{}') LIKE '%' || UPPER(unit_name) || '%')",
+            safe_title, safe_title
+        );
+        conn.execute(&reset_sql, []).ok();
+        println!(">>> [DELETE] Project deleted. Universe exposure reset for: {}", title);
+    }
     Ok("Deleted".into())
 }
 
@@ -844,14 +933,17 @@ pub fn get_file_preview(filePath: String, limit: Option<usize>, enableMasking: O
     let path = Path::new(&filePath);
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
     let take_limit = limit.unwrap_or(50);
+    let actual_limit = if take_limit == 0 || take_limit > 1000 { 1000 } else { take_limit };
+
     if ext == "xlsx" || ext == "xls" {
         let mut workbook = open_workbook_auto(path).map_err(|e| e.to_string())?;
         if let Some((_name, range)) = workbook.worksheets().first() {
             let mut preview: Vec<Vec<String>> = Vec::new();
-            for row in range.rows().take(if take_limit == 0 { 1000 } else { take_limit }) {
+            for row in range.rows().take(actual_limit) {
                 let row_data = row.iter().map(|c| {
                     let s = c.to_string();
-                    if masking { apply_deidentification(&s) } else { s }
+                    let s_truncated = crate::file_utils::safe_truncate(&s, 1000);
+                    if masking { apply_deidentification(&s_truncated) } else { s_truncated }
                 }).collect::<Vec<String>>();
                 preview.push(row_data);
             }
@@ -861,13 +953,19 @@ pub fn get_file_preview(filePath: String, limit: Option<usize>, enableMasking: O
     if let Ok(content) = read_any_file(path, &ext) {
         let mut preview: Vec<Vec<String>> = Vec::new();
         for (i, line) in content.lines().enumerate() {
-            if take_limit > 0 && i >= take_limit { break; }
-            let processed_line = if masking { apply_deidentification(line) } else { line.to_string() };
+            if i >= actual_limit { break; }
+            let mut processed_line = if masking { apply_deidentification(line) } else { line.to_string() };
+            
+            // [SAFETY] 한 줄이 너무 길면 자름 (IPC 버퍼 오버런 및 렌더링 부하 방지)
+            processed_line = crate::file_utils::safe_truncate(&processed_line, 2048);
+
             if processed_line.contains('\t') { preview.push(processed_line.split('\t').map(|s: &str| s.to_string()).collect::<Vec<String>>()); }
             else if processed_line.contains(',') && (ext == "csv" || ext == "log") { preview.push(processed_line.split(',').map(|s: &str| s.to_string()).collect::<Vec<String>>()); }
             else { preview.push(vec![processed_line]); }
         }
         Ok(preview)
+    } else if let Err(e) = read_any_file(path, &ext) {
+        Ok(vec![vec![format!("미리보기 실패: {}", e)]])
     } else {
         Ok(vec![vec!["미리보기를 지원하지 않는 형식입니다.".into()]])
     }
@@ -909,7 +1007,7 @@ pub fn get_all_scenarios(app_handle: AppHandle) -> Result<Vec<Value>, String> {
 pub fn get_audit_projects(app_handle: AppHandle) -> Result<Vec<AuditProject>, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare("SELECT id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, findings_count, created_at, risk_score, valuation_tier FROM audit_projects ORDER BY created_at DESC").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, findings_count, created_at, risk_score, valuation_tier, entity_id FROM audit_projects ORDER BY created_at DESC").map_err(|e| e.to_string())?;
     let rows = stmt.query_map([], |r| Ok(AuditProject {
         id: r.get(0)?, title: r.get(1)?, status: r.get(2)?, progress_pct: r.get(3)?,
         start_date: r.get(4)?, end_date: r.get(5)?, lead_auditor: r.get(6)?,
@@ -920,7 +1018,8 @@ pub fn get_audit_projects(app_handle: AppHandle) -> Result<Vec<AuditProject>, St
         findings_count: r.get(14)?,
         created_at: r.get(15).ok(),
         risk_score: r.get(16)?,
-        valuation_tier: r.get(17).ok()
+        valuation_tier: r.get(17).ok(),
+        entity_id: r.get(18).ok()
     })).map_err(|e| e.to_string())?;
     let mut list: Vec<AuditProject> = Vec::new(); for r in rows { if let Ok(p) = r { list.push(p); } }
     Ok(list)
@@ -928,11 +1027,11 @@ pub fn get_audit_projects(app_handle: AppHandle) -> Result<Vec<AuditProject>, St
 
 #[tauri::command]
 #[allow(non_snake_case)]
-pub fn update_project_metadata(app_handle: AppHandle, projectId: String, planningStart: Option<String>, planningEnd: Option<String>, fieldworkStart: Option<String>, fieldworkEnd: Option<String>, reportingStart: Option<String>, reportingEnd: Option<String>, auditScope: Option<String>, startDate: Option<String>, endDate: Option<String>, valuationTier: Option<String>) -> Result<(), String> {
+pub fn update_project_metadata(app_handle: AppHandle, projectId: String, planningStart: Option<String>, planningEnd: Option<String>, fieldworkStart: Option<String>, fieldworkEnd: Option<String>, reportingStart: Option<String>, reportingEnd: Option<String>, auditScope: Option<String>, startDate: Option<String>, endDate: Option<String>, valuationTier: Option<String>, entityId: Option<i64>) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    conn.execute("UPDATE audit_projects SET planning_start=?1, planning_end=?2, fieldwork_start=?3, fieldwork_end=?4, reporting_start=?5, reporting_end=?6, audit_scope=?7, start_date=?8, end_date=?9, valuation_tier=?10 WHERE id=?11",
-        params![planningStart, planningEnd, fieldworkStart, fieldworkEnd, reportingStart, reportingEnd, auditScope, startDate, endDate, valuationTier, projectId]
+    conn.execute("UPDATE audit_projects SET planning_start=?1, planning_end=?2, fieldwork_start=?3, fieldwork_end=?4, reporting_start=?5, reporting_end=?6, audit_scope=?7, start_date=?8, end_date=?9, valuation_tier=?10, entity_id=?11 WHERE id=?12",
+        params![planningStart, planningEnd, fieldworkStart, fieldworkEnd, reportingStart, reportingEnd, auditScope, startDate, endDate, valuationTier, entityId, projectId]
     ).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -953,7 +1052,7 @@ pub fn create_audit_project(app_handle: AppHandle, mut project: AuditProject) ->
     if project.start_date.is_empty() { project.start_date = today.clone(); }
     if project.end_date.is_empty() { project.end_date = today.clone(); }
 
-    conn.execute("INSERT OR REPLACE INTO audit_projects (id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, created_at, findings_count, risk_score, valuation_tier) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)", 
+    conn.execute("INSERT OR REPLACE INTO audit_projects (id, title, status, progress_pct, start_date, end_date, lead_auditor, planning_start, planning_end, fieldwork_start, fieldwork_end, reporting_start, reporting_end, audit_scope, created_at, findings_count, risk_score, valuation_tier, entity_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)", 
         params![project.id, project.title, project.status, project.progress_pct, project.start_date, project.end_date, project.lead_auditor, 
         project.planning_start.unwrap_or(today.clone()), project.planning_end.unwrap_or(today.clone()),
         project.fieldwork_start.unwrap_or(today.clone()), project.fieldwork_end.unwrap_or(today.clone()),
@@ -962,8 +1061,25 @@ pub fn create_audit_project(app_handle: AppHandle, mut project: AuditProject) ->
         Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         project.findings_count,
         project.risk_score,
-        project.valuation_tier.unwrap_or("startup".to_string())]
+        project.valuation_tier.unwrap_or("startup".to_string()),
+        project.entity_id]
     ).map_err(|e| e.to_string())?;
+
+    // [FIX] Automatically create a Default Session for the new project
+    // This prevents the "No Active Session" issue for manual test projects.
+    let session_id = format!("ses-{}-{}", yyyymm, seq);
+    conn.execute(
+        "INSERT INTO audit_session (id, project_id, name, period_start, period_end, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            &session_id,
+            &project.id,
+            format!("{} - Initial Session", &project.title),
+            &project.start_date,
+            &project.end_date,
+            "OPEN"
+        ]
+    ).map_err(|e| e.to_string())?;
+
     Ok(project.id)
 }
 
@@ -988,16 +1104,17 @@ pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     
-    // Disable FK temporarily to ensure forceful cleanup, or just delete in order. 
-    // We will delete in order for safety.
+    // [CONSTITUTIONAL ACT] Forceful cleanup requires disabling FK checks temporarily
+    let _ = conn.execute("PRAGMA foreign_keys = OFF", []);
     
-    // 1. Level 3: Leaf Nodes (Review, Relations, Events)
+    // 1. Level 3: Leaf Nodes (Review, Relations, Events, Cases)
     let _ = conn.execute("DELETE FROM review_tasks", []);
     let _ = conn.execute("DELETE FROM re_evaluation_event", []);
     let _ = conn.execute("DELETE FROM relation_candidate", []);
     let _ = conn.execute("DELETE FROM adjudication_log", []);
     let _ = conn.execute("DELETE FROM system_events", []);
     let _ = conn.execute("DELETE FROM engine_metrics", []);
+    let _ = conn.execute("DELETE FROM audit_cases", []);
     
     // 2. Level 2: Intermediate (Sessions, Objects, Issues)
     let _ = conn.execute("DELETE FROM audit_session", []);
@@ -1017,9 +1134,17 @@ pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
     let _ = conn.execute("DELETE FROM audit_data", []); // Legacy file table
     let _ = conn.execute("DELETE FROM review_item", []); // Legacy table cleanup
 
-    // Re-seed essential data
+    // Re-enable FKs for subsequent operations
+    let _ = conn.execute("PRAGMA foreign_keys = ON", []);
+
+    // Re-seed essential data (Rules only, not user data/universe)
     seed_master_scenarios(&mut conn).ok();
-    crate::database::AuditUniverseSeeder::seed(&mut conn).ok();
+    // crate::database::AuditUniverseSeeder::seed(&mut conn).ok(); // [ZERO-BASE] No longer auto-seeding
+    
+    // [FIX] Zero out metrics after seeding to ensure "Clean State" for user
+    // The seeder provides "Inherent Risk" (e.g. 9/10), but for a User Reset, we want 0 exposure start.
+    let _ = conn.execute("UPDATE audit_universe SET impact_score = 0, likelihood_score = 0, ai_analysis_data = NULL", []);
+
     Ok("Database Full Reset Complete".to_string())
 }
 
@@ -1085,26 +1210,37 @@ pub fn get_scenario_categories(_app_handle: AppHandle) -> Result<Vec<String>, St
 #[allow(non_snake_case)]
 pub async fn ask_ai_assistant(app_handle: AppHandle, message: String, projectId: Option<String>) -> Result<String, String> {
     let findings = if let Some(ref pid) = projectId {
-         get_audit_issues(app_handle, pid.clone()).unwrap_or_else(|_| Vec::new())
+         get_audit_issues(app_handle.clone(), pid.clone()).unwrap_or_else(|_| Vec::new())
     } else {
          Vec::<AuditIssue>::new()
     };
 
+    // [INTEGRITY CONNECT] Fetch financial exposure data for the AI to refer to
+    let summary = get_dashboard_summary(app_handle.clone(), projectId.clone()).ok();
+    let financial_context = summary.map(|s| {
+        format!(
+            "Potential Impact Value: {} KRW, Risk Exposure Score: {}, Key Drivers: {:?}", 
+            s["potential_impact_value"], s["risk_exposure_score"], s["key_drivers"]
+        )
+    }).unwrap_or_else(|| "Financial summary not available for this scope.".to_string());
+
     let system_prompt = r#"
     [CONSTITUTIONAL GUARD: NEGATIVE CAPABILITIES]
-    1. NO PREDICTION: You MUST NOT predict future financial value, bankruptcy risk, or survival probability. 
-    2. NO JUDICIAL AUTHORITY: You are a "Witness", not a "Judge". Focus only on evidence summary.
-    3. SCOPE LIMIT: If asked about future outcomes, respond: "AuditFlow Manifesto 1.0에 따라 본 시스템은 미래를 예측하거나 주관적인 판단을 내리지 않으며, 오직 확정된 데이터와 규칙에 기반한 증거만을 보고합니다."
-    4. LANGUAGE: Always respond in professional Korean.
-    5. FORMAT: Plain text only. No markdown symbols like # or **.
+    1. NO PREDICTION: You MUST NOT predict FUTURE financial value, bankruptcy risk, or survival probability. 
+    2. DATA REPORTING: You MAY report on CURRENTLY CALCULATED metrics like "potential_impact_value" or "risk_exposure_score" if they are in the context. These are static results of the rules, not predictions.
+    3. NO JUDICIAL AUTHORITY: You are a "Witness", not a "Judge". Focus only on evidence summary.
+    4. SCOPE LIMIT: If asked about FUTURE outcomes or subjective "will it happen?", respond according to Manifesto 1.0.
+    5. LANGUAGE: Always respond in professional Korean.
+    6. FORMAT: Plain text only. No markdown symbols like # or **.
     "#;
 
     let context = format!("
     System Guard: {}
     Project: {:?}
     Context (Findings): {:?}
+    Financial Impact Data: {}
     User Question: {}
-    ", system_prompt, projectId, findings, message);
+    ", system_prompt, projectId, findings, financial_context, message);
 
     call_gemini_direct(&context).await.map_err(|e| e.to_string())
 }
@@ -1447,21 +1583,24 @@ pub fn get_workbook_details(file_path: String, enable_masking: Option<bool>) -> 
     let names = workbook.sheet_names().to_vec();
     let mut sheets = Vec::new();
 
-    for name in names {
-        if let Ok(range) = workbook.worksheet_range(&name) {
+    // [SAFETY] 시트 수 제한 (최대 10개)
+    for name in names.iter().take(10) {
+        if let Ok(range) = workbook.worksheet_range(name) {
             let mut data: Vec<Vec<String>> = Vec::new();
+            // [SAFETY] 최대 200행 제한
             for row in range.rows().take(200) {
                 let mut row_data: Vec<String> = Vec::new();
-                for cell in row {
+                // [SAFETY] 최대 50열 제한
+                for cell in row.iter().take(50) {
                     let cell_str = cell.to_string();
-                    let final_val = if masking { apply_deidentification(&cell_str) } else { cell_str };
+                    // [SAFETY] 셀 길이 제한 (UTF-8 안전)
+                    let cell_truncated = crate::file_utils::safe_truncate(&cell_str, 1000);
+                    let final_val = if masking { apply_deidentification(&cell_truncated) } else { cell_truncated };
                     row_data.push(final_val);
                 }
                 data.push(row_data);
             }
-            sheets.push(crate::models::SheetData { name, data });
-        } else {
-            sheets.push(crate::models::SheetData { name, data: Vec::new() });
+            sheets.push(crate::models::SheetData { name: name.clone(), data });
         }
     }
     Ok(sheets)
@@ -1673,49 +1812,63 @@ pub async fn generate_risk_summary(app_handle: AppHandle) -> Result<String, Stri
 #[tauri::command]
 #[allow(non_snake_case)]
 pub async fn generate_professional_report(app_handle: AppHandle, projectId: String) -> Result<String, String> {
-    let findings_str = {
+    let (findings_str, financial_summary) = {
         let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
         let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
         
-        let mut stmt = conn.prepare("SELECT issue_title, description, severity, status, evidence_quote FROM audit_issues WHERE (project_type = ?1 OR audit_id = ?1) AND status != 'Dismissed'").map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare("SELECT issue_title, description, severity, status, manager_comment FROM audit_issues WHERE (project_type = ?1 OR audit_id = ?1) AND status != 'Dismissed'").map_err(|e| e.to_string())?;
         let rows = stmt.query_map(params![projectId], |r| {
-             Ok(format!("- [{}] {} ({})\n  Desc: {}\n  Evidence: {}", 
+             Ok(format!("- [등급: {}] {} (상태: {})\n  세부내역: {}\n  검토의견: {}", 
                 r.get::<_, String>(2).unwrap_or("Unknown".into()),
                 r.get::<_, String>(0).unwrap_or("Untitled".into()),
                 r.get::<_, String>(3).unwrap_or("Open".into()),
                 r.get::<_, String>(1).unwrap_or("".into()),
-                r.get::<_, String>(4).unwrap_or("".into())
+                r.get::<_, Option<String>>(4).unwrap_or(Some("".into())).unwrap_or_default()
              ))
         }).map_err(|e| e.to_string())?;
         
         let mut findings = Vec::new();
         for r in rows { if let Ok(s) = r { findings.push(s); } }
         
-        if findings.is_empty() { return Err("蹂닿퀬?쒕? ?앹꽦??吏???ы빆???놁뒿?덈떎.".into()); }
+        if findings.is_empty() { return Err("보고서를 생성할 지적 사항이 없습니다. 먼저 시뮬레이션이나 데이터 분석을 수행해 주세요.".into()); }
         
-        findings.join("\n\n")
+        // Fetch financial exposure for context
+        let summary_json = get_dashboard_summary(app_handle.clone(), Some(projectId.clone())).ok();
+        let financial_info = summary_json.map(|s| {
+            format!("총 잠재적 재무 영향: {}원, 리스크 노출 지수: {}, 주요 리스크 드라이버: {:?}", 
+                s["potential_impact_value"], s["risk_exposure_score"], s["key_drivers"])
+        }).unwrap_or_else(|| "재무 데이터 없음".to_string());
+
+        (findings.join("\n\n"), financial_info)
     };
 
     let prompt = format!(
-        "Role: Senior Auditor.
-        Task: Write a comprehensive Due Diligence Audit Report in Korean (Markdown).
-        Project: {}
-        
-        Findings Data:
+        "당신은 선임 감사인(Senior Auditor)입니다. 다음 데이터를 바탕으로 경영진을 위한 전문적인 '감사 조사 결과 보고서'를 한국어로 작성하십시오.
+
+        [재무 현황 요약]
         {}
-        
-        Structure:
-        # {}: Compliance DD Report
-        ## 1. Executive Summary
-        (Summarize key risks and overall status)
-        ## 2. Detailed Findings
-        (List findings grouped by severity. Include analysis.)
-        ## 3. Strategic Recommendations
-        (Actionable advice for management)
-        
-        Tone: Professional, Objective, Formal.
+
+        [세부 발견 사항 데이터]
+        {}
+
+        [작성 가이드라인]
+        1. 가독성: 서술형 문장을 최소화하고, 표(Table) 또는 명확한 불렛 포인트를 사용하십시오.
+        2. 용어 정리:
+           - '개방' 또는 'Open' 상태는 아직 감사인의 최종 adjudication(확정)이 완료되지 않은 상태임을 명시하십시오.
+           - 재발 횟수(예: 3, 4)는 'X회 반복 탐지'와 같이 이해하기 쉬운 한국어로 표현하십시오.
+        3. 구조:
+           # 감사 프로젝트 결과 보고서: {}
+           ## 1. 개요 (Executive Summary)
+           - 전체적인 리스크 수준과 총 재무 임팩트 요약
+           ## 2. 세부 발견 사항 (Detailed Findings)
+           - 등급별(Critical, High, Medium)로 그룹화하여 **표(Table)** 형식으로 제시
+           - 컬럼 항목: 항목명, 심각도, 현재 상태, 반복 횟수, 재무적 영향 분석
+           ## 3. 권고 사항 및 향후 조치
+           - 리스크 완화를 위한 전략적 제언
+
+        톤: 매우 전문적이고, 객관적이며, 격식 있는 문체를 사용하십시오.
         ", 
-        projectId, findings_str, projectId
+        financial_summary, findings_str, projectId
     );
 
     let response = crate::ai::call_gemini_direct(&prompt).await.map_err(|e| format!("AI Error: {}", e))?;
@@ -2437,12 +2590,12 @@ pub async fn close_audit_session(app_handle: AppHandle, sessionId: String) -> Re
 }
 
 #[tauri::command]
-pub fn update_review_status(app_handle: tauri::AppHandle, item_id: i64, status: String, note: Option<String>) -> Result<(), String> {
+pub fn update_review_status(app_handle: tauri::AppHandle, item_id: String, status: String, note: Option<String>) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     let is_locked: bool = conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM audit_session s JOIN review_item i ON s.id = i.session_id WHERE i.id = ?1 AND s.reviewer_ack IS NOT NULL)",
+        "SELECT EXISTS(SELECT 1 FROM audit_session s JOIN review_tasks i ON s.id = i.session_id WHERE i.id = ?1 AND s.reviewer_ack IS NOT NULL)",
         params![item_id],
         |row| row.get(0)
     ).unwrap_or(false);
@@ -2452,7 +2605,7 @@ pub fn update_review_status(app_handle: tauri::AppHandle, item_id: i64, status: 
     }
 
     conn.execute(
-        "UPDATE review_item SET status = ?1, reviewer_note = ?2 WHERE id = ?3",
+        "UPDATE review_tasks SET status = ?1, reviewer_note = ?2 WHERE id = ?3",
         params![status, note, item_id]
     ).map_err(|e| e.to_string())?;
 
@@ -2460,12 +2613,19 @@ pub fn update_review_status(app_handle: tauri::AppHandle, item_id: i64, status: 
 }
 
 #[tauri::command]
-pub fn resolve_escalation(app_handle: tauri::AppHandle, item_id: i64, status: String, final_note: String) -> Result<(), String> {
+pub fn judge_risk_exposure(app_handle: tauri::AppHandle, entity_id: i64, severity: String) -> Result<crate::compliance_judge::ExposureVerdict, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::compliance_judge::judge_commercial_risk(&db_path, entity_id, &severity)
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn resolve_escalation(app_handle: tauri::AppHandle, item_id: String, status: String, final_note: String) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     let is_locked: bool = conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM audit_session s JOIN review_item i ON s.id = i.session_id WHERE i.id = ?1 AND s.reviewer_ack IS NOT NULL)",
+        "SELECT EXISTS(SELECT 1 FROM audit_session s JOIN review_tasks i ON s.id = i.session_id WHERE i.id = ?1 AND s.reviewer_ack IS NOT NULL)",
         params![item_id],
         |row| row.get(0)
     ).unwrap_or(false);
@@ -2475,7 +2635,7 @@ pub fn resolve_escalation(app_handle: tauri::AppHandle, item_id: i64, status: St
     }
 
     conn.execute(
-        "UPDATE review_item SET status = ?1, reviewer_final_note = ?2 WHERE id = ?3",
+        "UPDATE review_tasks SET status = ?1, reviewer_final_note = ?2 WHERE id = ?3",
         params![status, final_note, item_id]
     ).map_err(|e| e.to_string())?;
 
