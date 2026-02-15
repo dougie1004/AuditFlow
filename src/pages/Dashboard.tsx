@@ -6,7 +6,7 @@ import { useAudit } from '../context/AuditContext';
 import {
     ShieldCheck, CheckCircle2,
     ShieldAlert, BrainCircuit, Globe, TrendingUp, Terminal, Clock, ArrowUpRight,
-    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard, Trash2, Activity
+    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard, Trash2, Activity, History
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
 
@@ -202,7 +202,8 @@ const Dashboard = () => {
                     findingsCount: p.findings_count || 0,
                     riskScore: score,
                     riskLevel: stateLabel,
-                    fill: getRiskColor(score)
+                    fill: getRiskColor(score),
+                    entityId: p.entity_id
                 };
             });
 
@@ -601,9 +602,23 @@ const Dashboard = () => {
                                                                 </p>
                                                             </div>
 
-                                                            <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between">
-                                                                <span className="text-[9px] text-blue-400 font-bold uppercase">Click to Investigate</span>
-                                                                <ArrowUpRight size={10} className="text-blue-400" />
+                                                            <div className="mt-3 pt-2 border-t border-white/10 flex flex-col gap-2">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); navigate('/workspace', { state: { projectFilter: projects.find(p => p.title === data.name)?.id } }); }}
+                                                                    className="flex items-center justify-between text-[9px] text-blue-400 font-black uppercase hover:text-white"
+                                                                >
+                                                                    <span>Go to Workspace</span>
+                                                                    <ArrowUpRight size={10} />
+                                                                </button>
+                                                                {data.entityId && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); navigate(`/entity/${data.entityId}/timeline`); }}
+                                                                        className="flex items-center justify-between text-[9px] text-emerald-400 font-black uppercase hover:text-white"
+                                                                    >
+                                                                        <span>View History Timeline</span>
+                                                                        <History size={10} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
@@ -728,7 +743,7 @@ const Dashboard = () => {
 
 
                     {/* Zone C: AI Feed */}
-                    <div className="col-span-12 lg:col-span-4 bg-slate-900 border-border-white/10 rounded-[40px] flex flex-col h-full shadow-2xl relative overflow-hidden min-h-[500px]">
+                    <div className="col-span-12 lg:col-span-4 bg-slate-900 border-white/10 rounded-[40px] flex flex-col h-full shadow-2xl relative overflow-hidden min-h-[500px]">
                         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
                             <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Terminal size={16} className="text-rose-500" /> 실시간 가치 평가 가드레일
@@ -747,62 +762,95 @@ const Dashboard = () => {
                                                 Active Risk
                                             </div>
                                         </div>
-                                        <p className="text-4xl font-black text-white italic tracking-tighter relative z-10 group-hover:blur-sm transition-all duration-300">
-                                            ₩{(exposureValue / 100000000).toFixed(1)}억 <span className="text-sm text-slate-400 font-bold not-italic tracking-normal ml-1">잠재적 손실 규모</span>
-                                        </p>
 
-                                        <div className="w-full h-3 bg-slate-900/50 rounded-full overflow-hidden relative z-10 mt-4">
-                                            <div className="h-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 w-[70%] shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                                        <div className="flex flex-col gap-1 relative z-10">
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">Systemic Risk Exposure</p>
+                                            <p className="text-4xl font-black text-white italic tracking-tighter group-hover:scale-105 transition-transform origin-left">
+                                                ₩{(exposureValue / 100000000).toFixed(1)}억 <span className="text-sm text-slate-400 font-bold not-italic tracking-normal ml-1">잠재적 노출</span>
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase">
+                                                    Direct: ₩{(summary.actual_detected_value ? summary.actual_detected_value / 1000000 : 0).toFixed(1)}M
+                                                </div>
+                                                <span className="text-[8px] text-slate-500 font-bold">실제 위반 확인액 합계</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full h-3 bg-slate-900/50 rounded-full overflow-hidden relative z-10 mt-4 border border-white/5">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all duration-1000"
+                                                style={{ width: `${Math.min(100, (summary.actual_detected_value || 0) / (exposureValue || 1) * 10000)}%` }}
+                                            />
                                         </div>
 
                                         {/* Hover Overlay Breakdown */}
-                                        <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col p-4 custom-scrollbar overflow-y-auto">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase mb-2 tracking-widest">Risk Composition</p>
+                                        <div className="absolute inset-0 bg-slate-900/98 backdrop-blur-xl z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col p-6 custom-scrollbar overflow-y-auto translate-y-4 group-hover:translate-y-0">
+                                            <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exposure Composition</p>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-rose-500" />
+                                                    <span className="text-[8px] text-slate-500 font-bold">Projected Risk</span>
+                                                </div>
+                                            </div>
 
                                             {/* Top-Level Split */}
-                                            <div className="space-y-1 mb-3">
-                                                <div className="flex justify-between items-center border-b border-white/10 pb-1">
-                                                    <span className="text-[9px] font-bold text-rose-400 uppercase">Governance (Ca.)</span>
-                                                    <span className="text-[10px] font-mono font-bold text-rose-400">₩{(Math.min(exposureValue / 100000000, (summary.total_risks || 0) * 0.1)).toFixed(1)}억</span>
-                                                </div>
-                                                <div className="flex justify-between items-center border-b border-white/10 pb-1">
-                                                    <span className="text-[9px] font-bold text-amber-400 uppercase">Process (Op.)</span>
-                                                    <span className="text-[10px] font-mono font-bold text-amber-400">₩{Math.max(0, (exposureValue / 100000000 - ((summary.total_risks || 0) * 0.1))).toFixed(1)}억</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Key Drivers (Simulated Top 3) */}
-                                            <div className="mt-1">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase mb-1.5 tracking-widest">Key Drivers (Top 3)</p>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-start group/item">
-                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="GDPR & Data Privacy Violation">
-                                                            1. GDPR & Data Privacy
-                                                        </span>
-                                                        <span className="text-[9px] font-mono text-rose-500">₩{(exposureValue / 100000000 * 0.45).toFixed(1)}억</span>
+                                            <div className="space-y-3 mb-6">
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[10px] font-bold text-rose-400 uppercase">
+                                                        <span>Governance / ESG</span>
+                                                        <span>{summary.exposure_breakdown?.governance_pct || 0}%</span>
                                                     </div>
-                                                    <div className="flex justify-between items-start group/item">
-                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="Unauthorized Vendor Contract">
-                                                            2. Vendor Contracts
-                                                        </span>
-                                                        <span className="text-[9px] font-mono text-orange-500">₩{(exposureValue / 100000000 * 0.30).toFixed(1)}억</span>
+                                                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-rose-500" style={{ width: `${summary.exposure_breakdown?.governance_pct || 0}%` }} />
                                                     </div>
-                                                    <div className="flex justify-between items-start group/item">
-                                                        <span className="text-[9px] text-slate-300 leading-tight w-2/3 truncate group-hover/item:text-white transition-colors" title="Duplicate Payment Anomaly">
-                                                            3. Duplicate Payments
-                                                        </span>
-                                                        <span className="text-[9px] font-mono text-yellow-500">₩{(exposureValue / 100000000 * 0.15).toFixed(1)}억</span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[10px] font-bold text-amber-400 uppercase">
+                                                        <span>Process / Operational</span>
+                                                        <span>{summary.exposure_breakdown?.process_pct || 0}%</span>
+                                                    </div>
+                                                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-amber-500" style={{ width: `${summary.exposure_breakdown?.process_pct || 0}%` }} />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[10px] font-bold text-blue-400 uppercase">
+                                                        <span>Behavioral / Culture</span>
+                                                        <span>{summary.exposure_breakdown?.behavioral_pct || 0}%</span>
+                                                    </div>
+                                                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500" style={{ width: `${summary.exposure_breakdown?.behavioral_pct || 0}%` }} />
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="mt-auto pt-2 border-t border-white/10 flex justify-between items-center">
-                                                <span className="text-[9px] font-black text-white uppercase">Total Exposure</span>
-                                                <span className="text-[11px] font-mono font-black text-white">₩{(exposureValue / 100000000).toFixed(1)}억</span>
+                                            {/* Key Drivers (Dynamic From Backend) */}
+                                            <div className="mt-2">
+                                                <p className="text-[9px] font-black text-slate-500 uppercase mb-3 tracking-widest border-l-2 border-rose-500 pl-2">Key Drivers</p>
+                                                <div className="space-y-3">
+                                                    {summary.key_drivers?.map((driver: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between items-start group/item">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] text-white font-bold leading-tight truncate w-32">{driver.label}</span>
+                                                                <span className="text-[8px] text-slate-500 font-medium">Top contributing category</span>
+                                                            </div>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="text-[10px] font-black text-rose-500">₩{(driver.exposure / 100000000).toFixed(1)}억</span>
+                                                                <span className="text-[8px] text-slate-600 font-mono italic">{driver.val} contribution</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-auto pt-4 border-t border-white/10 flex justify-between items-center">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Total Assessment</span>
+                                                <span className="text-xs font-black text-white italic tracking-tighter">₩{(exposureValue / 100000000).toFixed(1)}B KRW</span>
                                             </div>
                                         </div>
                                     </div>
                                 )}
+
                             </div>
 
                             {events.map((evt) => (
@@ -918,7 +966,7 @@ const Dashboard = () => {
                     <div className="absolute top-[40%] right-[20%] w-[500px] h-[500px] bg-indigo-900/5 blur-[150px] rounded-full" />
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

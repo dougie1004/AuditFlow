@@ -4,6 +4,11 @@ pub use crate::file_utils::extract_json;
 use std::sync::OnceLock;
 
 static GLOBAL_CLIENT: OnceLock<Client> = OnceLock::new();
+static CUSTOM_API_KEY: OnceLock<String> = OnceLock::new();
+
+pub fn set_api_key(key: String) {
+    let _ = CUSTOM_API_KEY.set(key);
+}
 
 fn get_client() -> &'static Client {
     GLOBAL_CLIENT.get_or_init(|| {
@@ -35,6 +40,7 @@ impl AiConfig {
     pub fn from_env() -> Result<Self, String> {
         let api_key = std::env::var("GOOGLE_API_KEY")
             .or_else(|_| std::env::var("GEMINI_API_KEY"))
+            .or_else(|_| CUSTOM_API_KEY.get().cloned().ok_or(std::env::VarError::NotPresent))
             .map_err(|_| "Missing GEMINI_API_KEY Environment Variable".to_string())?;
         
         let base_url = std::env::var("GEMINI_BASE_URL")

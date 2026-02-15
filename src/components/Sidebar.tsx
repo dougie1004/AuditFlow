@@ -51,7 +51,7 @@ const ActiveAuditWidget = () => {
                         <div className="flex justify-between items-start mb-1">
                             <span className="text-xs font-bold text-slate-200 group-hover:text-white truncate max-w-[140px]">{session.name}</span>
                             <div className={`w-1.5 h-1.5 rounded-full ${session.status === 'Active' ? 'bg-amber-500 animate-pulse' :
-                                    session.status === 'Escalated' ? 'bg-rose-500' : 'bg-blue-400'
+                                session.status === 'Escalated' ? 'bg-rose-500' : 'bg-blue-400'
                                 }`} />
                         </div>
                         <div className="flex justify-between items-center text-[9px]">
@@ -117,8 +117,22 @@ export default function Sidebar() {
                 >
                     <Activity size={18} /> <span style={{ fontSize: "14px" }}>시스템 최적화</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", cursor: "pointer", color: "#94a3b8" }}>
-                    <Settings size={18} /> <span style={{ fontSize: "14px" }}>설정</span>
+                <div
+                    onClick={async () => {
+                        const status = await safeInvoke<string>('get_gemini_api_key').catch(() => "미설정");
+                        const newKey = prompt(`Gemini API Key를 설정합니다.\n현재: ${status}\n\n새 Key를 입력하세요 (취소 시 기존 유지):`, "");
+                        if (newKey !== null && newKey.trim() !== "") {
+                            try {
+                                await safeInvoke('set_gemini_api_key', { key: newKey.trim() });
+                                alert("API Key가 성공적으로 저장되었습니다.");
+                            } catch (e) {
+                                alert("저장 중 오류 발생: " + e);
+                            }
+                        }
+                    }}
+                    style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", cursor: "pointer", color: "#94a3b8" }}
+                >
+                    <Settings size={18} /> <span style={{ fontSize: "14px" }}>설정 (AI API Key)</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", color: "#ef4444" }}>
                     <LogOut size={18} /> <span style={{ fontSize: "14px" }}>로그아웃</span>

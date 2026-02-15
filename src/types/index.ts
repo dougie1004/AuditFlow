@@ -17,6 +17,20 @@ export interface RelationCandidate {
     created_at: string;
 }
 
+export interface StructuralInsight {
+    account: string;
+    volatility: number;
+    concentration_ratio_1: number;
+    concentration_ratio_3: number;
+    hhi_index: number;
+    distribution_shift: number;
+    structural_score: number;
+    status: string;
+    reasons: string[];
+    recommended_focus: boolean;
+    is_statistically_significant: boolean;
+}
+
 export interface AuditSession {
     id: string;
     project_id: string;
@@ -136,11 +150,53 @@ export interface AuditUniverseEntity {
     likelihood_score: number;
     last_audit_year: number;
     budget_size: string;
+    operating_profit: string;
     headcount: number;
     last_audit_rating: string;
     key_systems: string;
     ai_analysis?: AiRiskAnalysis | null;
     findings_count: number;
+}
+
+export interface EntitySummary {
+    total_events: number;
+    total_exposure: number;
+    risk_score: number;
+    repetition_index: number;
+    first_seen: string;
+    last_seen: string;
+}
+
+export interface EntityEvent {
+    id: string;
+    entity_id: string;
+    event_type: string;
+    amount?: number | null;
+    event_date: string;
+    description: string;
+    source_object_id?: string | null;
+    is_flagged: boolean;
+    risk_delta: number;
+    rule_flags?: string | null;
+    stat_flags?: string | null;
+}
+
+export interface EntityTimelineResponse {
+    entity_id: string;
+    canonical_name: string;
+    summary: EntitySummary;
+    events: EntityEvent[];
+}
+
+export interface ExposureVerdict {
+    entity_name: string;
+    budget_tier: string;
+    risk_level: string;
+    calculated_exposure: number;
+    control_leakage_ratio: number;
+    materiality_impact_ratio: number;
+    policy_version: string;
+    formula_used: string;
 }
 
 export interface DashboardSummary {
@@ -151,8 +207,9 @@ export interface DashboardSummary {
     total_findings: number;
     raw_signals: number;  // Step 1: All detected patterns (the 828 count)
     critical_risks: number; // Step 3: Aggregated management risks (the ~12 count)
-    risk_exposure_score: number;
+    risk_score: number;
     potential_impact_value: number; // Added: Estimated financial impact for DD
+    actual_detected_value?: number; // Added: Direct loss sum
     exposure_breakdown?: {
         governance_pct: number;
         process_pct: number;

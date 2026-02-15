@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { safeInvoke } from "../lib/tauri-bridge";
 import { AlertCircle, User, Mic, Send, Bot, CheckCircle2, Zap, Terminal } from "lucide-react";
 
-interface AuditIssue { id: number; source: string; title: string; description: string; date: string; status: string; risk: string; }
+interface AuditIssue { id: number; source: string; title: string; description: string; date: string; status: string; risk: string; recommendations: string; }
 
 export default function IssueTracker() {
     const [issues, setIssues] = useState<AuditIssue[]>([]);
@@ -10,8 +10,18 @@ export default function IssueTracker() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const data: AuditIssue[] = await safeInvoke("get_audit_issues", { projectType: "ALL" });
-                setIssues(data);
+                const data: any[] = await safeInvoke("get_audit_issues", { projectType: "ALL" });
+                const formatted: AuditIssue[] = data.map(d => ({
+                    id: d.id,
+                    source: d.audit_id || "DETERMINISTIC",
+                    title: d.issue_title,
+                    description: d.description,
+                    date: d.detected_at,
+                    status: d.status,
+                    risk: d.severity,
+                    recommendations: d.recommendations
+                }));
+                setIssues(formatted);
             } catch (err) { console.error(err); }
         };
         fetchData();
@@ -80,15 +90,25 @@ export default function IssueTracker() {
                                         <div className="shrink-0 mt-1">
                                             {issue.risk === "High" ? <AlertCircle size={22} className="text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse" /> : <CheckCircleSmall status={issue.status} />}
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-4 w-full">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{issue.date.split(" ")[1]} • {issue.source}</span>
+                                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{issue.date.split(" ")[0]} • {issue.source}</span>
                                                 <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${issue.risk === 'High' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400'}`}>{issue.risk}</span>
                                             </div>
                                             <div className="text-base font-black text-white group-hover:text-blue-400 transition-colors tracking-tight">{issue.title}</div>
-                                            <div className="text-xs text-slate-500 font-medium leading-relaxed bg-black/20 p-4 rounded-2xl border border-white/5">
+                                            <div className="text-xs text-slate-500 font-medium leading-relaxed bg-black/20 p-4 rounded-xl border border-white/5">
                                                 {issue.description}
                                             </div>
+                                            {issue.recommendations && (
+                                                <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl space-y-2">
+                                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <Zap size={10} /> Auto Suggestion (자동 권고)
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-400 font-bold leading-relaxed italic">
+                                                        "{issue.recommendations}"
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

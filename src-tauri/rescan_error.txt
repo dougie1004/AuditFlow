@@ -1,0 +1,15 @@
+   Compiling auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\playground\AuditFlow\src-tauri)
+error[E0689]: can't call method `min` on ambiguous numeric type `{float}`
+   --> src\bin\rescan_split_signals.rs:125:65
+    |
+125 |                 let score = (base_weight * account_sensitivity).min(1.0);
+    |                                                                 ^^^
+
+error[E0689]: can't call method `min` on ambiguous numeric type `{float}`
+   --> src\bin\rescan_split_signals.rs:137:65
+    |
+137 |                 let score = (base_weight * account_sensitivity).min(1.0);
+    |                                                                 ^^^
+
+For more information about this error, try `rustc --explain E0689`.
+error: could not compile `auditflow` (bin "rescan_split_signals") due to 2 previous errors

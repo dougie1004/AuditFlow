@@ -44,7 +44,7 @@ export const safeInvoke = async <T>(command: string, args?: Record<string, any>)
         // Return a safe 'empty' value based on known commands to prevent UI crashes
         if (command.startsWith('get_')) {
             if (command.endsWith('s') || command === 'get_audit_universe') return [] as unknown as T;
-            if (command === 'get_dashboard_summary') return { total_risks: 0, ai_signals: 0, critical_coverage: "0%", open_findings: 0, risk_exposure_score: 0, trends: [] } as unknown as T;
+            if (command === 'get_dashboard_summary') return { total_risks: 0, ai_signals: 0, critical_coverage: "0%", open_findings: 0, risk_score: 0, trends: [] } as unknown as T;
         }
 
         throw error; // Still throw so the caller knows it failed, but we notified the user
@@ -92,7 +92,7 @@ const mockInvoke = async <T>(command: string, args?: any): Promise<T> => {
                 ai_signals: 0,
                 critical_coverage: "N/A",
                 open_findings: 0,
-                risk_exposure_score: 0,
+                risk_score: 0,
                 trends: []
             } as unknown as T;
 

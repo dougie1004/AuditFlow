@@ -171,7 +171,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                         let roll = rng.gen_range(0..100);
                         if roll < 15 { ("CONFIRMED", "High", "Direct evidence found.".to_string()) }
                         else if roll < 55 { ("PENDING", "Medium", "Potential anomaly requires review.".to_string()) }
-                        else { ("DISMISSED", "Low", "False positive likely.".to_string()) }
+                        else { ("PENDING", "Low", "Trace evidence noted in ledger.".to_string()) }
                     };
 
                     let day = rng.gen_range(1..28);

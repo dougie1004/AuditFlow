@@ -3,13 +3,14 @@ import { useState, useEffect, createContext, useContext } from "react";
 import {
   Menu, X, LayoutDashboard, Database, ShieldCheck,
   Activity, CreditCard, MessageSquare, FileText, BrainCircuit,
-  LogOut, CheckCircle2, ChevronDown, TrendingUp, Layers, Box, BookOpen, ListChecks, Cpu
+  LogOut, CheckCircle2, ChevronDown, TrendingUp, Layers, Box, BookOpen, ListChecks, Cpu, Settings
 } from "lucide-react";
 
 import { AuditProvider } from "./context/AuditContext";
 
 import auditflowLogo from "./assets/auditflow_logo.png";
 import insightrixLogo from "./assets/insightrix_logo.png";
+import { safeInvoke } from "./lib/tauri-bridge";
 
 // 페이지 컴포넌트 임포트
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +31,7 @@ import AuditHistory from "./pages/AuditHistory"; // Import History
 import StagingArea from "./pages/StagingArea";
 import AIAnalysisReport from "./components/AIAnalysisReport";
 import ExpertConsole from "./pages/ExpertConsole";
+import EntityTimeline from "./pages/EntityTimeline";
 
 // Debug Pages
 import AuditLifecycle from "./pages/debug/AuditLifecycle";
@@ -243,9 +245,27 @@ function Layout() {
           <NavItem to="/report" icon={<FileText size={18} />} label="감사 결론 및 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
           <div className="mt-8 pt-4 border-t border-slate-800">
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">Utility & Debug</p>
-            <NavItem to="/knowledge-base" icon={<BookOpen size={18} />} label="실사 프로토콜 (RAG)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-            <NavItem to="/debug/audit-lifecycle" icon={<Activity size={18} />} label="엔진 심전도 (Debug)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">System Admin</p>
+            <div
+              onClick={async () => {
+                const status = await safeInvoke<string>('get_gemini_api_key').catch(() => "미설정");
+                const newKey = prompt(`Gemini API Key를 설정합니다.\n현재: ${status}\n\n새 Key를 입력하세요 (취소 시 기존 유지):`, "");
+                if (newKey !== null && newKey.trim() !== "") {
+                  try {
+                    await safeInvoke('set_gemini_api_key', { key: newKey.trim() });
+                    alert("API Key가 성공적으로 저장되었습니다.");
+                  } catch (e) {
+                    alert("저장 중 오류 발생: " + e);
+                  }
+                }
+              }}
+              className="flex items-center gap-[14px] px-4 py-3 rounded-xl hover:bg-white/5 cursor-pointer text-[#94a3b8] hover:text-white transition-all text-[13px] font-semibold"
+            >
+              <div className="w-5 h-5 flex items-center justify-center">
+                <Settings size={18} />
+              </div>
+              <span>설정 (AI API Key)</span>
+            </div>
           </div>
         </nav>
       </aside>
@@ -292,13 +312,14 @@ function Layout() {
             <Route path="/report" element={<AuditReport />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
             <Route path="/history" element={<AuditHistory />} />
+            <Route path="/entity/:entityId/timeline" element={<EntityTimeline />} />
 
             {/* Debug Routes (Hidden) */}
             <Route path="/debug/audit-lifecycle" element={<AuditLifecycle />} />
           </Routes>
         </div>
       </main>
-    </div>
+    </div >
   );
 }
 

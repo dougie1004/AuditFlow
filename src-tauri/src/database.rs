@@ -254,6 +254,7 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
             likelihood_score INTEGER DEFAULT 0,
             last_audit_year INTEGER DEFAULT 2024,
             budget_size TEXT DEFAULT 'N/A',
+            operating_profit TEXT DEFAULT 'N/A',
             headcount INTEGER DEFAULT 0,
             last_audit_rating TEXT DEFAULT 'Not Rated',
             key_systems TEXT DEFAULT 'None',
@@ -262,14 +263,15 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
 
-    /* [ZERO-BASE] 배포용 버전은 초기 데이터를 자동으로 생성하지 않습니다.
+    let _ = conn.execute("ALTER TABLE audit_universe ADD COLUMN operating_profit TEXT DEFAULT 'N/A'", params![]);
+
+    // [AUTO-SEED] Seed data if empty
     let universe_count: i64 = conn.query_row("SELECT COUNT(*) FROM audit_universe", [], |r| r.get(0)).unwrap_or(0);
     if universe_count == 0 {
         AuditUniverseSeeder::seed(&mut conn).ok();
     }
     crate::scenarios_seeder::seed_master_scenarios(&mut conn).ok();
     export_scenario_manifest(&conn, app_handle).ok();
-    */
 
     // [PHASE 1] Audit Memory Layer (Audit Objects)
     conn.execute(
@@ -374,6 +376,182 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
 
+    // [AuditFlow V2] Application Settings
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [ARCH-V3] Entity Master Table (The canonical registry of WHO)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS entity_master (
+            id TEXT PRIMARY KEY,
+            entity_type TEXT NOT NULL,       -- VENDOR, EMPLOYEE, CUSTOMER, DEPT
+            canonical_name TEXT NOT NULL,
+            normalized_key TEXT NOT NULL UNIQUE, 
+            risk_score REAL DEFAULT 0.0,
+            tags TEXT                        -- JSON Array
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [ARCH-V3] Entity Alias Table (For Entity Resolution)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS entity_alias (
+            alias TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            FOREIGN KEY(entity_id) REFERENCES entity_master(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [ARCH-V3] Entity Event Table (The timeline of WHAT)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS entity_event (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,       -- TRANSACTION, APPROVAL, COMMUNICATION
+            amount REAL,
+            event_date TEXT,
+            description TEXT,
+            source_object_id TEXT,           -- Link back to raw audit_object
+            is_flagged INTEGER DEFAULT 0,    -- 0 or 1
+            risk_delta REAL DEFAULT 0.0,     -- Impact on total risk score
+            rule_flags TEXT,                 -- JSON Array of rule IDs
+            stat_flags TEXT,                 -- JSON Array of statistical anomaly keys
+            FOREIGN KEY(entity_id) REFERENCES entity_master(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN is_flagged INTEGER DEFAULT 0", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN risk_delta REAL DEFAULT 0.0", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN rule_flags TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN stat_flags TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN source_type TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN metadata TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN account_code TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN account_name TEXT", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN debit REAL DEFAULT 0.0", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN credit REAL DEFAULT 0.0", params![]);
+    let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN net_amount REAL DEFAULT 0.0", params![]);
+
+    // [PHASE 1 Performance] Indexing for High Volume Events
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_entity_id ON entity_event(entity_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_event_date ON entity_event(event_date)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_source_type ON entity_event(source_type)", params![]);
+
+    // [PHASE 2] Structural Risk Signals
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS risk_signal (
+            id TEXT PRIMARY KEY,
+            object_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            signal_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            score REAL DEFAULT 0.0,
+            related_ids TEXT,               -- JSON array of event/tx IDs
+            metadata TEXT,                  -- JSON facts
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // [PHASE 3] Monthly Aggregation Cache
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS account_month_profile (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            object_id TEXT NOT NULL,
+            account_code TEXT NOT NULL,
+            year_month TEXT NOT NULL,        -- YYYY-MM
+            total_debit REAL DEFAULT 0.0,
+            total_credit REAL DEFAULT 0.0,
+            net_change REAL DEFAULT 0.0,
+            transaction_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_account_month_profile_lookup ON account_month_profile (object_id, account_code, year_month)", params![]);
+
+    // [PHASE 4] Multi-Year Trend Analysis
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS account_year_profile (
+            account_code TEXT NOT NULL,
+            fiscal_year INTEGER NOT NULL,
+            structural_score REAL DEFAULT 0.0,
+            avg_anomaly_score REAL DEFAULT 0.0,
+            avg_cv REAL DEFAULT 0.0,
+            avg_cr1 REAL DEFAULT 0.0,
+            avg_hhi REAL DEFAULT 0.0,
+            transaction_count INTEGER DEFAULT 0,
+            PRIMARY KEY (account_code, fiscal_year)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // Migration: ensure columns exist
+    let _ = conn.execute("ALTER TABLE account_year_profile ADD COLUMN avg_anomaly_score REAL DEFAULT 0.0", params![]);
+    let _ = conn.execute("ALTER TABLE account_year_profile ADD COLUMN structural_score REAL DEFAULT 0.0", params![]);
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_account_year_lookup ON account_year_profile (account_code, fiscal_year)", params![]);
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS event_relations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_event_id TEXT NOT NULL,
+            target_event_id TEXT NOT NULL,
+            relation_type TEXT NOT NULL,     -- 'SAME_AMOUNT', 'SPLIT_PAYMENT', 'KEYWORD_LINK'
+            strength REAL DEFAULT 0.0,       -- 0.0 ~ 1.0
+            metadata TEXT,                   -- JSON details
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(source_event_id) REFERENCES entity_event(id),
+            FOREIGN KEY(target_event_id) REFERENCES entity_event(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_source ON event_relations(source_event_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_target ON event_relations(target_event_id)", params![]);
+
+    // [PHASE 5] Contextual Risk Signals (Non-Financial)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS context_signal (
+            id TEXT PRIMARY KEY,
+            object_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            signal_type TEXT NOT NULL,      -- POLICY_VIOLATION, SUSPICIOUS_COMM, etc.
+            description TEXT NOT NULL,
+            severity TEXT DEFAULT 'MEDIUM',
+            metadata TEXT,                  -- JSON facts
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_context_signal_project ON context_signal(project_id)", params![]);
+
+    // [PHASE 6] Risk Correlation (Hybrid Intelligence)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS correlation_signal (
+            id TEXT PRIMARY KEY,
+            object_id TEXT NOT NULL,
+            account_code TEXT NOT NULL,
+            structural_score REAL DEFAULT 0.0,
+            contextual_flag INTEGER DEFAULT 0, -- 1 if related communication found
+            final_priority REAL DEFAULT 0.0,
+            evidence_summary TEXT,           -- Summary of the cross-model link
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_correlation_signal_object ON correlation_signal(object_id)", params![]);
+
     Ok(())
 }
 
@@ -414,64 +592,64 @@ impl AuditUniverseSeeder {
     pub fn seed(conn: &mut Connection) -> Result<(), String> {
         let entities = vec![
             (
-                "구매팀", "지원부문", 9, 8, 2023, "$45M", 12, "미흡 (Unsatisfactory)", "Oracle ERP, Ariba",
+                "구매팀", "지원부문", 9, 8, 2023, "$45M", "$4.5M", 12, "미흡 (Unsatisfactory)", "Oracle ERP, Ariba",
                 r#"{"reason": "IT 아웃소싱 계약 내 입찰 담합 의심. 특정 업체에 대한 과도한 의존도(지출의 80%).", "impact_score": 9, "likelihood_score": 8, "impact_breakdown": {"financial_loss": 9, "strategic_impact": 7, "reputation_risk": 9}, "likelihood_breakdown": {"historical_frequency": 6, "control_weakness": 9, "process_complexity": 5}, "audit_approach": "입찰 로그에 대한 포렌식 데이터 분석 및 상위 10개 업체에 대한 이해상충 점검 수행.", "reference_standard": "ISO 37001 (부패방지), COSO 원칙 8 (부정 위험)"}"#
             ),
             (
-                "IT보안본부", "지원부문", 9, 7, 2023, "$18M", 45, "개선필요 (Needs Improvement)", "AWS, Azure, Splunk",
+                "IT보안본부", "지원부문", 9, 7, 2023, "$18M", "$1.2M", 45, "개선필요 (Needs Improvement)", "AWS, Azure, Splunk",
                 r#"{"reason": "R&D 부서 내 Shadow IT 사용 발견. 주요 서버 패치 지연(90일 초과). 랜섬웨어 취약성 높음.", "impact_score": 9, "likelihood_score": 7, "impact_breakdown": {"financial_loss": 9, "strategic_impact": 9, "reputation_risk": 9}, "likelihood_breakdown": {"historical_frequency": 4, "control_weakness": 8, "process_complexity": 8}, "audit_approach": "관리되지 않는 자산 스캔(Nmap/Tenable) 및 Splunk 내 패치 관리 로그 검토.", "reference_standard": "NIST CSF (탐지/보호), ISO 27001 A.12.6"}"#
             ),
             (
-                "인사팀 (급여/보상)", "지원부문", 6, 5, 2024, "$150M (급여)", 1200, "양호 (Satisfactory)", "Workday, SAP HCM",
+                "인사팀 (급여/보상)", "지원부문", 6, 5, 2024, "$150M (급여)", "$0 (Cost Center)", 1200, "양호 (Satisfactory)", "Workday, SAP HCM",
                 r#"{"reason": "현장 근로자 초과 근무 수당 불일치. 원격 지점 내 유령 직원(Ghost Employee) 리스크 존재.", "impact_score": 6, "likelihood_score": 5, "impact_breakdown": {"financial_loss": 6, "strategic_impact": 4, "reputation_risk": 7}, "likelihood_breakdown": {"historical_frequency": 5, "control_weakness": 4, "process_complexity": 6}, "audit_approach": "실제 근무 인원 명단과 급여 지급 내역 및 물리적 출입 로그 대조.", "reference_standard": "COSO 통제 활동 (급여 사이클), 근로기준법"}"#
             ),
             (
-                "자금팀", "지원부문", 9, 6, 2024, "$500M (AUM)", 8, "개선필요 (Needs Improvement)", "Kyriba, Bloomberg",
+                "자금팀", "지원부문", 9, 6, 2024, "$500M (AUM)", "$50M", 8, "개선필요 (Needs Improvement)", "Kyriba, Bloomberg",
                 r#"{"reason": "최근 변동성 장세 중 외환 헤지 전략이 정책에서 이탈함. 이체 승인 한도 초과 승인 빈번.", "impact_score": 9, "likelihood_score": 6, "impact_breakdown": {"financial_loss": 9, "strategic_impact": 7, "reputation_risk": 4}, "likelihood_breakdown": {"historical_frequency": 3, "control_weakness": 6, "process_complexity": 9}, "audit_approach": "일일 자금 정책 한도 대비 모든 외환 거래 티켓 검토 및 승인 타임스탬프 확인.", "reference_standard": "IIA GTAG (자금 관리), COSO 원칙 10 (통제 활동)"}"#
             ),
             (
-                "물류센터 (부산)", "운영부문", 7, 6, 2023, "$8M (Opex)", 45, "미흡 (Unsatisfactory)", "WMS (Legacy)",
+                "물류센터 (부산)", "운영부문", 7, 6, 2023, "$8M (Opex)", "$500K", 45, "미흡 (Unsatisfactory)", "WMS (Legacy)",
                 r#"{"reason": "재고 감모율 2.5% 증가. 하역장 물리적 보안 통제 취약점 발견.", "impact_score": 7, "likelihood_score": 6, "impact_breakdown": {"financial_loss": 7, "strategic_impact": 5, "reputation_risk": 5}, "likelihood_breakdown": {"historical_frequency": 6, "control_weakness": 8, "process_complexity": 5}, "audit_approach": "부산 허브 불시 재고 실사 및 하역 구역 CCTV 커버리지 검토.", "reference_standard": "COSO 원칙 11 (기술 일반 통제), 재고 관리 베스트 프랙티스"}"#
             ),
             (
-                "국내영업본부", "사업부문", 8, 7, 2022, "$220M (Rev)", 150, "양호 (Satisfactory)", "Salesforce",
+                "국내영업본부", "사업부문", 8, 7, 2022, "$220M (Rev)", "$44M (EBIT)", 150, "양호 (Satisfactory)", "Salesforce",
                 r#"{"reason": "분기말 밀어내기 매출(Channel Stuffing) 징후. 적절한 승인 없이 공격적인 리베이트 제도 적용.", "impact_score": 8, "likelihood_score": 7, "impact_breakdown": {"financial_loss": 8, "strategic_impact": 7, "reputation_risk": 6}, "likelihood_breakdown": {"historical_frequency": 4, "control_weakness": 5, "process_complexity": 6}, "audit_approach": "분기말 이후 매출 반품률 분석 및 고객 수령 확인일 검증.", "reference_standard": "IFRS 15 (수익 인식), COSO 원칙 8 (부정 위험)"}"#
             ),
             (
-                "R&D센터 (성남)", "사업부문", 8, 4, 2024, "$65M", 200, "개선필요 (Needs Improvement)", "Jira, Git",
+                "R&D센터 (성남)", "사업부문", 8, 4, 2024, "$65M", "$0 (R&D)", 200, "개선필요 (Needs Improvement)", "Jira, Git",
                 r#"{"reason": "IP 유출 리스크. 퍼블릭 리포지토리에 소스 코드 커밋 발생. 엔드포인트 내 DLP(데이터 유출 방지) 부재.", "impact_score": 8, "likelihood_score": 4, "impact_breakdown": {"financial_loss": 9, "strategic_impact": 9, "reputation_risk": 5}, "likelihood_breakdown": {"historical_frequency": 2, "control_weakness": 6, "process_complexity": 7}, "audit_approach": "퍼블릭 GitHub 리포지토리 비밀 정보 스캔 및 DLP 에이전트 설치 현황 감사.", "reference_standard": "ISO 27001 (자산 관리), NIST SP 800-53 (시스템 및 정보 무결성)"}"#
             ),
             (
-                "글로벌 컴플라이언스팀", "지원부문", 4, 2, 2023, "$2M", 5, "양호 (Satisfactory)", "ServiceNow GRC",
+                "글로벌 컴플라이언스팀", "지원부문", 4, 2, 2023, "$2M", "$0", 5, "양호 (Satisfactory)", "ServiceNow GRC",
                 r#"{"reason": "GDPR 준수 감사 대기 중. 내부 고발자 핫라인 익명성 프로토콜 내 사소한 격차 존재.", "impact_score": 4, "likelihood_score": 2, "impact_breakdown": {"financial_loss": 5, "strategic_impact": 3, "reputation_risk": 7}, "likelihood_breakdown": {"historical_frequency": 1, "control_weakness": 3, "process_complexity": 4}, "audit_approach": "가상 제보를 통한 내부 고발자 핫라인 익명성 테스트 및 접속 로그 추적.", "reference_standard": "GDPR 조항, ISO 37002 (내부 고발 관리 시스템)"}"#
             ),
             (
-                "미국 법인 (영업)", "종속회사", 7, 5, 2022, "$80M (Rev)", 30, "개선필요 (Needs Improvement)", "NetSuite",
+                "미국 법인 (영업)", "종속회사", 7, 5, 2022, "$80M (Rev)", "$12M", 30, "개선필요 (Needs Improvement)", "NetSuite",
                 r#"{"reason": "새로운 3개 주 내 세금 준수 이슈. 현지 영업 사원의 높은 여비 교통비 지출.", "impact_score": 7, "likelihood_score": 5, "impact_breakdown": {"financial_loss": 6, "strategic_impact": 5, "reputation_risk": 6}, "likelihood_breakdown": {"historical_frequency": 3, "control_weakness": 5, "process_complexity": 8}, "audit_approach": "CA/NY/TX 세금 임계값 검토 및 $200 초과 영수증 감사.", "reference_standard": "US GAAP (세무), IRS 가이드라인"}"#
             ),
             (
-                "유럽 지사 (프랑크푸르트)", "종속회사", 6, 4, 2023, "$45M (Rev)", 15, "양호 (Satisfactory)", "SAP Business One",
+                "유럽 지사 (프랑크푸르트)", "종속회사", 6, 4, 2023, "$45M (Rev)", "$6M", 15, "양호 (Satisfactory)", "SAP Business One",
                 r#"{"reason": "국가 간 거래 시 VAT 삼각 무역 오류. BEPS 준수를 위한 이전 가격 문서 업데이트 필요.", "impact_score": 6, "likelihood_score": 4, "impact_breakdown": {"financial_loss": 5, "strategic_impact": 4, "reputation_risk": 5}, "likelihood_breakdown": {"historical_frequency": 4, "control_weakness": 3, "process_complexity": 9}, "audit_approach": "정확한 VAT 코드 적용 여부 확인을 위한 국가 간 송장 20개 샘플링 및 TP 마스터 파일 검토.", "reference_standard": "EU VAT 지침, OECD 이전 가격 가이드라인"}"#
             ),
             (
-                "총무팀", "지원부문", 3, 3, 2024, "$5M", 10, "양호 (Satisfactory)", "Groupware",
+                "총무팀", "지원부문", 3, 3, 2024, "$5M", "$0", 10, "양호 (Satisfactory)", "Groupware",
                 r#"{"reason": "법인 차량 운행 일지 불일치. 시설 유지 보수 계약이 경쟁 입찰 없이 자동 갱신됨.", "impact_score": 3, "likelihood_score": 3, "impact_breakdown": {"financial_loss": 2, "strategic_impact": 1, "reputation_risk": 3}, "likelihood_breakdown": {"historical_frequency": 3, "control_weakness": 4, "process_complexity": 2}, "audit_approach": "차량 마일리지 로그와 연료 카드 사용 데이터 비교 및 계약 갱신 승인 검토.", "reference_standard": "내부 구매 정책, 기업 자산 관리 가이드"}"#
             ),
             (
-                "법무팀", "지원부문", 5, 2, 2023, "$4M", 8, "양호 (Satisfactory)", "Legal Tech",
+                "법무팀", "지원부문", 5, 2, 2023, "$4M", "$0", 8, "양호 (Satisfactory)", "Legal Tech",
                 r#"{"reason": "계약 관리 수동 수행(Excel)으로 인한 갱신 알림 누락. 소송 충당부채 적정성 검토 필요.", "impact_score": 5, "likelihood_score": 2, "impact_breakdown": {"financial_loss": 4, "strategic_impact": 6, "reputation_risk": 3}, "likelihood_breakdown": {"historical_frequency": 1, "control_weakness": 3, "process_complexity": 4}, "audit_approach": "실제 서명된 계약서와 Excel 추적 시트 대조 및 충당부채 계산 내역 점검.", "reference_standard": "IAS 37 (충당부채), COSO 원칙 10 (통제 활동)"}"#
             ),
             (
-                "마케팅팀", "사업부문", 5, 5, 2024, "$35M", 25, "양호 (Satisfactory)", "HubSpot, Google Ads",
+                "마케팅팀", "사업부문", 5, 5, 2024, "$35M", "$3.5M", 25, "양호 (Satisfactory)", "HubSpot, Google Ads",
                 r#"{"reason": "광고비 집행 효율성 및 대행사 리베이트 리스크. 디지털 대행사에 대한 과도한 수동 지급 발생.", "impact_score": 5, "likelihood_score": 5, "impact_breakdown": {"financial_loss": 5, "strategic_impact": 4, "reputation_risk": 6}, "likelihood_breakdown": {"historical_frequency": 3, "control_weakness": 4, "process_complexity": 7}, "audit_approach": "업체 지급 상관관계 분석 및 매체 집행 로그 검토.", "reference_standard": "부정방지 정책, 마케팅 집행 가이드라인"}"#
             )
         ];
 
         let tx = conn.transaction().map_err(|e| e.to_string())?;
-        for (name, cat, impact, likelihood, year, budget, head, rating, sys, ai_json) in &entities {
+        for (name, cat, impact, likelihood, year, budget, profit, head, rating, sys, ai_json) in &entities {
             tx.execute(
-                "INSERT INTO audit_universe (unit_name, category, impact_score, likelihood_score, last_audit_year, budget_size, headcount, last_audit_rating, key_systems, ai_analysis_data) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-                params![name, cat, impact, likelihood, year, budget, head, rating, sys, ai_json]
+                "INSERT INTO audit_universe (unit_name, category, impact_score, likelihood_score, last_audit_year, budget_size, operating_profit, headcount, last_audit_rating, key_systems, ai_analysis_data) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![name, cat, impact, likelihood, year, budget, profit, head, rating, sys, ai_json]
             ).map_err(|e| format!("Failed to insert entity [{}]: {}", name, e))?;
         }
         tx.commit().map_err(|e| format!("Seeding transaction commit failed: {}", e))?;

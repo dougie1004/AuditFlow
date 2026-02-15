@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { safeInvoke } from "../lib/tauri-bridge";
 import {
     Calendar, Users, Target, ShieldCheck,
-    MapPin, Briefcase, TrendingUp, ChevronRight
+    MapPin, Briefcase, TrendingUp, ChevronRight, History
 } from "lucide-react";
 import { useApp } from "../App";
 
@@ -327,6 +327,17 @@ export default function ProjectDetail() {
                                             </p>
                                         </div>
                                     </div>
+
+                                    <button
+                                        onClick={() => navigate(`/entity/${linkedEntity.id}/timeline`)}
+                                        className="w-full flex items-center justify-between p-4 bg-blue-500/10 hover:bg-blue-500/20 rounded-2xl transition-all group border border-blue-500/20"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <History size={16} className="text-blue-500" />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">이벤트 히스토리 타임라인</span>
+                                        </div>
+                                        <ChevronRight size={16} className="text-slate-500 group-hover:translate-x-1 transition-transform" />
+                                    </button>
 
                                     <button
                                         onClick={() => navigate('/')}

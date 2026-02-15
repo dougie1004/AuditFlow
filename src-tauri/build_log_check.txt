@@ -1,0 +1,397 @@
+   Compiling auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\playground\AuditFlow\src-tauri)
+warning: unused import: `params`
+ --> src\bin\diagnose_structural.rs:1:16
+  |
+1 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `p10_idx`
+  --> src\bin\analyze_anomaly_dist.rs:44:9
+   |
+44 |     let p10_idx = (count * 0.1) as usize;
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_p10_idx`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `id` is never read
+ --> src\bin\rescan_split_signals.rs:8:5
+  |
+7 | struct Event {
+  |        ----- field in this struct
+8 |     id: String,
+  |     ^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `get_entity_risk_multiplier` is never used
+  --> src\bin\rescan_split_signals.rs:15:4
+   |
+15 | fn get_entity_risk_multiplier(conn: &Connection, entity...
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `cr1`
+  --> src\bin\report_top10.rs:86:60
+   |
+86 | ... s_score, a_score, cv, cr1, hhi, trend) = r?;
+   |                           ^^^ help: if this is intentional, prefix it with an underscore: `_cr1`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `trend_str`
+  --> src\bin\report_top10.rs:88:25
+   |
+88 |                     let trend_str = trend.map(|t| format!("{:>5....
+   |                         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_trend_str`
+
+warning: `auditflow` (bin "diagnose_structural") generated 1 warning (run `cargo fix --bin "diagnose_structural" -p auditflow` to apply 1 suggestion)
+warning: `auditflow` (bin "analyze_anomaly_dist") generated 1 warning (run `cargo fix --bin "analyze_anomaly_dist" -p auditflow` to apply 1 suggestion)
+warning: `auditflow` (bin "rescan_split_signals") generated 2 warnings
+warning: `auditflow` (bin "report_top10") generated 2 warnings (run `cargo fix --bin "report_top10" -p auditflow` to apply 2 suggestions)
+warning: unused import: `regex::Regex`
+ --> src\audit_engine.rs:5:5
+  |
+5 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Path`
+ --> src\compliance_dd_flow.rs:3:17
+  |
+3 | use std::path::{Path, PathBuf};
+  |                 ^^^^
+
+warning: unused import: `Value`
+ --> src\debug_api.rs:3:24
+  |
+3 | use serde_json::{json, Value};
+  |                        ^^^^^
+
+warning: unused import: `Manager`
+ --> src\constitution.rs:1:24
+  |
+1 | use tauri::{AppHandle, Manager};
+  |                        ^^^^^^^
+
+warning: unused import: `std::path::Path`
+ --> src\constitution.rs:3:5
+  |
+3 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `params`
+ --> src\assurance\flow_analysis.rs:2:16
+  |
+2 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+
+warning: unused import: `params`
+ --> src\compliance_judge.rs:2:16
+  |
+2 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+
+warning: unused import: `crate::file_loader::load_file_rows`
+ --> src\ledger_engine.rs:3:5
+  |
+3 | use crate::file_loader::load_file_rows;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0277]: `?` couldn't convert the error to `std::string::String`
+   --> src\audit_engine.rs:456:173
+    |
+130 | ...t(app_handle: AppHandle, new_obj_id: &str, project_id: &str) -> Result<(), String> {
+    |                                                                    ------------------ expected `std::string::String` because of this
+...
+456 | ...nn.prepare("SELECT SUM(ABS(net_amount)) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 GROUP BY substr(event_date, 1, 7)")?;
+    |       --------------------------------------------------------------------------------------------------------------------------------------------^ the trait `From<rusqlite::Error>` is not implemented for `std::string::String`
+    |       |
+    |       this can't be annotated with `?` because it has type `Result<_, rusqlite::Error>`
+    |
+    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+    = help: the following other types implement trait `From<T>`:
+              `std::string::String` implements `From<&mut str>`
+              `std::string::String` implements `From<&std::string::String>`
+              `std::string::String` implements `From<&str>`
+              `std::string::String` implements `From<AssetKey>`
+              `std::string::String` implements `From<Box<str>>`
+              `std::string::String` implements `From<Cow<'_, str>>`
+              `std::string::String` implements `From<Uuid>`
+              `std::string::String` implements `From<char>`
+            and 8 others
+
+error[E0277]: `?` couldn't convert the error to `std::string::String`
+   --> src\audit_engine.rs:457:88
+    |
+130 | pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_id: &str) -> Result<(), String> {
+    |                                                                                              ------------------ expected `std::string::String` because of this
+...
+457 |             let rows = stmt.query_map(params![new_obj_id, acc], |r| r.get::<_, f64>(0))?;
+    |                             -----------------------------------------------------------^ the trait `From<rusqlite::Error>` is not implemented for `std::string::String`
+    |                             |
+    |                             this can't be annotated with `?` because it has type `Result<_, rusqlite::Error>`
+    |
+    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+    = help: the following other types implement trait `From<T>`:
+              `std::string::String` implements `From<&mut str>`
+              `std::string::String` implements `From<&std::string::String>`
+              `std::string::String` implements `From<&str>`
+              `std::string::String` implements `From<AssetKey>`
+              `std::string::String` implements `From<Box<str>>`
+              `std::string::String` implements `From<Cow<'_, str>>`
+              `std::string::String` implements `From<Uuid>`
+              `std::string::String` implements `From<char>`
+            and 8 others
+
+error[E0277]: `?` couldn't convert the error to `std::string::String`
+   --> src\audit_engine.rs:474:179
+    |
+130 | ...t(app_handle: AppHandle, new_obj_id: &str, project_id: &str) -> Result<(), String> {
+    |                                                                    ------------------ expected `std::string::String` because of this
+...
+474 | ...nn.prepare("SELECT SUM(ABS(net_amount)) as s FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 GROUP BY entity_id ORDER BY s DESC")?;
+    |       --------------------------------------------------------------------------------------------------------------------------------------------------^ the trait `From<rusqlite::Error>` is not implemented for `std::string::String`
+    |       |
+    |       this can't be annotated with `?` because it has type `Result<_, rusqlite::Error>`
+    |
+    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+    = help: the following other types implement trait `From<T>`:
+              `std::string::String` implements `From<&mut str>`
+              `std::string::String` implements `From<&std::string::String>`
+              `std::string::String` implements `From<&str>`
+              `std::string::String` implements `From<AssetKey>`
+              `std::string::String` implements `From<Box<str>>`
+              `std::string::String` implements `From<Cow<'_, str>>`
+              `std::string::String` implements `From<Uuid>`
+              `std::string::String` implements `From<char>`
+            and 8 others
+
+error[E0277]: `?` couldn't convert the error to `std::string::String`
+   --> src\audit_engine.rs:475:88
+    |
+130 | pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_id: &str) -> Result<(), String> {
+    |                                                                                              ------------------ expected `std::string::String` because of this
+...
+475 |             let rows = stmt.query_map(params![new_obj_id, acc], |r| r.get::<_, f64>(0))?;
+    |                             -----------------------------------------------------------^ the trait `From<rusqlite::Error>` is not implemented for `std::string::String`
+    |                             |
+    |                             this can't be annotated with `?` because it has type `Result<_, rusqlite::Error>`
+    |
+    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+    = help: the following other types implement trait `From<T>`:
+              `std::string::String` implements `From<&mut str>`
+              `std::string::String` implements `From<&std::string::String>`
+              `std::string::String` implements `From<&str>`
+              `std::string::String` implements `From<AssetKey>`
+              `std::string::String` implements `From<Box<str>>`
+              `std::string::String` implements `From<Cow<'_, str>>`
+              `std::string::String` implements `From<Uuid>`
+              `std::string::String` implements `From<char>`
+            and 8 others
+
+warning: unused import: `chrono::Datelike`
+ --> src\simulator.rs:4:5
+  |
+4 | use chrono::Datelike;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> src\commands.rs:478:9
+    |
+478 |     let mut actual_sum: f64 = 0.0;
+    |         ----^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `pillar_culture`
+   --> src\commands.rs:393:9
+    |
+393 |     let pillar_culture = conn.query_row(
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pillar_culture`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `actual_sum`
+   --> src\commands.rs:478:9
+    |
+478 |     let mut actual_sum: f64 = 0.0;
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actual_sum`
+
+warning: unused variable: `proc_pct`
+   --> src\commands.rs:535:9
+    |
+535 |     let proc_pct = if total_exposure > 0.0 { (proc_exp / total_exposure * 100.0) as i64 } else { 0 };
+    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_proc_pct`
+
+warning: value assigned to `total_exposure` is never read
+   --> src\commands.rs:450:35
+    |
+450 |     let mut total_exposure: f64 = 0.0;
+    |                                   ^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable `issue_filter` is assigned to, but never used
+   --> src\commands.rs:850:9
+    |
+850 |     let mut issue_filter = "WHERE status = 'Accepted'".to_string();
+    |         ^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_issue_filter` instead
+
+warning: value assigned to `issue_filter` is never read
+   --> src\commands.rs:854:14
+    |
+854 |              issue_filter = format!(
+    |              ^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `projectType`
+    --> src\commands.rs:1315:61
+     |
+1315 | pub async fn analyze_process_mining(_app_handle: AppHandle, projectType: String) -> Result<Value, String> {
+     |                                                             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_projectType`
+
+warning: unused variable: `name`
+    --> src\commands.rs:2788:10
+     |
+2788 |     let (name, start, end, report_sections) = {
+     |          ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: unused variable: `start`
+    --> src\commands.rs:2788:16
+     |
+2788 |     let (name, start, end, report_sections) = {
+     |                ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
+
+warning: unused variable: `end`
+    --> src\commands.rs:2788:23
+     |
+2788 |     let (name, start, end, report_sections) = {
+     |                       ^^^ help: if this is intentional, prefix it with an underscore: `_end`
+
+warning: variable does not need to be mutable
+  --> src\audit_engine.rs:36:9
+   |
+36 |     let mut stmt = conn.prepare("SELECT to_object_id FROM relation_candidate WHERE from_object_id = ?1").ok();
+   |         ----^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\audit_engine.rs:49:9
+   |
+49 |     let mut stmt2 = conn.prepare("SELECT from_object_id FROM relation_candidate WHERE to_object_id = ?1").ok();
+   |         ----^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `domain`
+  --> src\debug_api.rs:45:21
+   |
+45 |     for (id, title, domain, risk) in sample_projects {
+   |                     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_domain`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:18:34
+   |
+18 | pub fn validate_execution_safety(app_handle: &AppHandle, scope: &str) -> Result<(), String> {
+   |                                  ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_handle`
+
+warning: unused variable: `forbidden_literals`
+  --> src\constitution.rs:22:9
+   |
+22 |     let forbidden_literals = vec!["15420", "placeholder", "mock_user"];
+   |         ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_forbidden_literals`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:48:31
+   |
+48 | pub fn check_system_integrity(app_handle: AppHandle) -> Result<Value, String> {
+   |                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_handle`
+
+warning: unused variable: `rel_id`
+   --> src\simulator.rs:250:29
+    |
+250 |                         let rel_id = format!("REL-{}", Uuid::new_v4().to_string().split('-').next().unwrap());
+    |                             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_rel_id`
+
+warning: variable `success_count` is assigned to, but never used
+  --> src\simulator.rs:91:9
+   |
+91 |     let mut success_count = 0;
+   |         ^^^^^^^^^^^^^^^^^
+   |
+   = note: consider using `_success_count` instead
+
+warning: value assigned to `success_count` is never read
+   --> src\simulator.rs:359:22
+    |
+359 |             Ok(_) => success_count += 1,
+    |                      ^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `cat_lower`
+   --> src\simulator.rs:385:9
+    |
+385 |     let cat_lower = scenario.category.to_lowercase();
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cat_lower`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:25:13
+   |
+25 |         let mut fmt_dash = 0; // %Y-%m-%d
+   |             ----^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:26:13
+   |
+26 |         let mut fmt_slash = 0; // %Y/%m/%d
+   |             ----^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:27:13
+   |
+27 |         let mut fmt_dot = 0; // %Y.%m.%d
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:28:13
+   |
+28 |         let mut fmt_raw = 0; // %Y%m%d
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:29:13
+   |
+29 |         let mut fmt_us = 0; // %m/%d/%Y or %d/%m/%Y
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: value assigned to `total_rows` is never read
+  --> src\ingestion\ledger_builder.rs:42:14
+   |
+42 |              total_rows = rows.len();
+   |              ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `auditflow` (bin "auditflow") generated 36 warnings
+error: could not compile `auditflow` (bin "auditflow") due to 4 previous errors; 36 warnings emitted

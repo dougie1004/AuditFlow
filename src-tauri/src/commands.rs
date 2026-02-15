@@ -9,9 +9,10 @@ use rand;
 use crate::models::{AuditIssue, AuditProject, AuditPlan, AuditUniverseEntity, AiRiskAnalysis};
 use crate::database::get_active_universe_column;
 use crate::file_utils::{read_any_file, apply_deidentification};
-use crate::ai::{call_gemini_direct, call_gemini_chat, extract_json};
+use crate::ai::{call_gemini_direct, extract_json};
 use crate::scenarios_seeder::seed_master_scenarios;
 use crate::file_loader::load_file_rows;
+use num_format::{Locale, ToFormattedString};
 
 // [CONSTITUTIONAL RULE: WRAPPER ONLY]
 // This file must ONLY contain thin wrappers that delegate to specific modules.
@@ -53,6 +54,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
     use tauri::Emitter;
 
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    println!(">>> [Engine] Using Database at: {:?}", db_path);
     
     // [INCREMENTAL CHECK] Determine if we are analyzing ALL files or specific ones
     let specific_targets = targetFileIds.clone().unwrap_or_default();
@@ -143,8 +145,53 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
 
     let _api_key = crate::ai::get_api_key();
 
-    // [AuditFlow V2 Engine Switch]
-    // Migrating from Legacy Engine to Compliance DD Flow (Rule First, AI Witness)
+    // NEW ENGINE: Ingestion with REAL AI (Sampling Mode)
+    if !target_files.is_empty() {
+        println!(">>> [Engine] Running Ingestion Pipeline (Phase 1 & 2)...");
+        let mut conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+        
+        for (path, name) in &target_files {
+             // 1. Determine Parser Type based on file name or content
+             // Phase 2: Add Logic for Card vs Ledger
+             let is_card_data = name.contains("카드") || name.contains("Card") || name.contains("승인");
+             
+              if is_card_data {
+                println!(">>> [Ingestion] Recognized CARD data: {}", name);
+                use crate::ingestion::card_builder::CardBuilder;
+                use crate::ingestion::EventBuilder;
+                
+                let builder = CardBuilder { file_path: path.clone() };
+                let events = builder.build_events();
+
+                 let tx = conn.transaction().map_err(|e| e.to_string())?;
+                 for event in events {
+                    tx.execute(
+                        "INSERT INTO entity_event (id, entity_id, event_type, amount, event_date, description, is_flagged, risk_delta, source_type, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0.0, ?7, ?8)",
+                        params![event.id, event.entity_id, event.event_type, event.amount.unwrap_or(0.0), event.event_date, event.description, event.source_type, event.metadata]
+                    ).ok();
+                 }
+                 tx.commit().map_err(|e| e.to_string())?;
+
+              } else {
+                println!(">>> [Ingestion] Processing LEDGER data: {}", name);
+                use crate::ingestion::ledger_builder::LedgerBuilder;
+                use crate::ingestion::EventBuilder;
+
+                let builder = LedgerBuilder { file_path: path.clone() };
+                let events = builder.build_events();
+
+                let tx = conn.transaction().map_err(|e| e.to_string())?;
+                for event in events {
+                    tx.execute(
+                        "INSERT INTO entity_event (id, entity_id, event_type, amount, event_date, description, is_flagged, risk_delta, source_type, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0.0, ?7, ?8)",
+                        params![event.id, event.entity_id, event.event_type, event.amount.unwrap_or(0.0), event.event_date, event.description, event.source_type, event.metadata]
+                    ).ok();
+                }
+                tx.commit().map_err(|e| e.to_string())?;
+              }
+        }
+        
+    }
     
     // Legacy Calls (Disabled)
     /*
@@ -244,9 +291,17 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
         }
         println!(">>> [Ingestion] Complete. Check Inbox.");
     
+    }
+    
     // [DETERMINISTIC SCAN] Choice 2: Recover strictly limited rules (Split/Vendor)
     crate::compliance_dd_flow::run_compliance_check_flow(target_files.clone(), &projectType, &db_path, &app_handle).await.ok();
-    }
+
+    // [LEDGER-ONLY MODE] Choice 3: Statistical & Pattern based Top 10 Analysis
+    crate::ledger_engine::run_ledger_only_scan(target_files.clone(), &projectType, &db_path).await.ok();
+    
+    // [PHASE 2-2] Forensic Cross-Check (Auto-Run)
+    println!(">>> [Forensic] Auto-triggering Forensic Scan for Cross-Analysis...");
+    crate::forensic_engine::ForensicEngine::run_correlations(&conn).ok(); 
 
     let (findings_count, risk_score) = {
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
@@ -297,6 +352,16 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
     app_handle.emit("analysis-progress", json!({ "progress": 100, "message": "분석이 성공적으로 완료되었습니다.", "step": 5 })).ok();
     
     Ok(json!({ "status": "Success", "analyzed_files": target_files.len(), "findings_count": findings_count, "risk_score": risk_score }))
+}
+
+#[tauri::command]
+pub fn run_forensic_scan(app_handle: AppHandle) -> Result<Value, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+    
+    let links = crate::forensic_engine::ForensicEngine::run_correlations(&conn)?;
+    
+    Ok(json!({ "links_found": links }))
 }
 
 #[tauri::command]
@@ -385,39 +450,58 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     let mut total_exposure: f64 = 0.0;
     let mut exposure_by_category: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
 
-    // 1. Fetch all 'Critical' and 'High' issues in the current scope with category join
-    let issues_query = if let Some(ref id) = projectId {
+    // 1. Fetch all 'Critical', 'High' and 'Medium' issues in the current scope with category join
+    let (issues_query, params_vec) = if let Some(ref id) = projectId {
         if id.is_empty() {
-            "SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High')".to_string()
+            ("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High', 'Medium')".to_string(), vec![])
         } else {
-            format!("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE (i.audit_id = '{}' OR i.project_type = '{}') AND i.severity IN ('Critical', 'High')", id, id)
+            ("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE (i.audit_id = ?1 OR i.project_type = ?1) AND i.severity IN ('Critical', 'High', 'Medium')".to_string(), vec![id.to_string()])
         }
     } else {
-        "SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High')".to_string()
+        ("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High', 'Medium')".to_string(), vec![])
     };
 
     let mut issues_stmt = conn.prepare(&issues_query).map_err(|e| e.to_string())?;
-    let issues_rows = issues_stmt.query_map([], |row| {
-        Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
-    }).map_err(|e| e.to_string())?;
+    let issues_rows: Vec<(Option<i64>, String, Option<String>)> = if params_vec.is_empty() {
+        issues_stmt.query_map([], |row| {
+            Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
+        }).map_err(|e| e.to_string())?.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+    } else {
+        issues_stmt.query_map(params![params_vec[0]], |row| {
+            Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
+        }).map_err(|e| e.to_string())?.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+    };
 
-    for r in issues_rows {
-        if let Ok((entity_id_opt, severity, category_opt)) = r {
-            let exposure = if let Some(entity_id) = entity_id_opt {
-                if let Ok(verdict) = crate::compliance_judge::judge_commercial_risk(&db_path, entity_id, &severity) {
-                    verdict.calculated_exposure
-                } else {
-                    50_000_000.0
+    // [REFACTOR] Aggregation Logic:
+    // 1. Exposure (Systemic Risk): Group by Entity and take MAX exposure to avoid double-counting finding overlap.
+    // 2. Detected Amount (Direct Loss): Sum of the actual transactional values from findings.
+    let mut actual_sum: f64 = 0.0;
+    let mut entity_max_exposure: std::collections::HashMap<i64, f64> = std::collections::HashMap::new();
+    
+    for (entity_id_opt, severity, category_opt) in issues_rows {
+        // A. Calculate Risk Exposure (Systemic)
+        let exposure = if let Some(entity_id) = entity_id_opt {
+            if let Ok(verdict) = crate::compliance_judge::judge_commercial_risk(&db_path, entity_id, &severity) {
+                let val = verdict.calculated_exposure;
+                let current_max = entity_max_exposure.get(&entity_id).cloned().unwrap_or(0.0);
+                if val > current_max {
+                    entity_max_exposure.insert(entity_id, val);
                 }
+                val
             } else {
                 50_000_000.0
-            };
-            
-            total_exposure += exposure;
-            let cat = category_opt.unwrap_or_else(|| "General Compliance".to_string());
-            *exposure_by_category.entry(cat).or_insert(0.0) += exposure;
-        }
+            }
+        } else {
+            50_000_000.0
+        };
+
+        // B. Attribution by category for charts
+        let cat = category_opt.unwrap_or_else(|| "General Compliance".to_string());
+        *exposure_by_category.entry(cat).or_insert(0.0) += exposure;
     }
+
+    // [DASHBOARD SYNC] The 'Total Exposure' displayed on the main card is the sum of unique entity risks.
+    total_exposure = entity_max_exposure.values().sum();
 
     // Sort categories by exposure to find top drivers
     let mut sorted_cats: Vec<_> = exposure_by_category.iter().collect();
@@ -434,14 +518,19 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     let mut beh_exp = 0.0;
 
     for (cat, exp) in &exposure_by_category {
-        match cat.as_str() {
-            "Compliance/Legal" | "ESG" | "IT/Security" | "AML" | "IT Security" | "Anti-Bribery" => gov_exp += exp,
-            "Procurement" | "Sales/AR" | "Inventory" | "Production/Quality" | "Finance/Accounting" | "Revenue/Accounting" | "Supply Chain" => proc_exp += exp,
-            "HR/Payroll" | "Expense/Travel" | "Corp Card" | "EX Sector" | "Financial Integrity" => beh_exp += exp,
-            _ => proc_exp += exp,
+        let c = cat.to_lowercase();
+        if c.contains("governance") || c.contains("거버넌스") || c.contains("compliance") || c.contains("it") || c.contains("security") || c.contains("legal") || c.contains("esg") || c.contains("aml") {
+            gov_exp += exp;
+        } else if c.contains("procurement") || c.contains("구매") || c.contains("inventory") || c.contains("재고") || c.contains("sales") || c.contains("영업") || c.contains("finance") || c.contains("회계") {
+            proc_exp += exp;
+        } else if c.contains("hr") || c.contains("인사") || c.contains("expense") || c.contains("비용") || c.contains("culture") || c.contains("문화") || c.contains("card") {
+            beh_exp += exp;
+        } else {
+            proc_exp += exp;
         }
     }
 
+    // Normalize percentages based on the total_exposure used for the main card
     let gov_pct = if total_exposure > 0.0 { (gov_exp / total_exposure * 100.0) as i64 } else { 0 };
     let proc_pct = if total_exposure > 0.0 { (proc_exp / total_exposure * 100.0) as i64 } else { 0 };
     let beh_pct = if total_exposure > 0.0 { (beh_exp / total_exposure * 100.0) as i64 } else { 0 };
@@ -476,6 +565,29 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         conn.query_row("SELECT COUNT(*) FROM review_tasks WHERE status = 'PENDING'", [], |r| r.get(0)).unwrap_or(0)
     };
 
+    // [PHASE 5] Extract actual numeric amounts from descriptions for a "Direct Loss" metric
+    let amount_regex = regex::Regex::new(r"([\d,.]+)\s*원").unwrap();
+    let (issues_detail_query, detail_params) = if let Some(ref id) = projectId {
+        if id.is_empty() { ("SELECT description FROM audit_issues".to_string(), vec![]) }
+        else { ("SELECT description FROM audit_issues WHERE audit_id = ?1 OR project_type = ?1".to_string(), vec![id.to_string()]) }
+    } else { ("SELECT description FROM audit_issues".to_string(), vec![]) };
+    
+    let mut actual_loss_sum: f64 = 0.0;
+    if let Ok(mut stmt) = conn.prepare(&issues_detail_query) {
+        let rows: Vec<String> = if detail_params.is_empty() {
+            stmt.query_map([], |row| row.get::<_, String>(0)).unwrap().collect::<Result<Vec<_>, _>>().unwrap()
+        } else {
+            stmt.query_map(params![detail_params[0]], |row| row.get::<_, String>(0)).unwrap().collect::<Result<Vec<_>, _>>().unwrap()
+        };
+        for desc in rows {
+            if let Some(caps) = amount_regex.captures(&desc) {
+                if let Ok(val) = caps[1].replace(",", "").parse::<f64>() {
+                    actual_loss_sum += val;
+                }
+            }
+        }
+    }
+
     Ok(json!({ 
         "total_risks": pillar_governance, 
         "ai_signals": ai_signals, 
@@ -484,11 +596,12 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         "total_findings": total_audit_objects,
         "raw_signals": raw_signals,
         "critical_risks": total_ai_issues, // Updated to include suspicion_inbox count
-        "risk_exposure_score": risk_score, 
+        "risk_score": risk_score, 
         "potential_impact_value": impact_value,
+        "actual_detected_value": actual_loss_sum as i64,
         "exposure_breakdown": {
             "governance_pct": gov_pct,
-            "process_pct": proc_pct,
+            "process_pct": proc_exp as i64, // Using actual values for breakdown
             "behavioral_pct": beh_pct,
             "governance_val": gov_exp as i64,
             "process_val": proc_exp as i64,
@@ -496,7 +609,13 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         },
         "key_drivers": key_drivers,
         "trends": trends,
-        "signal_summary": if raw_signals > 0 { format!("{} forensic signals identified in current scope.", raw_signals) } else { "No significant signals in current scope.".to_string() }
+        "signal_summary": if raw_signals > 0 { 
+            format!(
+                "식별된 직접 위반 금액은 약 {}원이며, 이에 따른 전사적 리스크 노출액(Calculated Exposure)은 약 {}원입니다.", 
+                (actual_loss_sum as i64).to_formatted_string(&Locale::en), 
+                (impact_value as i64).to_formatted_string(&Locale::en)
+            ) 
+        } else { "No significant signals in current scope.".to_string() }
     }))
 }
 
@@ -744,7 +863,7 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
             u.id, u.{}, u.category, 
             u.impact_score as impact_score,
             u.likelihood_score as likelihood_score,
-            u.last_audit_year, u.budget_size, u.headcount, u.last_audit_rating, u.key_systems, u.ai_analysis_data,
+            u.last_audit_year, u.budget_size, u.operating_profit, u.headcount, u.last_audit_rating, u.key_systems, u.ai_analysis_data,
             COALESCE(CO_COUNT.total, 0) as findings_count
          FROM audit_universe u
          LEFT JOIN (
@@ -764,7 +883,7 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
     {
         let mut stmt = conn.prepare(&query_sql).map_err(|e| e.to_string())?;
         let rows = stmt.query_map([], |r| {
-            let ai_json: Option<String> = r.get(10)?;
+            let ai_json: Option<String> = r.get(11)?;
             let ai_analysis: Option<AiRiskAnalysis> = ai_json.and_then(|s| serde_json::from_str(&s).ok());
             Ok(AuditUniverseEntity { 
                 id: r.get(0)?, 
@@ -774,11 +893,12 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
                 likelihood_score: r.get(4)?, 
                 last_audit_year: r.get(5)?, 
                 budget_size: r.get(6).unwrap_or("[MISSING: BUDGET_DATA]".to_string()), 
-                headcount: r.get(7).unwrap_or(-1), 
-                last_audit_rating: r.get(8).unwrap_or("[NO_HISTORICAL_RATING]".to_string()), 
-                key_systems: r.get(9).unwrap_or("[NO_SYSTEM_DATA_AVAILABLE]".to_string()), 
+                operating_profit: r.get(7).unwrap_or("[MISSING: PROFIT_DATA]".to_string()),
+                headcount: r.get(8).unwrap_or(-1), 
+                last_audit_rating: r.get(9).unwrap_or("[NO_HISTORICAL_RATING]".to_string()), 
+                key_systems: r.get(10).unwrap_or("[NO_SYSTEM_DATA_AVAILABLE]".to_string()), 
                 ai_analysis,
-                findings_count: r.get(11).unwrap_or(0)
+                findings_count: r.get(12).unwrap_or(0)
             })
         }).map_err(|e| e.to_string())?;
         for r in rows { if let Ok(e) = r { list.push(e); } }
@@ -1139,7 +1259,7 @@ pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
 
     // Re-seed essential data (Rules only, not user data/universe)
     seed_master_scenarios(&mut conn).ok();
-    // crate::database::AuditUniverseSeeder::seed(&mut conn).ok(); // [ZERO-BASE] No longer auto-seeding
+    crate::database::AuditUniverseSeeder::seed(&mut conn).ok(); // Re-seed universe for demo
     
     // [FIX] Zero out metrics after seeding to ensure "Clean State" for user
     // The seeder provides "Inherent Risk" (e.g. 9/10), but for a User Reset, we want 0 exposure start.
@@ -1294,7 +1414,7 @@ Low: {}건 ({}%)
     // Add detailed findings
     for (idx, finding) in findings.iter().enumerate() {
         report.push_str(&format!(
-            "\n[{}. {}]\n??ぉ: {}\n?몄텧?? {}\n?몄텧: {}\n?쒖뼵: {}\n\n---\n\n",
+            "\n[{}. {}]\n제목: {}\n등급: {}\n내용: {}\n제언: {}\n\n---\n\n",
             (idx / 10) + 1,
             (idx % 10) + 1,
             finding.issue_title,
@@ -1380,7 +1500,7 @@ pub fn update_audit_issue_status(app_handle: AppHandle, id: String, status: Stri
             // Record High-risk findings to system_events for AI Signal tracking
             if severity == "High" {
                 let event_id = format!("AI-SIGNAL-{}", chrono::Local::now().timestamp());
-                let raw_desc = format!("?슚 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
+                let raw_desc = format!("🚩 High-Risk Finding Accepted: {} | {}", issue_title, description.chars().take(100).collect::<String>());
                 
                 // [FIX] Use Pseudonymization (Employee_NN) instead of simple masking for Vault Demo compatibility
                 let mut session = crate::file_utils::MaskingSession::new();
@@ -1454,7 +1574,11 @@ pub fn add_audit_plan_from_entity(_app_handle: AppHandle, _entity_id: i64) -> Re
 }
 
 #[tauri::command]
-pub fn force_seed_universe(_app_handle: AppHandle) -> Result<(), String> {
+pub fn force_seed_universe(app_handle: AppHandle) -> Result<(), String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    crate::database::AuditUniverseSeeder::seed(&mut conn)?;
+    crate::scenarios_seeder::seed_master_scenarios(&mut conn)?;
     Ok(())
 }
 
@@ -1465,7 +1589,7 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
     
     println!(">>> [AUDIT-GATEWAY] Masking sensitive data before AI analysis for project: {}", pid);
     
-    // 鍮꾩떇蹂꾪솕 泥섎━: AI???꾩넚?섍린 ??紐⑤뱺 而⑦뀗痢좎뿉??媛쒖씤?뺣낫瑜?臾쇰━?곸쑝濡?留덉뒪??
+    // 비식별화 처리: AI에게 전송하기 전 모든 컨텐츠에서 개인정보를 물리적으로 마스킹합니다.
     let content = full_content.map(|c| apply_deidentification(&c)).ok_or_else(|| "CONSTITUTIONAL_ERROR: Content acquisition failed. Process aborted.".to_string())?;
     
     // Construct Specialized Auditor Prompt (Extreme High Precision)
@@ -1834,9 +1958,17 @@ pub async fn generate_professional_report(app_handle: AppHandle, projectId: Stri
         
         // Fetch financial exposure for context
         let summary_json = get_dashboard_summary(app_handle.clone(), Some(projectId.clone())).ok();
-        let financial_info = summary_json.map(|s| {
-            format!("총 잠재적 재무 영향: {}원, 리스크 노출 지수: {}, 주요 리스크 드라이버: {:?}", 
-                s["potential_impact_value"], s["risk_exposure_score"], s["key_drivers"])
+        let financial_info = summary_json.as_ref().map(|s| {
+            let actual_detected = s["actual_detected_value"].as_i64().unwrap_or(0);
+            let potential_impact = s["potential_impact_value"].as_i64().unwrap_or(0);
+            let risk_score = s["risk_score"].as_i64().unwrap_or(0);
+            
+            format!(
+                "식별된 직접 위반 금액은 약 {}원이며, 이에 따른 전사적 리스크 노출액(Calculated Exposure)은 약 {}원입니다. (종합 리스크 점수: {})",
+                actual_detected.to_formatted_string(&Locale::en),
+                potential_impact.to_formatted_string(&Locale::en),
+                risk_score
+            )
         }).unwrap_or_else(|| "재무 데이터 없음".to_string());
 
         (findings.join("\n\n"), financial_info)
@@ -2295,7 +2427,8 @@ pub fn get_relation_candidates(app_handle: AppHandle, projectId: Option<String>)
 #[tauri::command]
 pub fn ingest_material(app_handle: AppHandle, project_id: String, file_path: String) -> Result<Value, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    println!(">>> [Ingestion] Writing to Database at: {:?}", db_path);
+    let mut conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
     let path = Path::new(&file_path);
     if !path.exists() {
@@ -2334,10 +2467,136 @@ pub fn ingest_material(app_handle: AppHandle, project_id: String, file_path: Str
 
     // 3. Save to Audit Memory Layer
     let object_id = format!("obj-{}", uuid::Uuid::new_v4());
+    
+    // [REAL-TIME INGESTION] If it's a Ledger, process it immediately into entity_event
+    if object_type == "LEDGER" {
+        println!(">>> [INGESTION] Performing Real-Time Ingestion: {}", file_name);
+        use crate::ingestion::ledger_builder::LedgerBuilder;
+        use crate::ingestion::EventBuilder;
+        
+        let builder = LedgerBuilder { file_path: file_path.clone() };
+        let events = builder.build_events();
+        println!(">>> [INGESTION] Builder returned {} events to canonicalize.", events.len());
+        
+        let mut inserted = 0;
+        let mut fail_fk = 0;
+        let mut fail_other = 0;
+
+        // Initialize transaction for bulk insert
+        let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+        for event in &events {
+            // 1. Ensure Entity exists (Canonical Resolution)
+            let _ = tx.execute(
+                "INSERT OR IGNORE INTO entity_master (id, entity_type, canonical_name, normalized_key, risk_score) VALUES (?1, 'VENDOR', ?2, ?3, 0.0)",
+                params![&event.entity_id, &event.entity_id, &event.entity_id.to_lowercase()]
+            );
+
+            // 2. Insert into Canonical Table (entity_event)
+            let res = tx.execute(
+                "INSERT INTO entity_event (id, entity_id, event_type, amount, event_date, description, source_object_id, is_flagged, risk_delta, source_type, metadata, account_code, account_name, debit, credit, net_amount) 
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0.0, 'LEDGER', ?8, ?9, ?10, ?11, ?12, ?13)",
+                params![
+                    event.id, 
+                    event.entity_id, 
+                    event.event_type, 
+                    event.amount.unwrap_or(0.0), 
+                    event.event_date, 
+                    event.description,
+                    &object_id, // Link to source object
+                    event.metadata,
+                    event.account_code,
+                    event.account_name,
+                    event.debit,
+                    event.credit,
+                    event.net_amount
+                ]
+            );
+
+            match res {
+                Ok(_) => inserted += 1,
+                Err(e) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("FOREIGN KEY") { fail_fk += 1; }
+                    else { fail_other += 1; }
+                }
+            }
+        }
+
+        // Commit Bulk Insert Transaction
+        tx.commit().map_err(|e| e.to_string())?;
+
+        if inserted == 0 && !events.is_empty() {
+            return Err(format!("CRITICAL PERSISTENCE FAILURE: Builder returned {} events but 0 were inserted. Ingestion Aborted.", events.len()));
+        }
+
+        // Fetch Post-Ingestion Stats
+        let total_count: i64 = conn.query_row("SELECT COUNT(*) FROM entity_event", [], |r| r.get(0)).unwrap_or(0);
+        let distinct_accounts: i64 = conn.query_row("SELECT COUNT(DISTINCT account_code) FROM entity_event", [], |r| r.get(0)).unwrap_or(0);
+        let distinct_months: i64 = conn.query_row("SELECT COUNT(DISTINCT substr(event_date, 1, 7)) FROM entity_event", [], |r| r.get(0)).unwrap_or(0);
+
+        println!(">>> [INGESTION] Persistence Summary:");
+        println!("  - Inserted Row Count: {}", inserted);
+        println!("  - EntityEvent Total Count: {}", total_count);
+        println!("  - Distinct Account Count: {}", distinct_accounts);
+        println!("  - Distinct Month Count: {}", distinct_months);
+        
+        if fail_fk + fail_other > 0 {
+            println!("  - Failed Rows: {} (FK: {}, Other: {})", fail_fk + fail_other, fail_fk, fail_other);
+        }
+
+        // [PHASE 3] Populate account_month_profile cache
+        println!(">>> [INGESTION] Creating Monthly Aggregation Cache for Object: {}", object_id);
+        let _ = conn.execute(
+            "INSERT INTO account_month_profile (object_id, account_code, year_month, total_debit, total_credit, net_change, transaction_count)
+             SELECT source_object_id, account_code, substr(event_date, 1, 7) as ym,
+                    SUM(debit), SUM(credit), SUM(net_amount), COUNT(*)
+             FROM entity_event
+             WHERE source_object_id = ?1
+             GROUP BY account_code, ym",
+            params![&object_id]
+        );
+    }
+
+
+    // Update metadata to include the file path so we don't lose it
+    let final_metadata = if extracted_fields.contains('{') {
+        let mut meta_v: Value = serde_json::from_str(&extracted_fields).unwrap_or(json!({}));
+        meta_v["file_path"] = json!(file_path);
+        meta_v.to_string()
+    } else {
+        json!({ "file_path": file_path, "raw": extracted_fields }).to_string()
+    };
+
     conn.execute(
         "INSERT INTO audit_object (id, object_type, source, extracted_fields, project_id) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![object_id, object_type, "file", extracted_fields, project_id]
+        params![&object_id, object_type, "file", final_metadata, &project_id]
     ).map_err(|e| e.to_string())?;
+
+    // [PHASE 5] Contextual Event Ingestion (Emails/Docs)
+    if object_type == "EMAIL" || object_type == "DOC" {
+        println!(">>> [INGESTION] Creating Contextual Events for: {}", object_type);
+        let _ = conn.execute(
+            "INSERT OR IGNORE INTO entity_master (id, entity_type, canonical_name, normalized_key, risk_score) VALUES ('SYSTEM_CONTEXT', 'SYSTEM', 'System Context', 'system_context', 0.0)",
+            params![]
+        );
+
+        let event_type = if object_type == "EMAIL" { "COMMUNICATION" } else { "DOCUMENT" };
+        let description = format!("{} Ingested: {}", object_type, file_name);
+        
+        conn.execute(
+            "INSERT INTO entity_event (id, entity_id, event_type, event_date, description, source_object_id, source_type, metadata) 
+             VALUES (?1, 'SYSTEM_CONTEXT', ?2, datetime('now'), ?3, ?4, ?5, ?6)",
+            params![
+                uuid::Uuid::new_v4().to_string(),
+                event_type,
+                description,
+                &object_id,
+                object_type,
+                json!({ "file_name": file_name, "auto_extracted": true }).to_string()
+            ]
+        ).ok();
+    }
 
     // [DYNAMIC STATUS] Advance project stage once data collection starts
     conn.execute(
@@ -2368,14 +2627,23 @@ pub fn ingest_material(app_handle: AppHandle, project_id: String, file_path: Str
         }
     }
 
-    // 2. Cross-Model Relation Discovery (Delegated to Audit Engine)
-    // This executes Local Signal Extraction (Fast Path) immediately after ingestion
-    let content_snapshot = crate::file_utils::read_any_file(path, &ext).unwrap_or_default();
-    
-    // Fire-and-Forget (In a real async system, this might be a background task)
-    if let Err(e) = crate::audit_engine::analyze_ingested_object(app_handle.clone(), &object_id, &project_id, &content_snapshot) {
-        println!(">>> [AI ENGINE] Warning: Analysis failed for {}: {}", object_id, e);
-    }
+    // 2. Structural Risk Engine Trigger (Async Job) - Phase 2 Hook
+    let app_handle_task = app_handle.clone();
+    let obj_id_task = object_id.clone();
+    let proj_id_task = project_id.clone();
+
+    tauri::async_runtime::spawn(async move {
+        let start_time = std::time::Instant::now();
+        println!(">>> [ASYNC JOB] Starting Structural Analysis for Object: {}", obj_id_task);
+        
+        let result = crate::audit_engine::analyze_ingested_object(app_handle_task, &obj_id_task, &proj_id_task);
+        
+        let elapsed = start_time.elapsed();
+        match result {
+            Ok(_) => println!(">>> [ASYNC JOB] Completed Structural Analysis for Object: {} in {:?}", obj_id_task, elapsed),
+            Err(e) => eprintln!(">>> [ASYNC JOB] Analysis FAILED for Object: {}: {} (Time: {:?})", obj_id_task, e, elapsed),
+        }
+    });
 
     println!(">>> [MEMORY LAYER] Object Ingested: {} (ID: {})", file_name, object_id);
 
@@ -2516,21 +2784,10 @@ pub fn get_review_queue(app_handle: tauri::AppHandle, sessionId: String) -> Resu
 pub async fn close_audit_session(app_handle: AppHandle, sessionId: String) -> Result<(), String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     
-    // 1. Fetch data & check pending (Synchronous scope)
-    let (name, start, end, items_text) = {
+    // 1. Fetch data & categorize items
+    let (name, start, end, report_sections) = {
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
         
-        // [ENFORCEMENT] Check if there are any PENDING review items
-        let pending_count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM review_tasks WHERE session_id = ?1 AND status = 'PENDING'",
-            params![sessionId],
-            |row| row.get(0)
-        ).unwrap_or(0);
-
-        if pending_count > 0 {
-            return Err(format!("품질 관리 실패: 아직 {}개의 미결 검토 항목이 남아 있어 세션을 종료할 수 없습니다.", pending_count));
-        }
-
         let (name, start, end, ack) = conn.query_row(
             "SELECT name, period_start, period_end, reviewer_ack FROM audit_session WHERE id = ?1",
             params![sessionId],
@@ -2546,44 +2803,128 @@ pub async fn close_audit_session(app_handle: AppHandle, sessionId: String) -> Re
             return Err("이 세션은 이미 승인 및 서명되어 봉인되었습니다. 다시 종료할 수 없습니다.".to_string());
         }
 
-        let mut stmt = conn.prepare("SELECT reason, status, reviewer_note FROM review_tasks WHERE session_id = ?1")
+        // Categorize Items
+        let mut stmt = conn.prepare("SELECT reason, status, reviewer_note, snapshot_data FROM review_tasks WHERE session_id = ?1")
             .map_err(|e| e.to_string())?;
         
-        let items: Vec<String> = stmt.query_map(params![sessionId], |row| {
-            Ok(format!("- [{}]: {} (Note: {})", row.get::<_, String>(1)?, row.get::<_, String>(0)?, row.get::<_, String>(2).unwrap_or("None".to_string())))
-        }).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+        let mut confirmed_items = Vec::new();
+        let mut pending_items = Vec::new();
+        let mut dismissed_items = Vec::new();
+        
+        let mut confirmed_amount = 0.0;
+        let mut potential_amount = 0.0;
+        
+        let mut h_count = 0;
+        let mut m_count = 0;
 
-        (name, start, end, items.join("\n"))
+        let rows = stmt.query_map(params![sessionId], |row| {
+            let status: String = row.get(1)?;
+            let reason: String = row.get(0)?;
+            let note: String = row.get(2).unwrap_or_default();
+            let snapshot: String = row.get(3).unwrap_or_default();
+            
+            let mut amount = 0.0;
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&snapshot) {
+                amount = v["amount"].as_f64().unwrap_or(0.0);
+            }
+
+            Ok((reason, status, note, amount))
+        }).map_err(|e| e.to_string())?;
+
+        for r in rows {
+            if let Ok((reason, status, note, amt)) = r {
+                let entry = format!("- {}: {} (Note: {})", status, reason, note);
+                match status.as_str() {
+                    "CONFIRMED" => {
+                        confirmed_items.push(entry);
+                        confirmed_amount += amt;
+                        if reason.to_lowercase().contains("critical") || reason.to_lowercase().contains("high") {
+                            h_count += 1;
+                        } else {
+                            m_count += 1;
+                        }
+                    },
+                    "PENDING" | "OPEN" | "ESCALATED" | "DEFERRED" => {
+                        pending_items.push(format!("- [잠재 신호]: {} (검토 중)", reason));
+                        potential_amount += amt;
+                    },
+                    "DISMISSED" => {
+                        dismissed_items.push(format!("- [기각]: {}", reason));
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        // [OFFICIAL RISK CALCULATION] Confirmed Only
+        let confirmed_risk_score = std::cmp::min(100, (h_count * 25) + (m_count * 10));
+        
+        (name, start, end, (confirmed_items, pending_items, dismissed_items, confirmed_amount, potential_amount, confirmed_risk_score))
     };
 
-    // 2. Call AI (Async)
-    let prompt = format!(
-        "Audit Session Summary Request:\n\
-        Session Name: {}\n\
-        Period: {} to {}\n\
-        Review Items Conducted:\n\
-        {}\n\n\
-        Review these actions and provide a 3-paragraph executive summary in Korean. \
-        Focus on the judgment coverage and key risk areas addressed. \
-        Avoid making legal opinions, focus on summarizing the audit activities.",
-        name, start, end, items_text
-    );
+    let (confirmed, pending, dismissed, conf_amt, pot_amt, score) = report_sections;
 
-    let ai_summary = crate::ai::call_gemini_direct(&prompt).await.unwrap_or("AI Summarization failed.".to_string());
+    // 2. Generate Structured Report
+    let mut report = String::new();
+    report.push_str(&format!("# 감사 세션 결과 보고서 (Audit Session Report)\n\n"));
+    
+    // [1] Executive Summary
+    report.push_str("## 1. Executive Summary\n\n");
+    report.push_str(&format!("### [1] Confirmed Risk Level (공식 리스크)\n"));
+    report.push_str(&format!("- **최종 공식 점수: {}점**\n", score));
+    report.push_str("- 산출 근거: 확정 발견 사항(Confirmed Issues)의 심각도 가중치 합산\n");
+    report.push_str("- *본 점수는 감사인의 판단이 완료되지 않은 잠재 신호를 포함하지 않습니다.*\n\n");
 
-    let final_report = format!(
-        "# Audit Session Recap Report\n\n\
-        ## 📌 Overview\n- Name: {}\n- Range: {} ~ {}\n\n\
-        ## 📊 Judgment Summary\n{}\n\n\
-        ## 📝 Itemized History\n{}\n", 
-        name, start, end, ai_summary, items_text
-    );
+    report.push_str("### [2] Review Status Overview (검토 현황 – 비공식)\n");
+    report.push_str(&format!("- **검토 대기 중인 신호: {}건**\n", pending.len()));
+    report.push_str("- 상태: 검토 대기(Open/Escalated)\n");
+    report.push_str("- **중요 안내**: \"현재 다수의 발견 사항이 검토 대기(Open) 상태이며, 최종 확정(adjudication) 이후 공식 리스크 점수에 반영될 예정입니다.\"\n\n");
 
-    // 3. Update DB (Synchronous scope)
+    report.push_str("### [3] Financial Exposure Summary\n");
+    report.push_str(&format!("- **확정 노출 금액 (Confirmed): ₩{}**\n", (conf_amt as i64).to_formatted_string(&Locale::ko)));
+    report.push_str(&format!("- **잠재 노출 금액 (Potential/Open): ₩{}**\n", (pot_amt as i64).to_formatted_string(&Locale::ko)));
+    report.push_str(&format!("- **총 합계: ₩{}**\n\n", ((conf_amt + pot_amt) as i64).to_formatted_string(&Locale::ko)));
+
+    // [Detailed Findings]
+    report.push_str("## 2. 상세 발견 사항 (Detailed Findings)\n\n");
+    
+    report.push_str("### A. 확정 발견 사항 (Confirmed Issues)\n");
+    if confirmed.is_empty() { report.push_str("- 없음\n"); }
+    for item in &confirmed { report.push_str(&format!("{}\n", item)); }
+    report.push_str("\n");
+
+    report.push_str("### B. 잠재적 위험 신호 (Pending Review Signals)\n");
+    if pending.is_empty() { report.push_str("- 없음\n"); }
+    for item in &pending { report.push_str(&format!("{}\n", item)); }
+    report.push_str("\n");
+
+    report.push_str("### C. 기각된 신호 (Dismissed Signals)\n");
+    if dismissed.is_empty() { report.push_str("- 없음\n"); }
+    for item in &dismissed { report.push_str(&format!("{}\n", item)); }
+    report.push_str("\n");
+
+    // [Recommendation]
+    report.push_str("## 3. 권고 사항 및 조치 계획 (Recommendations)\n\n");
+    if score > 0 {
+        report.push_str("- **확정 이슈 기반 권고**: 발견된 리스크에 대해 즉각적인 소명 요청 및 통제 강화가 필요합니다.\n");
+        if score > 70 {
+            report.push_str("- **[중점 관리]**: 심각한 결함이 확인되었으므로 인사 조치 및 프로세스 전면 재검토를 권고합니다.\n");
+        }
+    } else {
+        report.push_str("- 공식적인 확정 이슈가 없으므로 현재까지 추가 조치는 불필요합니다.\n");
+    }
+    report.push_str("- *잠재적 위험 신호 항목들은 추가 조사(Open investigation)가 필요합니다.*\n\n");
+
+    // [Legal Disclaimer]
+    report.push_str("---\n");
+    report.push_str("> **법적/윤리적 안내**: 본 보고서의 공식 리스크 평가는 감사인의 최종 확정(adjudication)을 완료한 사항만을 기준으로 산출되었습니다.\n");
+    report.push_str("> 엔진은 의심을 만들고, 감사인은 판단을 내리며, 본 문서는 그 판단의 결과만을 공식 기록으로 인정합니다.\n");
+
+    // 3. Update DB
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     conn.execute(
         "UPDATE audit_session SET status = 'CLOSED', final_report = ?1 WHERE id = ?2",
-        params![final_report, sessionId]
+        params![report, sessionId]
     ).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -2775,3 +3116,76 @@ pub fn update_status_v2(app_handle: tauri::AppHandle, item_id: String, status: S
     
     Ok(())
 }
+#[tauri::command]
+pub fn set_gemini_api_key(app_handle: AppHandle, key: String) -> Result<(), String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('GEMINI_API_KEY', ?1)",
+        params![key]
+    ).map_err(|e| e.to_string())?;
+
+    crate::ai::set_api_key(key);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_gemini_api_key(app_handle: AppHandle) -> Result<String, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    
+    let key: Option<String> = conn.query_row(
+        "SELECT value FROM settings WHERE key = 'GEMINI_API_KEY'",
+        [],
+        |r| r.get(0)
+    ).ok();
+
+    match key {
+        Some(k) => {
+            if k.len() > 10 {
+                Ok(format!("{}...{}", &k[0..4], &k[k.len()-4..]))
+            } else {
+                Ok("SET_BUT_INVALID".into())
+            }
+        },
+        None => Err("API Key not found".into())
+    }
+}
+
+#[tauri::command]
+pub async fn get_entity_timeline(app_handle: AppHandle, entityId: String) -> Result<crate::models::EntityTimelineResponse, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    crate::entity_resolver::get_entity_timeline(&conn, &entityId)
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn get_monthly_summary(app_handle: AppHandle, accountName: Option<String>, year: Option<i32>) -> Result<Vec<crate::assurance::flow_analysis::MonthlySummary>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::assurance::flow_analysis::get_monthly_account_summary_impl(&db_path, accountName, year)
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn get_account_flow_graph(app_handle: AppHandle, accountName: String) -> Result<Vec<crate::assurance::flow_analysis::FlowNode>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::assurance::flow_analysis::get_account_flow_graph_impl(&db_path, accountName)
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn get_structural_insight(app_handle: AppHandle, accountName: String) -> Result<crate::assurance::flow_analysis::StructuralInsight, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::assurance::flow_analysis::get_structural_insight_impl(&db_path, accountName)
+}
+
+#[tauri::command]
+pub fn get_structural_top_accounts(app_handle: AppHandle) -> Result<Vec<crate::assurance::flow_analysis::StructuralInsight>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::assurance::flow_analysis::get_structural_top_accounts_impl(&db_path)
+}
+
+
+

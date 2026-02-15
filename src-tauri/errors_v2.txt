@@ -1,0 +1,41 @@
+cargo :     Checking auditflo
+w v0.1.0 (C:\Users\user\.gemi
+ni\antigravity\playground\Aud
+itFlow\src-tauri)
+?? ?:1 ??:1
++ cargo check 2>&1 | Out-File
+ -Encoding ASCII errors_v2.tx
+t
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (    Che  
+  cking au...Flow\src-taur   
+ i):String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+error: unexpected closing del
+imiter: `}`
+   --> src\commands.rs:528:5
+    |
+521 |             if let Some
+(caps) = amount_regex.capture
+s(&desc) {
+    |                        
+                             
+         - this delimiter mig
+ht not be properly closed...
+...
+525 |                 }
+    |                 - ...as
+ it matches this but it has d
+ifferent indentation
+...
+528 |     }
+    |     ^ unexpected closin
+g delimiter
+
+error: could not compile `aud
+itflow` (bin "auditflow") due
+ to 1 previous error

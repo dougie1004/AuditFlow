@@ -1,0 +1,15 @@
+   Compiling auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\playground\AuditFlow\src-tauri)
+error[E0502]: cannot borrow `conn` as mutable because it is also borrowed as immutable
+   --> src\bin\rescan_split_signals.rs:177:18
+    |
+ 56 |     let mut obj_stmt = conn.prepare("SELECT DISTINCT source_object_id, project_id FROM entity_event WHERE source_type = 'LEDGER'")?;
+    |                        ---- immutable borrow occurs here
+...
+177 |         let tx = conn.transaction()?;
+    |                  ^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+...
+201 | }
+    | - immutable borrow might be used here, when `obj_stmt` is dropped and runs the `Drop` code for type `Statement`
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `auditflow` (bin "rescan_split_signals") due to 1 previous error

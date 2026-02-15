@@ -33,3 +33,5 @@ tauri-plugin-fs = "2.0.0-rc"
 uuid = { version = "1.10", features = ["v4"] }
 rand = "0.8"
 md5 = "0.7"
+num-format = "0.4"
+anyhow = "1.0"

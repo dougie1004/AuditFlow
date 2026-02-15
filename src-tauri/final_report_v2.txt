@@ -1,0 +1,67 @@
+warning: unused variable: `cr1`
+  --> src\bin\report_top10.rs:86:60
+   |
+86 | ... s_score, a_score, cv, cr1, hhi, trend) = r?;
+   |                           ^^^ help: if this is intentional, prefix it with an underscore: `_cr1`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `trend_str`
+  --> src\bin\report_top10.rs:88:25
+   |
+88 |                     let trend_str = trend.map(|t| format!("{:>5....
+   |                         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_trend_str`
+
+warning: `auditflow` (bin "report_top10") generated 2 warnings (run `cargo fix --bin "report_top10" -p auditflow` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.81s
+     Running `target_v3_final\debug\report_top10.exe`
+>>> [DEBUG] Connecting to: "C:\\Users\\user\\AppData\\Roaming\\com.auditflow.app\\audit_data_v4.db"
+>>> [DEBUG] account_year_profile has 129 rows.
+
+>>> [REPORT] Structural Top 10 - 2007 Only
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| Account Code | Account Name         | S-Scr | A-Scr | CV   | HHI   | Risk Label | Context              |
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| 96000        | 잡손실                  |  0.99 |  0.85 | 1.97 | 0.977 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 51200        | 여비교통비                |  0.97 |  0.85 | 2.00 | 0.933 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 50300        | 급여                   |  0.93 |  0.85 | 1.53 | 0.917 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 90100        | 이자수익                 |  0.84 |  0.85 | 1.22 | 1.000 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 81200        | 여비교통비                |  0.82 |  0.85 | 1.44 | 0.848 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 10400        | 기타제예금                |  0.80 |  0.85 | 1.00 | 1.000 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 12000        | 미수금                  |  0.75 |  0.85 | 0.75 | 0.999 | WARNING    | MONITOR              |
+| 17600        | 장기성예금                |  0.75 |  0.85 | 0.74 | 1.000 | WARNING    | MONITOR              |
+| 51100        | 복리후생비                |  0.74 |  0.85 | 1.53 | 0.542 | WARNING    | MONITOR              |
+| 53100        | 지급수수료                |  0.74 |  0.85 | 1.88 | 0.492 | WARNING    | MONITOR              |
++--------------+----------------------+-------+-------+------+------+-------+-------+
+
+>>> [REPORT] Structural Top 10 - 2008 Only
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| Account Code | Account Name         | S-Scr | A-Scr | CV   | HHI   | Risk Label | Context              |
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| 80100        | 임원급여                 |  1.00 |  0.85 | 1.69 | 1.000 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 50300        | 급여                   |  1.00 |  0.85 | 1.69 | 0.999 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 93000        | 잡이익                  |  1.00 |  0.85 | 2.23 | 0.995 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 80200        | 직원급여                 |  0.99 |  0.85 | 1.71 | 0.980 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 81300        | 접대비                  |  0.97 |  0.85 | 1.66 | 0.932 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 12000        | 미수금                  |  0.92 |  0.85 | 1.55 | 0.896 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 81200        | 여비교통비                |  0.91 |  0.85 | 1.67 | 0.807 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 80500        | 잡급                   |  0.91 |  0.85 | 1.50 | 0.885 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 10108        | 현금                   |  0.89 |  0.85 | 2.45 | 0.767 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 13100        | 선급금                  |  0.89 |  0.84 | 1.52 | 0.835 | STRUCTURAL | SYSTEMIC_ANOMALY     |
++--------------+----------------------+-------+-------+------+------+-------+-------+
+
+>>> [REPORT] Structural Top 10 - Combined 2007+2008
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| Account Code | Account Name         | S-Scr | A-Scr | CV   | HHI   | Risk Label | Context              |
++--------------+----------------------+-------+-------+------+-------+------------+----------------------+
+| 81300        | 접대비                  |  0.97 |  0.85 | 1.66 | 0.932 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 50300        | 급여                   |  0.96 |  0.85 | 1.61 | 0.958 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 51200        | 여비교통비                |  0.90 |  0.85 | 1.81 | 0.798 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 10108        | 현금                   |  0.89 |  0.85 | 2.45 | 0.767 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 81200        | 여비교통비                |  0.86 |  0.85 | 1.56 | 0.827 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 29500        | 퇴직급여충당부채             |  0.85 |  0.85 | 1.37 | 0.957 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 93000        | 잡이익                  |  0.84 |  0.85 | 2.00 | 0.703 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 12000        | 미수금                  |  0.84 |  0.85 | 1.15 | 0.948 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 80200        | 직원급여                 |  0.84 |  0.85 | 1.06 | 0.990 | STRUCTURAL | SYSTEMIC_ANOMALY     |
+| 52900        | 사무용품비                |  0.82 |  0.85 | 1.64 | 0.642 | STRUCTURAL | SYSTEMIC_ANOMALY     |
++--------------+----------------------+-------+-------+------+------+-------+-------+

@@ -80,6 +80,7 @@ pub struct AuditUniverseEntity {
     pub likelihood_score: i32,
     pub last_audit_year: i32,
     pub budget_size: String,
+    pub operating_profit: String,
     pub headcount: i32,
     pub last_audit_rating: String,
     pub key_systems: String,
@@ -261,4 +262,53 @@ pub struct AuditSignalPayload {
     
     // 4. Minimal Context Snippet (Must be Masked)
     pub masked_snippet: Option<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntityMaster {
+    pub id: String,
+    pub entity_type: String,
+    pub canonical_name: String,
+    pub normalized_key: String,
+    pub risk_score: f64,
+    pub tags: Option<String>, // JSON array
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntityEvent {
+    pub id: String,
+    pub entity_id: String,
+    pub event_type: String,
+    pub amount: Option<f64>,
+    pub event_date: String,
+    pub description: String,
+    pub source_object_id: Option<String>,
+    pub is_flagged: bool,
+    pub risk_delta: f64,
+    pub rule_flags: Option<String>, // JSON Array
+    pub stat_flags: Option<String>, // JSON Array
+    pub source_type: Option<String>, // LEDGER, EMAIL, APPROVAL, etc.
+    pub metadata: Option<String>,    // JSON for extensible fields
+    pub account_code: Option<String>,
+    pub account_name: Option<String>,
+    pub debit: Option<f64>,
+    pub credit: Option<f64>,
+    pub net_amount: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntitySummary {
+    pub total_events: i64,
+    pub total_exposure: f64,
+    pub risk_score: f64,
+    pub repetition_index: f64,
+    pub first_seen: String,
+    pub last_seen: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntityTimelineResponse {
+    pub entity_id: String,
+    pub canonical_name: String,
+    pub summary: EntitySummary,
+    pub events: Vec<EntityEvent>,
 }

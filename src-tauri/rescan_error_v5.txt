@@ -1,0 +1,23 @@
+warning: field `id` is never read
+ --> src\bin\rescan_split_signals.rs:8:5
+  |
+7 | struct Event {
+  |        ----- field in this struct
+8 |     id: String,
+  |     ^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `get_entity_risk_multiplier` is never used
+  --> src\bin\rescan_split_signals.rs:15:4
+   |
+15 | fn get_entity_risk_multiplier(conn: &Connection, entity...
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `auditflow` (bin "rescan_split_signals") generated 2 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.78s
+     Running `target_v3_final\debug\rescan_split_signals.exe`
+>>> [BACKUP] Creating snapshot of risk_signal table...
+>>> [BASELINE] Found 11698 existing SPLIT_PAYMENT signals.
+Error: SqlInputError { error: Error { code: Unknown, extended_code: 1 }, msg: "no such column: project_id", sql: "\n        SELECT DISTINCT source_object_id, project_id \n        FROM entity_event \n        WHERE source_type = 'LEDGER'\n    ", offset: 43 }
+error: process didn't exit successfully: `target_v3_final\debug\rescan_split_signals.exe` (exit code: 1)

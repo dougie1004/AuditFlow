@@ -19,10 +19,20 @@ mod constitution;
 mod assurance;
 mod simulator;
 mod compliance_judge;
+mod ledger_engine;
+mod entity_resolver;
+mod ingestion;
+mod risk_interpret;
+mod risk_score;
+mod rule_weights;
+mod error;
+
+mod forensic_engine;
 
 use database::initialize_database;
 use std::fs;
 use serde_json::Value;
+use tauri::Manager;
 
 fn load_permanent_config() -> Result<(), String> {
     let config_path = std::env::current_dir()
@@ -54,7 +64,23 @@ fn main() {
     
     tauri::Builder::default()
         .setup(|app| {
-            initialize_database(app.handle())?;
+            let handle = app.handle();
+            initialize_database(handle)?;
+            
+            // [API KEY INJECTION] Load persistent key from settings table
+            let db_path = handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+            if let Ok(conn) = rusqlite::Connection::open(db_path) {
+                let key: Option<String> = conn.query_row(
+                    "SELECT value FROM settings WHERE key = 'GEMINI_API_KEY'",
+                    [],
+                    |r| r.get(0)
+                ).ok();
+                if let Some(api_key) = key {
+                    crate::ai::set_api_key(api_key);
+                    println!(">>> [INIT] Persistent GEMINI_API_KEY loaded into runtime.");
+                }
+            }
+
             println!(">>> [INIT] AuditFlow Backend Ready. Scenarios validated.");
             Ok(())
         })
@@ -108,6 +134,11 @@ fn main() {
             commands::get_google_maps_key,
             commands::get_card_transactions,
             commands::upload_knowledge_doc,
+            commands::get_entity_timeline,
+            commands::get_monthly_summary,
+            commands::get_account_flow_graph,
+            commands::get_structural_insight,
+            commands::get_structural_top_accounts,
             dedup::remove_duplicate_issues,
             commands::optimize_database,
             commands::clean_temp_files,
@@ -142,7 +173,10 @@ fn main() {
             commands::update_status_v2,
             commands::update_audit_universe_field,
             commands::judge_risk_exposure,
-            simulator::generate_annual_audit_data
+            simulator::generate_annual_audit_data,
+            commands::set_gemini_api_key,
+            commands::get_gemini_api_key,
+            commands::run_forensic_scan
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

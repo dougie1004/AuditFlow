@@ -1,8 +1,10 @@
 ﻿use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Result as SqlResult};
 use serde_json::json;
 use regex::Regex;
+use anyhow::Context;
+use crate::error::EngineResult;
 
 // --- INTELLIGENCE HELPERS ---
 
@@ -77,15 +79,15 @@ fn get_entity_risk_multiplier(conn: &Connection, entity_name: &str) -> f64 {
 }
 
 /// [Case Elevation] Clusters related signals into a formal 'Audit Case'
-fn elevate_to_case_candidates(conn: &Connection, project_id: &str) -> Result<(), String> {
+fn elevate_to_case_candidates(conn: &Connection, project_id: &str) -> EngineResult<()> {
     // Logic: Find entities with 3+ pending suspicions in this project
     let mut stmt = conn.prepare(
         "SELECT metadata FROM suspicion_inbox 
          WHERE status = 'Pending' 
          GROUP BY metadata HAVING COUNT(*) >= 3"
-    ).map_err(|e| e.to_string())?;
+    ).context("Failed to prepare case elevation query")?;
 
-    let clusters = stmt.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?;
+    let clusters = stmt.query_map([], |row| row.get::<_, String>(0))?;
     
     for c in clusters {
         if let Ok(metadata_str) = c {
@@ -127,226 +129,493 @@ fn elevate_to_case_candidates(conn: &Connection, project_id: &str) -> Result<(),
     Ok(())
 }
 
-pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_id: &str, file_content: &str) -> Result<(), String> {
+pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_id: &str) -> EngineResult<()> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let conn = Connection::open(db_path).context("Failed to open audit database")?;
 
-    // 1. Fetch the newly ingested object's metadata for context
-    let mut stmt = conn.prepare("SELECT object_type, extracted_fields FROM audit_object WHERE id = ?1").map_err(|e| e.to_string())?;
-    let (obj_type, fields_str) = stmt.query_row(params![new_obj_id], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-    }).map_err(|e| e.to_string())?;
+    // 1. Fetch the newly ingested object's basic info
+    let (obj_type, fields_str) = conn.query_row(
+        "SELECT object_type, extracted_fields FROM audit_object WHERE id = ?1",
+        params![new_obj_id],
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    ).context(format!("Failed to fetch audit object for ID: {}", new_obj_id))?;
 
-    println!(">>> [AUDIT ENGINE] Analyzing Ingestion Event: {} ({})", new_obj_id, obj_type);
+    println!(">>> [AUDIT ENGINE] Canonical Analysis Triggered for Object: {}", new_obj_id);
 
-    // 2. Fetch Potential Correlation Candidates (Other objects in same project)
-    // Explicitly scope stmt to drop it before iterating results
-    let candidates = {
-        let mut stmt = conn.prepare("SELECT id, object_type, extracted_fields FROM audit_object WHERE project_id = ?1 AND id != ?2").map_err(|e| e.to_string())?;
+    // 2. Fetch Canonical Events from Layer 2 (DB)
+    let mut stmt = conn.prepare(
+        "SELECT id, entity_id, event_type, amount, event_date, description, account_name, account_code, debit, credit, net_amount, metadata, source_type 
+         FROM entity_event WHERE source_object_id = ?1"
+    ).context("Failed to prepare entity event fetch query")?;
+    
+    let event_rows = stmt.query_map(params![new_obj_id], |row| -> SqlResult<crate::models::EntityEvent> {
+        Ok(crate::models::EntityEvent {
+            id: row.get(0)?,
+            entity_id: row.get(1)?,
+            event_type: row.get(2)?,
+            amount: Some(row.get(3)?),
+            event_date: row.get(4)?,
+            description: row.get(5)?,
+            source_object_id: Some(new_obj_id.to_string()),
+            is_flagged: false,
+            risk_delta: 0.0,
+            rule_flags: None,
+            stat_flags: None,
+            source_type: row.get(12)?,
+            account_name: Some(row.get(6)?),
+            account_code: Some(row.get(7)?),
+            debit: Some(row.get(8)?),
+            credit: Some(row.get(9)?),
+            net_amount: Some(row.get(10)?),
+            metadata: row.get(11)?,
+        })
+    })?;
+
+    let mut all_events = Vec::new();
+    for r in event_rows {
+        if let Ok(e) = r { all_events.push(e); }
+    }
+
+    if all_events.is_empty() {
+        println!(">>> [AUDIT ENGINE] Skip: No Canonical Events found for {}. Analysis terminated.", new_obj_id);
+        return Ok(());
+    }
+
+    // Filter for Structural Engine (Ledger only)
+    let ledger_events: Vec<&crate::models::EntityEvent> = all_events.iter()
+        .filter(|e| e.source_type.as_ref().map(|s| s == "LEDGER").unwrap_or(false))
+        .collect();
+
+    if !ledger_events.is_empty() {
+        println!(">>> [AUDIT ENGINE] Running Structural Risk-Engine on {} Ledger Events...", ledger_events.len());
         
-        // Manual collection to avoid complex iterator types and borrow issues
-        let mut results = Vec::new();
-        let rows = stmt.query_map(params![project_id, new_obj_id], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?))
-        }).map_err(|e| e.to_string())?;
-
-        for r in rows {
-             results.push(r.map_err(|e| e.to_string()));
+        // A. SPLIT PAYMENT DETECTION (Temporal Proximity + Entity Match)
+        // A. ADVANCED SPLIT PAYMENT DETECTION (Forensic Grouping Logic)
+        // Group by (Entity, Date) to analyze patterns
+        let mut grouped_events: std::collections::HashMap<(String, String), Vec<&crate::models::EntityEvent>> = std::collections::HashMap::new();
+        for e in &ledger_events {
+            if !e.entity_id.is_empty() {
+                grouped_events.entry((e.entity_id.clone(), e.event_date.clone())).or_default().push(e);
+            }
         }
+
+        for ((entity, date), group) in grouped_events {
+            if group.len() < 2 { continue; } // Need at least 2 to split
+
+            let amounts: Vec<f64> = group.iter().map(|e| e.net_amount.unwrap_or(0.0).abs()).collect();
+            let total: f64 = amounts.iter().sum();
+            let count = group.len();
+
+            // 1. Batch Process Exclusion (High count + High variance = Batch)
+            // If count > 4 and standard deviation is high, it's likely a batch payment (e.g. diverse salary/vendor payments)
+            // If variability is low (amounts are similar), it MIGHT be structuring, so we keep checking.
+            let mean = total / count as f64;
+            let variance = amounts.iter().map(|a| (a - mean).powi(2)).sum::<f64>() / count as f64;
+            let std_dev = variance.sqrt();
+            let cv = if mean > 0.0 { std_dev / mean } else { 0.0 };
+
+            if count > 4 && cv > 0.1 {
+                // High variance batch -> Exclude
+                continue;
+            }
+
+            // 2. Similarity Check (Structure Intent)
+            // If CV is very low (< 0.05), amounts are nearly identical (e.g. 49,000 + 49,000)
+            let is_similar = cv < 0.05;
+
+            // 3. Limit Targeting (Regulatory Limits)
+            // Check proximity to key thresholds: 50k (Start), 500k (Corp Card), 1M, 3M, 5M, 10M
+            let limits = vec![50_000.0, 500_000.0, 1_000_000.0, 3_000_000.0, 5_000_000.0, 10_000_000.0];
+            let target_limit = limits.iter().find(|&&l| (total - l).abs() <= l * 0.1); 
+            
+            // 4. Account Sensitivity Modifier
+            let account_sensitivity = if let Some(first) = group.first() {
+                if let Some(code) = &first.account_code {
+                    match code.as_str() {
+                        "81300" | "81100" => 1.3, // Entertainment/Welfare (High Risk)
+                        "50300" | "80200" | "80100" | "90100" | "93000" => 0.5, // Salary/Interest/Misc Gain (Low Risk)
+                        _ => 1.0,
+                    }
+                } else { 1.0 }
+            } else { 1.0 };
+
+            // DECISION LOGIC
+            // Trigger if: (Targeting Limit) OR (Similar Amounts & Total > Threshold)
+            
+            if let Some(limit) = target_limit {
+                // Case A: Limit Evasion (Critical/High)
+                let observation = format!("[규정회피 의심] '{}'에서 {}건 분할 결제 (합계: {}원). 규정 한도({}원)에 근접(±10%).", entity, count, total, limit);
+                
+                // Base weight depends on account type
+                let base_weight = if account_sensitivity > 1.0 { crate::rule_weights::RuleWeight::Critical } else { crate::rule_weights::RuleWeight::High };
+                
+                // Adjust score by Account Modifier (capped at 1.0)
+                let final_score = (base_weight.as_f64() * account_sensitivity).min(1.0);
+
+                conn.execute(
+                    "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        uuid::Uuid::new_v4().to_string(),
+                        new_obj_id,
+                        project_id,
+                        "SPLIT_PAYMENT:LIMIT_EVASION",
+                        observation,
+                        final_score,
+                        serde_json::to_string(&group.iter().map(|e| e.id.clone()).collect::<Vec<_>>()).unwrap(),
+                        serde_json::json!({ "vendor": entity, "date": date, "total": total, "target_limit": limit, "count": count }).to_string()
+                    ]
+                ).ok();
+
+            } else if is_similar && total > 100_000.0 {
+                // Case B: Similarity Splitting (Medium/High)
+                // e.g. 50k + 50k + 50k -> 150k
+                let observation = format!("[분할결제 의심] '{}'에서 {}건의 동일/유사 금액({}) 반복 결제 (합계: {}원).", entity, count, mean, total);
+                
+                let base_weight = if count >= 3 { crate::rule_weights::RuleWeight::High } else { crate::rule_weights::RuleWeight::Medium };
+                let final_score = (base_weight.as_f64() * account_sensitivity).min(1.0);
+
+                conn.execute(
+                    "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        uuid::Uuid::new_v4().to_string(),
+                        new_obj_id,
+                        project_id,
+                        "SPLIT_PAYMENT:STRUCTURED",
+                        observation,
+                        final_score,
+                        serde_json::to_string(&group.iter().map(|e| e.id.clone()).collect::<Vec<_>>()).unwrap(),
+                        serde_json::json!({ "vendor": entity, "date": date, "total": total, "cv": cv, "count": count }).to_string()
+                    ]
+                ).ok();
+            }
+        }
+
+        // B. WEEKEND/HOLIDAY DETECTION
+        for e in &ledger_events {
+            let date_str = &e.event_date;
+            let amt = e.net_amount.unwrap_or(0.0);
+            
+            // Re-using standardized date logic (Canonical dates are YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+            let is_holiday = date_str.contains("-12-25") || date_str.contains("-12-21") || date_str.contains("-12-28");
+            
+            if is_holiday && amt > 50_000.0 {
+                let observation = format!("[휴일 사용] 공휴일/주말({})에 고액({}) 결제", date_str, amt);
+                // Rule: Holiday usage > 50k is consistent with policy violations (LOW/MED)
+                let final_score = crate::rule_weights::RuleWeight::Low.as_f64();
+                
+                conn.execute(
+                    "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        uuid::Uuid::new_v4().to_string(),
+                        new_obj_id,
+                        project_id,
+                        "HOLIDAY_USAGE",
+                        observation,
+                        final_score,
+                        serde_json::json!([e.id]).to_string(),
+                        serde_json::json!({ "date": date_str, "amount": amt }).to_string()
+                    ]
+                ).ok();
+            }
+        }
+
+        // C. ACCOUNT ANOMALY (e.g. Unusual Account Code Usage)
+        for e in &ledger_events {
+             if let Some(code) = &e.account_code {
+                 if code == "999" || code == "SUSPENSE" {
+                    // Rule: Suspense account usage is a MEDIUM risk indicator
+                    let final_score = crate::rule_weights::RuleWeight::Medium.as_f64();
+                    
+                    conn.execute(
+                        "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                        params![
+                            uuid::Uuid::new_v4().to_string(),
+                            new_obj_id,
+                            project_id,
+                            "ACCOUNT_ANOMALY",
+                            format!("[임시계정] 의심스러운 계정 코드({}) 사용", code),
+                            final_score,
+                            serde_json::json!([e.id]).to_string(),
+                            serde_json::json!({ "account_code": code, "amount": e.net_amount }).to_string()
+                        ]
+                    ).ok();
+                 }
+             }
+        }
+    
+        // D. VOLUMETRIC ANOMALY (Using Phase 3 Cached Aggregates)
+        let mut agg_stmt = conn.prepare(
+            "SELECT account_code, year_month, transaction_count, net_change 
+             FROM account_month_profile WHERE object_id = ?1 AND transaction_count > 1000"
+        ).context("Failed to prepare volumetric anomaly query")?;
+
+        let agg_rows = agg_stmt.query_map(params![new_obj_id], |row| -> SqlResult<(String, String, i64, f64)> {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })?;
+
+        for r in agg_rows {
+            if let Ok((code, ym, count, net)) = r {
+                let observation = format!("[대량 거래 신호] 계정 {}에서 {}월에 {}건의 거래 발생 (순변동: {}원)", code, ym, count, net);
+                // Rule: Volumetric anomaly is a LOW risk indicator (often operational)
+                let final_score = crate::rule_weights::RuleWeight::Low.as_f64();
+
+                conn.execute(
+                    "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![
+                        uuid::Uuid::new_v4().to_string(),
+                        new_obj_id,
+                        project_id,
+                        "VOLUMETRIC_ANOMALY",
+                        observation,
+                        final_score,
+                        "[]",
+                        serde_json::json!({ "account": code, "month": ym, "count": count, "net_change": net }).to_string()
+                    ]
+                ).ok();
+            }
+        }
+    }
+
+// 3. Execution of Cross-Object Semantic Relations (Layer 3 Intelligence)
+    let candidates = {
+        let mut stmt = conn.prepare("SELECT id, object_type, extracted_fields FROM audit_object WHERE project_id = ?1 AND id != ?2").context("Failed to prepare semantic relation query")?;
+        let mut results = Vec::new();
+        let rows = stmt.query_map(params![project_id, new_obj_id], |row| -> SqlResult<(String, String, String)> {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?;
+        for r in rows { if let Ok(v) = r { results.push(v); } }
         results
     };
 
-    let content_lower = file_content.to_lowercase();
-    let fields_json: serde_json::Value = serde_json::from_str(&fields_str).unwrap_or(json!({}));
-    let file_name = fields_json["file_name"].as_str().unwrap_or("unknown_file");
+    let context_summary = format!("{} {}", fields_str, all_events.iter().map(|e| e.description.clone()).collect::<Vec<_>>().join(" "));
+    let context_lower = context_summary.to_lowercase();
 
-    // 3. Local Anomaly Detection (Corrected Parsing)
-    let mut rows: Vec<Vec<String>> = Vec::new();
-    for line in file_content.lines() {
-        // Handle quoted CSV lines (e.g. "date,amount,...")
-        let clean_line = line.trim().trim_matches('"');
-        // Use standard CSV split (assuming simple CSV for now, or use crate::parser)
-        let parts: Vec<String> = clean_line.split(',').map(|s| s.trim().to_string()).collect();
-        if !parts.is_empty() {
-             rows.push(parts);
+    for (other_id, other_type, other_fields_str) in candidates {
+        let mut signals = Vec::new();
+        let mut confidence = "low";
+        let other_fields_lower = other_fields_str.to_lowercase();
+
+        // Semantic Correlation (Synonym Expansion)
+        let audit_keywords = vec!["식비", "교통", "상품권", "IT", "접대", "선물"];
+        for kw in audit_keywords {
+            if context_lower.contains(&kw.to_lowercase()) {
+                let synonyms = get_semantic_synonyms(kw);
+                if synonyms.iter().any(|&s| other_fields_lower.contains(s)) {
+                    signals.push(format!("SEMANTIC_MATCH:{}", kw.to_uppercase()));
+                    confidence = "medium";
+                }
+            }
+        }
+
+        // Entity Resolution Match using Canonical Events
+        for e in &all_events {
+            let norm = normalize_entity_name(&e.entity_id);
+            if !norm.is_empty() && other_fields_lower.contains(&norm.to_lowercase()) {
+                signals.push("ENTITY_RESOLUTION_MATCH".to_string());
+                confidence = "high";
+                break;
+            }
+        }
+
+        if confidence != "low" && !signals.is_empty() {
+            let reasons_json = serde_json::to_string(&signals).unwrap();
+            conn.execute(
+                "INSERT OR IGNORE INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+                params![new_obj_id, other_id, reasons_json, confidence]
+            ).ok();
         }
     }
 
-    if !rows.is_empty() {
-        let headers = rows[0].clone();
+    
+    // [PHASE 4] Multi-Year Forensic Analysis (Structural Intelligence)
+    println!(">>> [PHASE 4] Executing Forensic Structural Analysis Layer...");
+    
+    let accounts_in_obj: Vec<String> = {
+        let mut stmt = conn.prepare("SELECT DISTINCT account_code FROM entity_event WHERE source_object_id = ?1").context("Failed to prepare distinct account query")?;
+        let rows = stmt.query_map(params![new_obj_id], |r| r.get(0))?;
+        rows.filter_map(|r| r.ok()).collect()
+    };
+
+    for acc in accounts_in_obj {
+        // 1. Calculate Anomaly Score (Average of rule-based signals)
+        let (avg_anomaly, _anomaly_count): (f64, i64) = conn.query_row(
+            "SELECT COALESCE(AVG(score), 0.0), COUNT(*) FROM risk_signal WHERE object_id = ?1 AND (metadata LIKE ?2 OR description LIKE ?2)",
+            params![new_obj_id, format!("%{}%", acc)],
+            |r| Ok((r.get(0)?, r.get(1)?))
+        ).unwrap_or((0.0, 0));
+
+        // 2. Fetch Fiscal Year
+        let year: i32 = conn.query_row(
+            "SELECT CAST(substr(event_date, 1, 4) AS INTEGER) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 LIMIT 1",
+            params![new_obj_id, acc],
+            |r| r.get(0)
+        ).unwrap_or(2025);
+
+        // 3. RUST-NATIVE FORENSIC METRICS
         
-        // Flexible Column Identification
-        let amount_idx = headers.iter().position(|h| {
-            let lh = h.to_lowercase();
-            lh.contains("금액") || lh.contains("amount") || lh.contains("비용") || lh.contains("공급가")
-        });
-        
-        let date_idx = headers.iter().position(|h| {
-            let lh = h.to_lowercase();
-            lh.contains("date") || lh.contains("날짜") || lh.contains("일자") || lh.contains("일시") || lh.contains("승인일")
-        });
-        
-        let vendor_idx = headers.iter().position(|h| {
-            let lh = h.to_lowercase();
-            lh.contains("vendor") || lh.contains("가맹점") || lh.contains("거래처") || lh.contains("상호") || lh.contains("사용처") || lh.contains("식당")
-        });
+        // A. CV Calculation (Using Monthly Aggregates)
+        let monthly_data: Vec<f64> = {
+            let mut stmt = conn.prepare("SELECT SUM(ABS(net_amount)) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 GROUP BY substr(event_date, 1, 7)")?;
+            let rows = stmt.query_map(params![new_obj_id, acc], |r| r.get::<_, f64>(0))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
 
-        if let (Some(a_idx), Some(d_idx), Some(v_idx)) = (amount_idx, date_idx, vendor_idx) {
-            println!(">>> [AUDIT ENGINE] Mapped Columns: Date=[{}], Vendor=[{}], Amount=[{}]", headers[d_idx], headers[v_idx], headers[a_idx]);
-            
-            // A. SPLIT PAYMENT DETECTION
-            for i in 1..rows.len() {
-                for j in (i+1)..std::cmp::min(i+20, rows.len()) { 
-                    if rows[i].len() <= a_idx || rows[j].len() <= a_idx { continue; }
-                    
-                    let v1 = &rows[i][v_idx];
-                    let v2 = &rows[j][v_idx];
-                    let d1 = &rows[i][d_idx].split_whitespace().next().unwrap_or(""); // Take only date part YYYY-MM-DD
-                    let d2 = &rows[j][d_idx].split_whitespace().next().unwrap_or("");
-                    
-                    if v1 == v2 && d1 == d2 && !v1.is_empty() {
-                        let amt1 = rows[i][a_idx].replace(",", "").parse::<f64>().unwrap_or(0.0);
-                        let amt2 = rows[j][a_idx].replace(",", "").parse::<f64>().unwrap_or(0.0);
-                        
-                        // Rule: Threshold > 100,000 KRW combined
-                        if amt1 > 0.0 && amt2 > 0.0 && (amt1 + amt2) > 100_000.0 {
-                             let total = amt1 + amt2;
-                             let signal_id = uuid::Uuid::new_v4().to_string();
-                             let observation = format!("[쪼개기 의심] '{}'에서 {}에 {}원 + {}원 연속 결제 (합계: {}원)", v1, d1, amt1, amt2, total);
-                             
-                             // [INTELLIGENCE] Repetition Amplifier
-                             let multiplier = get_entity_risk_multiplier(&conn, v1);
-                             let base_score = 0.85;
-                             let final_score = (base_score * multiplier).min(1.0);
-
-                             // Check duplication before insert
-                             conn.execute(
-                                "INSERT INTO suspicion_inbox (signal_id, observation, anomaly_score, source, scope, related_tx_ids, metadata, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'Pending')",
-                                params![
-                                    signal_id,
-                                    observation,
-                                    final_score,
-                                    "RULE:SPLIT_PAYMENT",
-                                    "Transaction",
-                                    serde_json::json!([i, j]).to_string(),
-                                    serde_json::json!({ "vendor": v1, "normalized_vendor": normalize_entity_name(v1), "date": d1, "total_amount": total }).to_string()
-                                ]
-                             ).ok();
-                             println!(">>> [AUDIT ENGINE] Risk Found (Amp: {:.1}): {}", multiplier, observation);
-                        }
-                    }
-                }
-            }
-            
-            // B. WEEKEND/HOLIDAY DETECTION
-            for (i, row) in rows.iter().enumerate().skip(1) {
-                if row.len() > d_idx && row.len() > a_idx {
-                    let date_str = &row[d_idx];
-                    let amt = row[a_idx].replace(",", "").parse::<f64>().unwrap_or(0.0);
-                    
-                    // Simple heuristic + You can extend this with specific holiday list
-                    let is_weekend = date_str.contains("토") || date_str.contains("일") || date_str.contains("Sat") || date_str.contains("Sun");
-                    // Specific dates in demo: 2024-12-25 (X-mas), 2024-12-21(Sat)
-                    let is_holiday_demo = date_str.contains("12-25") || date_str.contains("12-21") || date_str.contains("12-28"); 
-
-                    if (is_weekend || is_holiday_demo) && amt > 50_000.0 {
-                        let signal_id = uuid::Uuid::new_v4().to_string();
-                        let observation = format!("[휴일 사용] 공휴일/주말({})에 고액({}) 결제", date_str, amt);
-                        
-                        conn.execute(
-                            "INSERT INTO suspicion_inbox (signal_id, observation, anomaly_score, source, scope, related_tx_ids, metadata, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'Pending')",
-                            params![
-                                signal_id,
-                                observation,
-                                0.7,
-                                "RULE:HOLIDAY_USAGE",
-                                "Transaction",
-                                serde_json::json!([i]).to_string(),
-                                serde_json::json!({ "date": date_str, "amount": amt }).to_string()
-                            ]
-                        ).ok();
-                         println!(">>> [AUDIT ENGINE] Risk Found: {}", observation);
-                    }
-                }
-            }
-
+        let cv = if monthly_data.len() > 1 {
+            let n = monthly_data.len() as f64;
+            let sum: f64 = monthly_data.iter().sum();
+            let mean = sum / n;
+            let variance = monthly_data.iter().map(|&v| (v - mean).powi(2)).sum::<f64>() / n;
+            let std_dev = variance.sqrt();
+            if mean > 0.0 { std_dev / mean } else { 0.0 }
         } else {
-             println!(">>> [AUDIT ENGINE] Failed to identify columns. Headers: {:?}", headers);
-        }
-    }
+            0.0 // Insufficient periodicity
+        };
 
+        // B. CR1 and HHI Calculation (Using Counterparty Distribution)
+        let cp_data: Vec<f64> = {
+            let mut stmt = conn.prepare("SELECT SUM(ABS(net_amount)) as s FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 GROUP BY entity_id ORDER BY s DESC")?;
+            let rows = stmt.query_map(params![new_obj_id, acc], |r| r.get::<_, f64>(0))?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
 
-    // 4. Execution of Intelligent Detection Rules (Cross-Object Semantic Relations)
-    for candidate in candidates {
-        if let Ok((other_id, other_type, other_fields_str)) = candidate {
-            let mut signals = Vec::new();
-            let mut confidence = "low";
-            let other_fields_lower = other_fields_str.to_lowercase();
+        let (cr1, hhi) = if !cp_data.is_empty() {
+            let total: f64 = cp_data.iter().sum();
+            let max_val = cp_data[0];
+            let cr1_val = if total > 0.0 { max_val / total } else { 0.0 };
+            let hhi_val = if total > 0.0 { cp_data.iter().map(|&v| (v / total).powi(2)).sum::<f64>() } else { 0.0 };
+            (cr1_val, hhi_val)
+        } else {
+            (0.0, 0.0)
+        };
 
-            // [INTELLIGENCE 1] Semantic Correlation (Synonym Expansion)
-            let audit_keywords = vec!["식비", "교통", "상품권", "IT", "접대", "선물"];
-            for kw in audit_keywords {
-                if content_lower.contains(&kw.to_lowercase()) {
-                    let synonyms = get_semantic_synonyms(kw);
-                    if synonyms.iter().any(|&s| other_fields_lower.contains(s)) {
-                        signals.push(format!("SEMANTIC_MATCH:{}", kw.to_uppercase()));
-                        confidence = "medium";
-                    }
-                }
+        // 4. Calculate Final Structural Score (Forensic Calibration)
+        let structural_score = crate::risk_score::calculate_structural_score(cv, cr1, hhi);
+        let structural_label = crate::risk_interpret::interpret_structural_score(structural_score);
+
+        println!(">>> [FORENSIC] Acc: {}, CV: {:.4}, CR1: {:.4}, HHI: {:.4} -> Structural: {:.4} ({:?})", 
+                 acc, cv, cr1, hhi, structural_score, structural_label);
+
+        // 5. Update Yearly Profile Repository
+        conn.execute(
+            "INSERT INTO account_year_profile (account_code, fiscal_year, structural_score, avg_anomaly_score, avg_cv, avg_cr1, avg_hhi, transaction_count) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(account_code, fiscal_year) DO UPDATE SET 
+             structural_score = ?3,
+             avg_anomaly_score = ?4,
+             avg_cv = ?5,
+             avg_cr1 = ?6,
+             avg_hhi = ?7,
+             transaction_count = ?8",
+            params![acc, year, structural_score, avg_anomaly, cv, cr1, hhi, cp_data.len() as i64]
+        ).ok();
+
+        // 6. Trend Calculation (Forensic Momentum)
+        let history: Vec<(i32, f64)> = {
+            if let Ok(mut stmt) = conn.prepare("SELECT fiscal_year, structural_score FROM account_year_profile WHERE account_code = ?1 ORDER BY fiscal_year ASC") {
+                stmt.query_map(params![acc], |r| -> SqlResult<(i32, f64)> {
+                   Ok((r.get(0)?, r.get(1)?))
+                })
+                .map(|rows| rows.filter_map(|r| r.ok()).collect())
+                .unwrap_or_default()
+            } else {
+                Vec::new()
             }
+        };
 
-            // [INTELLIGENCE 2] Normalized Entity Resolution
-            let new_vendor_norm = normalize_entity_name(&file_name);
-            if other_fields_lower.contains("vendor") || other_fields_lower.contains("가맹점") {
-                 if other_fields_lower.contains(&new_vendor_norm.to_lowercase()) {
-                     signals.push("ENTITY_RESOLUTION_MATCH".to_string());
-                     confidence = "high";
-                 }
-            }
+            if history.len() >= 2 {
+                let first = history.first().unwrap();
+                let last = history.last().unwrap();
+                let year_diff = (last.0 - first.0) as f64;
+                let score_diff = last.1 - first.1;
+                let slope = if year_diff > 0.0 { score_diff / year_diff } else { 0.0 };
 
-            // Signal A: 'Corporate Card Trace' (Keyword: 상품권, Gift, etc.)
-            if content_lower.contains("gift") || content_lower.contains("상품권") {
-                if other_fields_lower.contains("상품권") || other_fields_lower.contains("gift") {
-                    signals.push("GIFT_CARD_TRACE".to_string());
-                    confidence = "high";
-                }
-            }
-
-            // Signal B: 'High Value Cross-Check' (Amount Matching)
-            if (obj_type == "LEDGER" && other_type == "EMAIL") || (obj_type == "EMAIL" && other_type == "LEDGER") {
-                 if content_lower.contains("1000000") || content_lower.contains("1,000,000") {
-                      if other_fields_lower.contains("1000000") || other_fields_lower.contains("1,000,000") {
-                          signals.push("HIGH_VALUE_EXACT_MATCH".to_string());
-                          confidence = "critical";
-                      }
-                 }
-            }
-
-            // 5. Record Discovered Relations & Explore Multi-hop Chains
-            if !signals.is_empty() {
-                let reasons_json = serde_json::to_string(&signals).unwrap();
-                
-                // [INTELLIGENCE] Confidence Layer Separation
-                // Only save relations if confidence is above 'low' (or threshold)
-                if confidence != "low" {
-                    println!(">>> [AI ENGINE] Relation Discovered: {} <-> {} [Signals: {}]", new_obj_id, other_id, reasons_json);
-                    
+                if slope > 0.1 {
+                    let observation = format!("[위험 트렌드] 계정 {}의 구조적 위험 점수가 매년 {:.2}씩 증가하고 있습니다. (현재 상태: {:?})", 
+                                              acc, slope, structural_label);
                     conn.execute(
-                        "INSERT INTO relation_candidate (from_object_id, to_object_id, reason_codes, confidence, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
-                        params![new_obj_id, other_id, reasons_json, confidence]
+                        "INSERT INTO risk_signal (id, object_id, project_id, signal_type, description, score, related_ids, metadata) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                        params![
+                            uuid::Uuid::new_v4().to_string(),
+                            new_obj_id,
+                            project_id,
+                            "TREND:INCREASING_RISK",
+                            observation,
+                            (structural_score * 1.2).min(1.0), // Escalate based on structural risk
+                            "[]",
+                            serde_json::json!({ 
+                                "account": acc, 
+                                "slope": slope, 
+                                "history": history, 
+                                "structural_score": structural_score,
+                                "label": structural_label 
+                            }).to_string()
+                        ]
                     ).ok();
-
-                    // [INTELLIGENCE 3] Discover Multi-hop Chains
-                    let chains = discover_multi_hop_chains(&conn, new_obj_id, &other_id);
-                    for chain_desc in chains {
-                        println!(">>> [AI ENGINE] Causation Chain Found: {}", chain_desc);
-                        let _ = conn.execute(
-                            "INSERT INTO system_events (id, timestamp, event_type, description, audit_id) VALUES (?1, datetime('now'), 'AI_SIGNAL', ?2, ?3)",
-                            params![uuid::Uuid::new_v4().to_string(), format!("🧩 고도화 분석: 다단계 증거 체인 발견 - {}", chain_desc), project_id]
-                        );
-                    }
                 }
             }
+    } // End of Phase 4 loop (accounts_in_obj)
+    
+    // [PHASE 6] Risk Correlation Engine (Cross-Modal Intelligence)
+    println!(">>> [PHASE 6] Executing Risk Correlation Engine...");
+    
+    // 1. Fetch high-score structural signals for correlation
+    let structural_signals = {
+        let mut stmt = conn.prepare("SELECT id, description, score, metadata FROM risk_signal WHERE object_id = ?1 AND score > 0.7").context("Failed to prepare signal fetch")?;
+        let rows = stmt.query_map(params![new_obj_id], |r| -> SqlResult<(String, String, f64, String)> {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+        })?;
+        let mut v = Vec::new();
+        for r in rows { if let Ok(s) = r { v.push(s); } }
+        v
+    };
+
+    // 2. Identify relevant communications (Emails)
+    let communications: Vec<&crate::models::EntityEvent> = all_events.iter()
+        .filter(|e| e.source_type.as_ref().map(|s| s == "EMAIL" || s == "DOC").unwrap_or(false))
+        .collect();
+
+    let risk_keywords = vec!["urgent", "emergency", "bypass", "manual", "cash", "confidential", "delete", "긴급", "우회", "현금", "삭제"];
+
+    for (sig_id, _desc, score, meta_str) in structural_signals {
+        let mut found_context = false;
+        let mut evidence = String::new();
+
+        // Check if any email correlates with this structural risk
+        for comm in &communications {
+            let comm_body = comm.description.to_lowercase();
+            let comm_meta = comm.metadata.as_ref().map(|m| m.to_lowercase()).unwrap_or_default();
+            
+            // Heuristic: Does email mention the structural risk description or risk keywords?
+            let has_keyword = risk_keywords.iter().any(|&k| comm_body.contains(k) || comm_meta.contains(k));
+            
+            if has_keyword {
+                found_context = true;
+                evidence = format!("Correlated with event '{}' ({})", comm.id, comm.description);
+                break;
+            }
+        }
+
+        if found_context {
+            println!(">>> [PHASE 6] Hybrid Correlation Found for signal: {}", sig_id);
+            
+            // A. Create Correlation Signal
+            let corr_id = uuid::Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO correlation_signal (id, object_id, account_code, structural_score, contextual_flag, final_priority, evidence_summary) 
+                 VALUES (?1, ?2, 'N/A', ?3, 1, ?4, ?5)",
+                params![corr_id, new_obj_id, score, score + 0.2, evidence]
+            ).ok();
+
+            // B. Adjust RiskSignal priority (Bump score in metadata but don't auto-confirm)
+            let mut meta_v: serde_json::Value = serde_json::from_str(&meta_str).unwrap_or(serde_json::json!({}));
+            meta_v["correlation_escalated"] = serde_json::json!(true);
+            meta_v["correlation_evidence"] = serde_json::json!(evidence);
+            meta_v["final_priority_score"] = serde_json::json!(score + 0.2);
+
+            conn.execute(
+                "UPDATE risk_signal SET score = MIN(1.0, score + 0.15), metadata = ?1 WHERE id = ?2",
+                params![meta_v.to_string(), sig_id]
+            ).ok();
         }
     }
 
@@ -366,7 +635,7 @@ pub async fn run_generic_ai_audit(
     _api_key: &str,
     _enable_masking: bool,
     _external_context: Option<String>
-) -> Result<(), String> {
+) -> EngineResult<()> {
     println!(">>> [AuditEngine] Generic AI audit handled via commands/ai_detection.");
     Ok(())
 }

@@ -2,7 +2,7 @@
 
 const Header = () => {
     return (
-        <header className="h-16 border-b border-border bg-background px-6 flex items-center justify-between">
+        <header className="h-16 border-b border-white/10 bg-background px-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <h2 className="text-lg font-semibold">Dashboard</h2>
             </div>

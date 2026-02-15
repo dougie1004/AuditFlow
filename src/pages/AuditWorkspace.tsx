@@ -6,7 +6,7 @@ import {
     FileText, EyeOff, CheckCircle2, XCircle,
     BrainCircuit, BarChart3, Database, Lock, MoveRight,
     ShieldAlert, ShieldCheck, Search, ChevronDown, Terminal,
-    Layers, ClipboardList, Clock, Plus
+    Layers, ClipboardList, Clock, Plus, Activity
 } from 'lucide-react';
 import { useApp } from '../App';
 import { useAudit } from '../context/AuditContext';
@@ -26,6 +26,7 @@ export default function AuditWorkspace() {
     const [isLoading, setIsLoading] = useState(false);
     const [sessions, setSessions] = useState<AuditSession[]>([]);
     const [reviewQueue, setReviewQueue] = useState<ReviewItem[]>([]);
+    const [structuralInsights, setStructuralInsights] = useState<any[]>([]);
 
     const location = useLocation();
 
@@ -54,7 +55,10 @@ export default function AuditWorkspace() {
     }, [id, setActiveProject]);
 
     useEffect(() => {
-        // [GLOBAL SUPPORT] Allow fetching even if activeProject is null (Company Wide)
+        refreshAllData();
+    }, [id, activeProject]);
+
+    const refreshAllData = () => {
         setIsLoading(true);
         const fetchContext = activeProject || null;
 
@@ -62,10 +66,14 @@ export default function AuditWorkspace() {
             safeInvoke("get_audit_objects", { projectId: fetchContext }),
             safeInvoke("get_relation_candidates", { projectId: fetchContext }),
             safeInvoke("get_audit_sessions", { projectId: fetchContext }),
-            safeInvoke("get_risk_summary", {}) // Fetch new AI risks
-        ]).then(([objs, candidates, sess, riskData]: [any, any, any, any]) => {
+            safeInvoke("get_risk_summary", {}),
+            safeInvoke("get_structural_top_accounts", {})
+        ]).then(([objs, candidates, sess, riskData, structuralData]: [any, any, any, any, any]) => {
             setAuditObjects(objs);
+            setStructuralInsights(structuralData || []);
+            setSessions(sess);
 
+            // 1. Map GPT/LLM Risks
             const newRisks = (riskData?.items || []).map((r: any) => {
                 let parsedMeta = {};
                 try { parsedMeta = JSON.parse(r.metadata || '{}'); } catch (e) { }
@@ -75,22 +83,41 @@ export default function AuditWorkspace() {
                     reason_codes: r.observation,
                     confidence: (r.score || 0) >= 0.8 ? 'exact' : 'high',
                     original_id: r.id,
-                    meta: parsedMeta
+                    meta: parsedMeta,
+                    type: 'LLM'
                 };
             });
 
-            setRelationCandidates([...newRisks, ...candidates]);
-            setSessions(sess);
+            // 2. Map Structural (Deterministic AI) Risks
+            const structuralRisks = (structuralData || [])
+                .filter((s: any) => s.recommended_focus || s.structural_score > 0.5)
+                .map((s: any) => ({
+                    from_object_id: "ENGINE_CORE",
+                    to_object_id: s.account,
+                    reason_codes: s.reasons.join(", "),
+                    confidence: s.status.includes("Critical") ? "exact" : "high",
+                    original_id: null, // Virtual ID
+                    meta: {
+                        is_structural: true,
+                        score: s.structural_score,
+                        status: s.status,
+                        vol: s.volatility,
+                        hhi: s.hhi_index
+                    },
+                    type: 'STRUCTURAL'
+                }));
+
+            setRelationCandidates([...structuralRisks, ...newRisks, ...candidates]);
 
             if (activeProject) {
                 const relevantSession = sess.find((s: any) => s.project_id === activeProject);
                 if (relevantSession) {
                     setWorkspaceState({ currentSessionId: relevantSession.id });
-                } else {
+                } else if (activeProject !== "_ALL_") {
                     console.log("No session found for project, auto-creating...");
                     safeInvoke("create_audit_session", {
                         projectId: activeProject,
-                        name: "Default Audit Session (Auto-Generated)",
+                        name: "Default Audit Session",
                         periodStart: "2026-01-01",
                         periodEnd: "2026-12-31",
                         includedObjectTypes: "ALL"
@@ -105,9 +132,19 @@ export default function AuditWorkspace() {
                 }
             }
             setIsLoading(false);
+        }).catch(err => {
+            console.error(err);
+            setIsLoading(false);
         });
+    };
 
-    }, [activeProject]);
+    const fetchStructuralInsights = () => {
+        setIsLoading(true);
+        safeInvoke("get_structural_top_accounts", {}).then((res: any) => {
+            setStructuralInsights(res || []);
+            setIsLoading(false);
+        }).catch(() => setIsLoading(false));
+    };
 
     useEffect(() => {
         if (currentSessionId) {
@@ -388,7 +425,75 @@ export default function AuditWorkspace() {
                                     <BrainCircuit className="text-emerald-500" size={24} /> AI 기반 이슈 분석 (Insights)
                                 </h3>
 
-                                <div className="space-y-6">
+                                <div className="space-y-8">
+                                    {/* 1. Structural Analytics (Deterministic) */}
+                                    <div className="bg-amber-500/5 border border-amber-500/10 rounded-[48px] p-8">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-amber-500/10 rounded-lg">
+                                                    <BarChart3 className="text-amber-500" size={18} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[11px] font-black uppercase text-amber-500 tracking-[0.2em]">통계 기반 구조적 위험 진단</h4>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Statistical Anomaly Engine v4.2</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={fetchStructuralInsights}
+                                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-all active:scale-95"
+                                            >
+                                                <Loader2 className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {structuralInsights.length > 0 ? (
+                                                structuralInsights.map((insight, idx) => (
+                                                    <div key={`structural-${idx}`} className="bg-black/40 border border-white/5 rounded-3xl p-6 hover:border-amber-500/30 transition-all group relative overflow-hidden">
+                                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${insight.status.includes('Critical') ? 'bg-red-500' :
+                                                            insight.status.includes('Elevated') ? 'bg-amber-500' :
+                                                                insight.status.includes('Watch') ? 'bg-blue-500' : 'bg-slate-500'
+                                                            }`} />
+
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <div>
+                                                                <h5 className="font-black text-white text-[13px]">{insight.account}</h5>
+                                                                <span className={`inline-block mt-1 text-[8px] font-black px-2 py-0.5 rounded-full border uppercase tracking-tighter ${insight.status.includes('Critical') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                                    insight.status.includes('Elevated') ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                                    }`}>
+                                                                    {insight.status}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[8px] font-black text-slate-600 uppercase">Risk</p>
+                                                                <p className="text-xs font-black text-white">{(insight.structural_score * 100).toFixed(0)}%</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-1.5 mt-2">
+                                                            {insight.reasons.map((reason, ri) => (
+                                                                <p key={ri} className="text-[10px] text-slate-400 leading-tight flex items-start gap-2">
+                                                                    <span className="mt-1.5 w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+                                                                    {reason}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="col-span-2 py-10 text-center opacity-40">
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">자동 진단 대기 중...</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Transaction Relations (AI Juror) */}
+                                    <h4 className="text-[11px] font-black uppercase text-emerald-500 tracking-[0.2em] flex items-center gap-3 px-4">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 이상 관계 탐지 (AI Relation Matrix)
+                                    </h4>
+
                                     {relationCandidates.length === 0 ? (
                                         <div className="bg-white/5 border border-white/5 rounded-[48px] p-24 text-center">
                                             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 opacity-20">
@@ -399,13 +504,15 @@ export default function AuditWorkspace() {
                                         </div>
                                     ) : (
                                         relationCandidates.map((rel, i) => (
-                                            <div key={i} className="bg-emerald-500/5 border border-emerald-500/10 rounded-[40px] p-8 flex items-center gap-8 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                                            <div key={i} className={`${rel.type === 'STRUCTURAL' ? 'bg-rose-500/5 border-rose-500/10' : 'bg-emerald-500/5 border-emerald-500/10'} border rounded-[40px] p-8 flex items-center gap-8 relative overflow-hidden group hover:border-emerald-500/30 transition-all shadow-lg`}>
                                                 <div className="flex-1 space-y-2">
-                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">분석 후보 (Candidate) #{i + 1}</p>
+                                                    <p className={`text-[10px] font-black ${rel.type === 'STRUCTURAL' ? 'text-rose-500' : 'text-emerald-500'} uppercase tracking-widest`}>
+                                                        {rel.type === 'STRUCTURAL' ? '구조적 리스크 (Structural)' : `분석 후보 (Candidate) #${i + 1}`}
+                                                    </p>
                                                     <div className="flex items-center gap-4">
-                                                        <div className="text-xs font-black text-white px-2 py-1 bg-white/5 rounded">{rel.from_object_id}</div>
-                                                        <MoveRight className="text-emerald-500/40" size={16} />
-                                                        <div className="text-xs font-black text-white px-2 py-1 bg-white/5 rounded">{rel.to_object_id}</div>
+                                                        <div className="text-xs font-black text-white px-2 py-1 bg-white/5 rounded truncate max-w-[120px]">{rel.from_object_id}</div>
+                                                        <MoveRight className={rel.type === 'STRUCTURAL' ? 'text-rose-500/40' : 'text-emerald-500/40'} size={16} />
+                                                        <div className="text-xs font-black text-white px-2 py-1 bg-white/5 rounded truncate max-w-[120px]">{rel.to_object_id}</div>
                                                     </div>
                                                 </div>
                                                 <div className="flex-[2]">
@@ -413,77 +520,178 @@ export default function AuditWorkspace() {
                                                     <p className="text-xs text-slate-300 font-bold leading-relaxed">{rel.reason_codes}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">신뢰도 (Confidence)</p>
-                                                    <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${rel.confidence === 'exact' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-slate-400'}`}>
-                                                        {rel.confidence === 'exact' ? '정밀 일치' : rel.confidence === 'high' ? '높음' : '패턴 매칭'}
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">상태 (Status)</p>
+                                                    <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${rel.type === 'STRUCTURAL' ? 'bg-rose-500 text-white' : (rel.confidence === 'exact' ? 'bg-emerald-500 text-black' : 'bg-white/10 text-slate-400')}`}>
+                                                        {rel.meta?.status || (rel.confidence === 'exact' ? '정밀 일치' : rel.confidence === 'high' ? '높음' : '패턴 매칭')}
                                                     </span>
                                                 </div>
                                                 {role === 'Auditor' && rel.original_id && (
                                                     <button
                                                         onClick={() => handlePromoteToReview(rel.original_id)}
-                                                        className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-lg shadow-blue-900/40"
+                                                        className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase rounded-lg transition-all shadow-lg shadow-blue-900/40 whitespace-nowrap"
                                                     >
                                                         이슈 등록
                                                     </button>
+                                                )}
+                                                {rel.type === 'STRUCTURAL' && (
+                                                    <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                                        <BarChart3 size={24} className="text-rose-500" />
+                                                    </div>
                                                 )}
                                             </div>
                                         ))
                                     )}
 
+
+
+                                    {/* [New] Audit Evidence Detail Modal Logic Placeholder */}
+                                    {/* Implementing inline for now to avoid large refactor */}
+                                    {relationCandidates.map((rel, i) => (
+                                        (rel.meta?.evidence_quote) && (
+                                            <div key={`evidence-${i}`} className="hidden group-hover:block absolute z-50 bg-slate-800 border border-emerald-500/30 p-6 rounded-2xl shadow-2xl w-[400px] right-full mr-4 top-0 animate-in fade-in zoom-in-95">
+                                                <h5 className="text-emerald-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
+                                                    <BrainCircuit size={12} /> 배심원(AI) 제보 증거 (Evidence)
+                                                </h5>
+                                                <div className="bg-black/40 p-3 rounded-lg border border-white/5 mb-4">
+                                                    <p className="text-white text-xs italic">"{rel.meta.evidence_quote}"</p>
+                                                </div>
+
+                                                <h5 className="text-blue-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
+                                                    <Database size={12} /> 판심(Engine) 산출 근거 (Logic)
+                                                </h5>
+                                                <div className="space-y-1 text-[10px] text-slate-400 font-mono">
+                                                    <div className="flex justify-between">
+                                                        <span>일치 기준 (Matched Criterion):</span>
+                                                        <span className="text-white">{rel.meta.matched_criterion}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>이상 점수 (Anomaly Score):</span>
+                                                        <span className="text-white">{rel.meta.s_score?.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
+                                                        <span>최종 판결 (Verdict):</span>
+                                                        <span className="text-emerald-400 font-bold">{rel.meta.risk_label === 'HIGH' ? '심각' : rel.meta.risk_label === 'MEDIUM' ? '주의' : '낮음'} 위험 (RISK)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (currentSession?.status === 'CLOSED' || currentSession?.status === 'ARCHIVED') ? (
+                        /* [PHASE 6] FINAL RECAP REPORT VIEW - ARCHITECTURE REVISION */
+                        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                            {/* Header Section */}
+                            <div className="bg-slate-900/80 border border-white/10 rounded-[48px] p-12 shadow-2xl">
+                                <div className="flex justify-between items-start mb-12">
+                                    <div className="space-y-3">
+                                        <span className="bg-emerald-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">감사 최종 보고서 (Final Report)</span>
+                                        <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">{currentSession.name}</h2>
+                                        <div className="flex items-center gap-4 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                                            <span>Session ID: {currentSession.id}</span>
+                                            <span className="w-1 h-1 bg-slate-700 rounded-full" />
+                                            <span>Period: {currentSession.period_start} ~ {currentSession.period_end}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">종료 일자 (Closed Date)</p>
+                                        <p className="text-xl font-black text-white">{currentSession.created_at.split(' ')[0]}</p>
+                                    </div>
                                 </div>
 
-                                {/* [New] Audit Evidence Detail Modal Logic Placeholder */}
-                                {/* Implementing inline for now to avoid large refactor */}
-                                {relationCandidates.map((rel, i) => (
-                                    (rel.meta?.evidence_quote) && (
-                                        <div key={`evidence-${i}`} className="hidden group-hover:block absolute z-50 bg-slate-800 border border-emerald-500/30 p-6 rounded-2xl shadow-2xl w-[400px] right-full mr-4 top-0 animate-in fade-in zoom-in-95">
-                                            <h5 className="text-emerald-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
-                                                <BrainCircuit size={12} /> 배심원(AI) 제보 증거 (Evidence)
-                                            </h5>
-                                            <div className="bg-black/40 p-3 rounded-lg border border-white/5 mb-4">
-                                                <p className="text-white text-xs italic">"{rel.meta.evidence_quote}"</p>
+                                {/* [ARCHITECTURE V2] 3-BLOCK EXECUTIVE SUMMARY */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                                    {/* [1] Confirmed Risk Level */}
+                                    <div className="bg-black/40 border border-emerald-500/20 p-8 rounded-[32px] relative overflow-hidden group">
+                                        <div className="relative z-10">
+                                            <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <ShieldCheck size={14} /> Confirmed Risk Level
+                                            </h4>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-5xl font-black text-white italic">
+                                                    {(() => {
+                                                        const conf = reviewQueue.filter(i => i.status === 'CONFIRMED');
+                                                        const h = conf.filter(i => i.reason.toLowerCase().includes('high') || i.reason.toLowerCase().includes('critical')).length;
+                                                        const m = conf.length - h;
+                                                        return Math.min(100, (h * 25) + (m * 10));
+                                                    })()}
+                                                </span>
+                                                <span className="text-slate-500 font-black text-xl italic uppercase">pts</span>
                                             </div>
+                                            <p className="text-[9px] text-slate-400 mt-4 leading-relaxed font-bold uppercase italic">
+                                                *공식 리스크 점수: 확정된 발견 사항(Confirmed)만 반영되었습니다.
+                                            </p>
+                                        </div>
+                                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                            <Zap size={80} />
+                                        </div>
+                                    </div>
 
-                                            <h5 className="text-blue-500 font-black uppercase text-xs mb-2 flex items-center gap-2">
-                                                <Database size={12} /> 판심(Engine) 산출 근거 (Logic)
-                                            </h5>
-                                            <div className="space-y-1 text-[10px] text-slate-400 font-mono">
-                                                <div className="flex justify-between">
-                                                    <span>일치 기준 (Matched Criterion):</span>
-                                                    <span className="text-white">{rel.meta.matched_criterion}</span>
+                                    {/* [2] Review Status Overview */}
+                                    <div className="bg-black/40 border border-amber-500/20 p-8 rounded-[32px] relative overflow-hidden group">
+                                        <div className="relative z-10">
+                                            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <BrainCircuit size={14} /> Review Status Overview
+                                            </h4>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-3xl font-black text-white italic">
+                                                        {reviewQueue.filter(i => ['PENDING', 'ESCALATED', 'DEFERRED'].includes(i.status)).length}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pending Signals</span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span>이상 점수 (Anomaly Score):</span>
-                                                    <span className="text-white">{rel.meta.s_score?.toFixed(2)}</span>
+                                                <div className="h-10 w-[1px] bg-white/10" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-3xl font-black text-white/40 italic">
+                                                        {reviewQueue.filter(i => i.status === 'CONFIRMED').length}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Confirmed</span>
                                                 </div>
-                                                <div className="flex justify-between border-t border-white/10 pt-1 mt-1">
-                                                    <span>최종 판결 (Verdict):</span>
-                                                    <span className="text-emerald-400 font-bold">{rel.meta.risk_label === 'HIGH' ? '심각' : rel.meta.risk_label === 'MEDIUM' ? '주의' : '낮음'} 위험 (RISK)</span>
+                                            </div>
+                                            <p className="text-[9px] text-amber-500/70 mt-4 leading-relaxed font-bold uppercase italic">
+                                                "현재 다수의 발견 사항이 검토 대기(Open) 상태이며, 최종 확정 시 공식 점수에 반영됩니다."
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* [3] Financial Exposure Summary */}
+                                    <div className="bg-black/40 border border-blue-500/20 p-8 rounded-[32px] relative overflow-hidden group">
+                                        <div className="relative z-10">
+                                            <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <Database size={14} /> Financial Exposure
+                                            </h4>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Confirmed</span>
+                                                    <span className="text-xl font-black text-white italic">
+                                                        ₩{reviewQueue.filter(i => i.status === 'CONFIRMED').reduce((acc, curr) => {
+                                                            try { return acc + (JSON.parse(curr.snapshot_data || '{}').amount || 0); } catch (e) { return acc; }
+                                                        }, 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-baseline opacity-40">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Potential (Open)</span>
+                                                    <span className="text-lg font-black text-slate-300 italic">
+                                                        ₩{reviewQueue.filter(i => ['PENDING', 'ESCALATED', 'DEFERRED'].includes(i.status)).reduce((acc, curr) => {
+                                                            try { return acc + (JSON.parse(curr.snapshot_data || '{}').amount || 0); } catch (e) { return acc; }
+                                                        }, 0).toLocaleString()}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    ) : currentSession?.status === 'CLOSED' ? (
-                        /* [PHASE 6] FINAL RECAP REPORT VIEW */
-                        <div className="max-w-4xl mx-auto bg-slate-900/80 border border-white/10 rounded-[48px] p-16 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-                            <div className="flex justify-between items-start mb-12">
-                                <div className="space-y-2">
-                                    <span className="bg-emerald-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">감사 최종 보고서 (Final Report)</span>
-                                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">{currentSession.name}</h2>
-                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Session ID: {currentSession.id}</p>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">종료 일자 (Closed Date)</p>
-                                    <p className="text-lg font-black text-white">{currentSession.created_at.split(' ')[0]}</p>
-                                </div>
-                            </div>
 
-                            <div className="prose prose-invert max-w-none">
-                                <div className="p-10 bg-black/40 border border-white/5 rounded-[32px] font-sans text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                    {currentSession.final_report || "No summary report generated for this session."}
+                                {/* Main Report Content */}
+                                <div className="prose prose-invert max-w-none">
+                                    <div className="p-12 bg-black/60 border border-white/5 rounded-[40px] font-sans text-slate-300 leading-relaxed whitespace-pre-wrap text-sm shadow-inner">
+                                        {currentSession.final_report || "No summary report generated for this session."}
+                                    </div>
+
+                                    <div className="mt-8 text-center text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] italic">
+                                        “본 보고서의 공식 리스크 평가는 감사인의 최종 확정(adjudication)을 완료한 사항만을 기준으로 산출되었습니다.”
+                                    </div>
                                 </div>
                             </div>
 
@@ -599,6 +807,8 @@ export default function AuditWorkspace() {
                                                                     </div>
                                                                 </div>
                                                             )}
+
+
 
                                                             {item.reviewer_final_note && (
                                                                 <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
@@ -717,6 +927,6 @@ export default function AuditWorkspace() {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
             `}</style>
-        </div >
+        </div>
     );
 }
