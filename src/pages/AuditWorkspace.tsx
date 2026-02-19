@@ -11,6 +11,7 @@ import {
 import { useApp } from '../App';
 import { useAudit } from '../context/AuditContext';
 import { AuditSession, ReviewItem } from '../types';
+import FinancialTrendPanel from '../components/workspace/FinancialTrendPanel';
 
 export default function AuditWorkspace() {
     const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function AuditWorkspace() {
     const [sessions, setSessions] = useState<AuditSession[]>([]);
     const [reviewQueue, setReviewQueue] = useState<ReviewItem[]>([]);
     const [structuralInsights, setStructuralInsights] = useState<any[]>([]);
+    const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
 
     const location = useLocation();
 
@@ -67,7 +69,7 @@ export default function AuditWorkspace() {
             safeInvoke("get_relation_candidates", { projectId: fetchContext }),
             safeInvoke("get_audit_sessions", { projectId: fetchContext }),
             safeInvoke("get_risk_summary", {}),
-            safeInvoke("get_structural_top_accounts", {})
+            safeInvoke("get_strategic_deviations", {})
         ]).then(([objs, candidates, sess, riskData, structuralData]: [any, any, any, any, any]) => {
             setAuditObjects(objs);
             setStructuralInsights(structuralData || []);
@@ -90,19 +92,20 @@ export default function AuditWorkspace() {
 
             // 2. Map Structural (Deterministic AI) Risks
             const structuralRisks = (structuralData || [])
-                .filter((s: any) => s.recommended_focus || s.structural_score > 0.5)
+                .filter((s: any) => s.audit_score > 0.15) // WATCH threshold
                 .map((s: any) => ({
                     from_object_id: "ENGINE_CORE",
-                    to_object_id: s.account,
-                    reason_codes: s.reasons.join(", "),
-                    confidence: s.status.includes("Critical") ? "exact" : "high",
+                    to_object_id: s.account_name || s.account_code,
+                    reason_codes: s.detection_reason,
+                    confidence: s.audit_severity === "CRITICAL" ? "exact" : "high",
                     original_id: null, // Virtual ID
                     meta: {
                         is_structural: true,
-                        score: s.structural_score,
-                        status: s.status,
-                        vol: s.volatility,
-                        hhi: s.hhi_index
+                        score: s.audit_score,
+                        status: s.audit_severity,
+                        vol: s.delta_magnitude,
+                        category: s.risk_category_label,
+                        l1_signal: s.statistical_signature
                     },
                     type: 'STRUCTURAL'
                 }));
@@ -140,7 +143,7 @@ export default function AuditWorkspace() {
 
     const fetchStructuralInsights = () => {
         setIsLoading(true);
-        safeInvoke("get_structural_top_accounts", {}).then((res: any) => {
+        safeInvoke("get_strategic_deviations", {}).then((res: any) => {
             setStructuralInsights(res || []);
             setIsLoading(false);
         }).catch(() => setIsLoading(false));
@@ -426,6 +429,9 @@ export default function AuditWorkspace() {
                                 </h3>
 
                                 <div className="space-y-8">
+                                    {/* Financial Trend Analysis Section */}
+                                    <FinancialTrendPanel />
+
                                     {/* 1. Structural Analytics (Deterministic) */}
                                     <div className="bg-amber-500/5 border border-amber-500/10 rounded-[48px] p-8">
                                         <div className="flex items-center justify-between mb-8">
@@ -434,8 +440,12 @@ export default function AuditWorkspace() {
                                                     <BarChart3 className="text-amber-500" size={18} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-[11px] font-black uppercase text-amber-500 tracking-[0.2em]">통계 기반 구조적 위험 진단</h4>
-                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Statistical Anomaly Engine v4.2</p>
+                                                    <h4 className="text-[11px] font-black uppercase text-amber-500 tracking-[0.2em]">전략적 이상 징후 분석 (Strategic Deviations)</h4>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 flex gap-2">
+                                                        <span>Statistical Signal (L1)</span>
+                                                        <span className="text-slate-700">|</span>
+                                                        <span>Audit Severity (L2)</span>
+                                                    </p>
                                                 </div>
                                             </div>
                                             <button
@@ -448,42 +458,111 @@ export default function AuditWorkspace() {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {structuralInsights.length > 0 ? (
-                                                structuralInsights.map((insight, idx) => (
-                                                    <div key={`structural-${idx}`} className="bg-black/40 border border-white/5 rounded-3xl p-6 hover:border-amber-500/30 transition-all group relative overflow-hidden">
-                                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${insight.status.includes('Critical') ? 'bg-red-500' :
-                                                            insight.status.includes('Elevated') ? 'bg-amber-500' :
-                                                                insight.status.includes('Watch') ? 'bg-blue-500' : 'bg-slate-500'
-                                                            }`} />
+                                                structuralInsights.map((insight, idx) => {
+                                                    const isExpanded = expandedInsight === insight.account_name;
+                                                    return (
+                                                        <div
+                                                            key={`strategic-${idx}`}
+                                                            onClick={() => setExpandedInsight(isExpanded ? null : insight.account_name)}
+                                                            className={`border rounded-3xl p-6 transition-all group relative overflow-hidden flex flex-col gap-4 cursor-pointer select-none
+                                                            ${isExpanded
+                                                                    ? 'bg-amber-500/10 border-amber-500/40 shadow-lg shadow-amber-500/10'
+                                                                    : 'bg-black/40 border-white/5 hover:border-amber-500/30'}`}
+                                                        >
+                                                            {/* Severity Bar */}
+                                                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${insight.audit_severity === 'CRITICAL' ? 'bg-red-500' :
+                                                                insight.audit_severity === 'HIGH' ? 'bg-orange-500' :
+                                                                    insight.audit_severity === 'WATCH' ? 'bg-blue-500' : 'bg-slate-700'
+                                                                }`} />
 
-                                                        <div className="flex justify-between items-start mb-4">
-                                                            <div>
-                                                                <h5 className="font-black text-white text-[13px]">{insight.account}</h5>
-                                                                <span className={`inline-block mt-1 text-[8px] font-black px-2 py-0.5 rounded-full border uppercase tracking-tighter ${insight.status.includes('Critical') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                                    insight.status.includes('Elevated') ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                                    }`}>
-                                                                    {insight.status}
-                                                                </span>
+                                                            {/* Header */}
+                                                            <div className="pl-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{insight.account_code}</span>
+                                                                        <h5 className={`font-black text-sm truncate ${isExpanded ? 'text-amber-400' : 'text-white'}`}>{insight.account_name}</h5>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="px-2 py-1 bg-white/5 rounded border border-white/5 text-[9px] font-mono text-slate-400">
+                                                                            ₩{(insight.total_volume / 1000000).toFixed(0)}M
+                                                                        </div>
+                                                                        <div className={`text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-90 text-amber-500' : ''}`}>
+                                                                            ▶
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <p className="text-[8px] font-black text-slate-600 uppercase">Risk</p>
-                                                                <p className="text-xs font-black text-white">{(insight.structural_score * 100).toFixed(0)}%</p>
-                                                            </div>
-                                                        </div>
 
-                                                        <div className="space-y-1.5 mt-2">
-                                                            {insight.reasons.map((reason, ri) => (
-                                                                <p key={ri} className="text-[10px] text-slate-400 leading-tight flex items-start gap-2">
-                                                                    <span className="mt-1.5 w-1 h-1 rounded-full bg-amber-500 shrink-0" />
-                                                                    {reason}
-                                                                </p>
-                                                            ))}
+                                                            {/* Dual Metrics */}
+                                                            <div className="pl-2 grid grid-cols-2 gap-4 border-t border-white/5 pt-3">
+                                                                <div>
+                                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Statistical Signal</p>
+                                                                    <div className="text-lg font-black text-slate-300">
+                                                                        {(insight.statistical_signature * 100).toFixed(1)}%
+                                                                    </div>
+                                                                </div>
+                                                                <div className="relative group/score">
+                                                                    <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Audit Severity</p>
+                                                                    <div className={`text-lg font-black cursor-help ${insight.audit_severity === 'CRITICAL' ? 'text-red-500' :
+                                                                        insight.audit_severity === 'HIGH' ? 'text-orange-500' :
+                                                                            insight.audit_severity === 'WATCH' ? 'text-blue-500' : 'text-slate-500'
+                                                                        }`}>
+                                                                        {insight.audit_severity}
+                                                                    </div>
+                                                                    {insight.score_formula && (
+                                                                        <div className="absolute bottom-full right-0 mb-2 z-50 hidden group-hover/score:block">
+                                                                            <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-3 shadow-xl min-w-[220px]">
+                                                                                <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Score Calculation</p>
+                                                                                <p className="text-[9px] font-mono text-slate-300 leading-relaxed">Signal × Materiality × NatureAdj × Multiplier</p>
+                                                                                <p className="text-[11px] font-mono font-black text-white mt-1">= {insight.score_formula}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Logic Context */}
+                                                            <div className="pl-2 bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Logic:</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{insight.risk_category_label}</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-slate-300 leading-tight">{insight.nature_context}</p>
+                                                            </div>
+
+                                                            {/* ── Drill-Down Detail (클릭 시 펼침) ── */}
+                                                            {isExpanded && (
+                                                                <div className="pl-2 border-t border-amber-500/20 pt-4 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                    <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest">세부 분석 내역</p>
+                                                                    <div className="bg-black/60 rounded-xl p-3 border border-white/5">
+                                                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">탐지 사유</p>
+                                                                        <p className="text-[11px] text-slate-200 leading-relaxed">{insight.detection_reason}</p>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">변동 규모</p>
+                                                                            <p className="text-sm font-black text-white">{(insight.delta_magnitude * 100).toFixed(1)}%</p>
+                                                                        </div>
+                                                                        <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">권고 조치</p>
+                                                                            <p className="text-[10px] font-black text-amber-400">{insight.recommended_action}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    {insight.score_formula && (
+                                                                        <div className="bg-black/40 rounded-xl p-3 border border-amber-500/20">
+                                                                            <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-1">Score Formula</p>
+                                                                            <p className="text-[10px] font-mono text-slate-300">Signal × Materiality × NatureAdj × Multiplier</p>
+                                                                            <p className="text-xs font-mono font-black text-white mt-1">= {insight.score_formula}</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </div>
-                                                ))
+                                                    );
+                                                })
                                             ) : (
                                                 <div className="col-span-2 py-10 text-center opacity-40">
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">자동 진단 대기 중...</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">전략적 특이사항 없음 (Clean)</p>
                                                 </div>
                                             )}
                                         </div>

@@ -231,8 +231,8 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
              // [STABLE BATCHING] Sequential processing for 100% reliability
              // [CONSTITUTIONAL LIMIT] System Integrity requires deterministic scan limits to prevent OOM
              // Documented in Manifesto 짠3.2 as 'Infrastructure fixity'
-             const MAX_FORENSIC_ROWS: usize = 1001; 
-             let scan_limit = std::cmp::min(total_available, MAX_FORENSIC_ROWS);
+             const MAX_ANALYSIS_ROWS: usize = 1001; 
+             let scan_limit = std::cmp::min(total_available, MAX_ANALYSIS_ROWS);
              let mut injected_count = 0;
 
              while row_cursor < scan_limit {
@@ -299,9 +299,111 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
     // [LEDGER-ONLY MODE] Choice 3: Statistical & Pattern based Top 10 Analysis
     crate::ledger_engine::run_ledger_only_scan(target_files.clone(), &projectType, &db_path).await.ok();
     
-    // [PHASE 2-2] Forensic Cross-Check (Auto-Run)
-    println!(">>> [Forensic] Auto-triggering Forensic Scan for Cross-Analysis...");
-    crate::forensic_engine::ForensicEngine::run_correlations(&conn).ok(); 
+        // [BRIDGE] Structural Analysis -> Audit Issues & Session Queue
+        // Connects the Visual Dashboard (Flow Analysis) to the actionable Review Queue.
+        println!(">>> [Engine] Promoting Structural Insights to Audit Issues & Queue...");
+        if let Ok(insights) = crate::assurance::flow_analysis::get_structural_top_accounts_impl(&db_path) {
+            let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+            
+            // 1. Find the latest OPEN session for this project
+            //    Try exact match first, then fuzzy match, then auto-create
+            let active_session_id: Option<String> = conn.query_row(
+                "SELECT id FROM audit_session WHERE project_id = ?1 AND status = 'OPEN' ORDER BY created_at DESC LIMIT 1",
+                params![&projectType],
+                |r| r.get(0)
+            ).ok()
+            .or_else(|| {
+                // Fuzzy: project_id LIKE %projectType% or projectType LIKE %project_id%
+                conn.query_row(
+                    "SELECT id FROM audit_session WHERE status = 'OPEN' ORDER BY created_at DESC LIMIT 1",
+                    [],
+                    |r| r.get(0)
+                ).ok()
+            })
+            .or_else(|| {
+                // Auto-create a session if none exists
+                let new_id = uuid::Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT INTO audit_session (id, project_id, name, status, created_at) VALUES (?1, ?2, ?3, 'OPEN', CURRENT_TIMESTAMP)",
+                    params![&new_id, &projectType, format!("Auto Session - {}", &projectType)]
+                ).ok();
+                println!(">>> [Engine] Auto-created audit session {} for project {}", new_id, projectType);
+                Some(new_id)
+            });
+
+    
+            let mut promoted_count = 0;
+            let mut queue_count = 0;
+            
+            for insight in insights {
+                // Only promote significant risks to the queue to avoid noise
+                if insight.recommended_focus && insight.structural_score >= 0.5 {
+                    let title = format!("[구조적 위험] {} - {}", insight.account, insight.status);
+                    let description = insight.reasons.join("\n");
+                    let severity = if insight.structural_score >= 0.7 { "Critical" } else { "High" };
+                    
+                    // A. Global Issue Pool (audit_issues)
+                    let check_issue: i64 = conn.query_row(
+                        "SELECT COUNT(*) FROM audit_issues WHERE project_type = ?1 AND issue_title = ?2",
+                        params![&projectType, &title],
+                        |r| r.get(0)
+                    ).unwrap_or(0);
+                    
+                    if check_issue == 0 {
+                        conn.execute(
+                            "INSERT INTO audit_issues (project_type, issue_title, description, severity, status, verdict_mode, recommendations, detected_at, entity_id) 
+                             VALUES (?1, ?2, ?3, ?4, 'Open', 'STRUCTURAL', ?5, CURRENT_TIMESTAMP, NULL)",
+                            params![
+                                &projectType, 
+                                title, 
+                                description, 
+                                severity, 
+                                "계정의 구조적 특성(행태)과 통계적 지표를 종합하여 산출된 리스크입니다. 상세 내역을 검토하세요."
+                            ]
+                        ).ok();
+                        promoted_count += 1;
+                    }
+    
+                    // B. Session Queue (review_tasks) - Only if we have an active session
+                    if let Some(ref sess_id) = active_session_id {
+                         let task_reason = format!("(자동생성) {}", title);
+                         
+                         // Deduplicate in Queue as well
+                         let check_queue: i64 = conn.query_row(
+                             "SELECT COUNT(*) FROM review_tasks WHERE session_id = ?1 AND reason = ?2",
+                             params![sess_id, task_reason],
+                             |r| r.get(0)
+                         ).unwrap_or(0);
+                         
+                         if check_queue == 0 {
+                             conn.execute(
+                                 "INSERT INTO review_tasks (id, session_id, object_id, relation_candidate_id, reason, status, snapshot_data, created_at)
+                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP)",
+                                 params![
+                                     uuid::Uuid::new_v4().to_string(),
+                                     sess_id,
+                                     insight.account, // object_id (using account name as proxy)
+                                     "STRUCTURAL_AUTO",
+                                     task_reason,
+                                     "PENDING",
+                                     serde_json::json!({
+                                         "score": insight.structural_score,
+                                         "volatility": insight.volatility,
+                                         "hhi": insight.hhi_index
+                                     }).to_string()
+                                 ]
+                             ).ok();
+                             queue_count += 1;
+                         }
+                    }
+                }
+            }
+            println!(">>> [Bridge] Pushed {} Issues to Global Pool and {} Tasks to Active Queue.", promoted_count, queue_count);
+        }
+
+    // [PHASE 2-2] Flux Cross-Check (Auto-Run)
+    println!(">>> [Flux] Auto-triggering Flux Scan for Cross-Analysis...");
+    crate::flux_engine::FluxEngine::run_correlations(&conn).ok(); 
 
     let (findings_count, risk_score) = {
         let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
@@ -336,7 +438,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
             params![
                 format!("EVT-{}", chrono::Local::now().timestamp_millis()),
                 "ANALYSIS_COMPLETE",
-                format!("AI Forensic Analysis complete for [{}]. {} findings identified.", projectType, findings_count)
+                format!("AI Analysis complete for [{}]. {} findings identified.", projectType, findings_count)
             ]
         );
     }
@@ -355,23 +457,33 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
 }
 
 #[tauri::command]
-pub fn run_forensic_scan(app_handle: AppHandle) -> Result<Value, String> {
+pub fn run_flux_scan(app_handle: AppHandle) -> Result<Value, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
-    let links = crate::forensic_engine::ForensicEngine::run_correlations(&conn)?;
+    let links = crate::flux_engine::FluxEngine::run_correlations(&conn)?;
     
     Ok(json!({ "links_found": links }))
 }
 
 #[tauri::command]
 #[allow(non_snake_case)]
-pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -> Result<Value, String> {
+pub fn get_strategic_deviations(app_handle: AppHandle) -> Result<Vec<crate::assurance::flow_analysis::StrategicDeviation>, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    crate::assurance::flow_analysis::get_strategic_deviations_impl(&db_path)
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) -> Result<Value, String> {
+    let db_path = match app_handle.path().app_data_dir() {
+        Ok(path) => path.join("audit_data_v4.db"),
+        Err(_) => return Err("Failed to resolve app data directory".to_string()),
+    };
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
     let mut filter_base = " WHERE 1=1".to_string();
-    if let Some(ref id) = projectId {
+    if let Some(ref id) = project_id {
         if !id.is_empty() {
             filter_base = format!(" WHERE (audit_id = '{}' OR project_type = '{}')", id, id);
         }
@@ -408,7 +520,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
     
-    let critical_coverage: String = if let Some(ref id) = projectId {
+    let critical_coverage: String = if let Some(ref id) = project_id {
         if id.is_empty() {
             let avg: f64 = conn.query_row("SELECT AVG(progress_pct) FROM audit_projects", [], |row| row.get(0)).unwrap_or(0.0);
             format!("{:.0}%", avg)
@@ -422,27 +534,46 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     };
 
     // [MEMORY LAYER] New metrics for Dashboard
-    let total_audit_objects = if let Some(ref id) = projectId {
+    let total_audit_objects = if let Some(ref id) = project_id {
         conn.query_row("SELECT COUNT(*) FROM audit_object WHERE project_id = ?1", params![id], |row: &rusqlite::Row| row.get::<_, i64>(0)).unwrap_or(0)
     } else {
         conn.query_row("SELECT COUNT(*) FROM audit_object", [], |row: &rusqlite::Row| row.get::<_, i64>(0)).unwrap_or(0)
     };
 
-    let relation_candidates_count = if let Some(ref id) = projectId {
+    let relation_candidates_count = if let Some(ref id) = project_id {
         conn.query_row("SELECT COUNT(*) FROM relation_candidate r JOIN audit_object a ON r.from_object_id = a.id WHERE a.project_id = ?1", params![id], |row: &rusqlite::Row| row.get::<_, i64>(0)).unwrap_or(0)
     } else {
         conn.query_row("SELECT COUNT(*) FROM relation_candidate", [], |row: &rusqlite::Row| row.get::<_, i64>(0)).unwrap_or(0)
     };
 
-    // [AI INSIGHTS SYNC] Include new 'suspicion_inbox' findings in the dashboard count
-    // These are the findings from the new AI engine (Split Payment, Weekend Usage, etc.)
+    // [AI INSIGHTS SYNC] Include new 'suspicion_inbox' AND 'risk_signal' findings in the dashboard count
     let suspicion_count: i64 = conn.query_row(
         "SELECT COUNT(*) FROM suspicion_inbox WHERE status = 'Pending'", 
         [], 
         |row: &rusqlite::Row| row.get(0)
     ).unwrap_or(0);
 
-    let total_ai_issues = relation_candidates_count + suspicion_count;
+    // [AI AMOUNT SYNC] Extract pending amounts from suspicion inbox
+    let mut suspicion_stmt = conn.prepare("SELECT metadata FROM suspicion_inbox WHERE status = 'Pending'").map_err(|e| e.to_string())?;
+    let suspicion_rows = suspicion_stmt.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?;
+    let mut total_suspicion_exposure = 0.0;
+    for meta_str in suspicion_rows {
+        if let Ok(meta_json) = meta_str {
+            if let Ok(meta) = serde_json::from_str::<Value>(&meta_json) {
+                if let Some(amt) = meta["amount"].as_f64() {
+                    total_suspicion_exposure += amt;
+                }
+            }
+        }
+    }
+
+    let signal_count: i64 = if let Some(ref id) = project_id {
+        conn.query_row("SELECT COUNT(*) FROM risk_signal WHERE project_id = ?1", params![id], |r| r.get::<_, i64>(0)).unwrap_or(0)
+    } else {
+        conn.query_row("SELECT COUNT(*) FROM risk_signal", [], |r| r.get::<_, i64>(0)).unwrap_or(0)
+    };
+
+    let total_ai_issues = relation_candidates_count + suspicion_count + signal_count;
     
     // [ORGANIC REFACTOR] Bind Financial Exposure to REAL Issues and Entity Budgets.
     // This removes the "29.3억" hardcoded paradox by evaluating actual confirmed findings.
@@ -451,7 +582,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     let mut exposure_by_category: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
 
     // 1. Fetch all 'Critical', 'High' and 'Medium' issues in the current scope with category join
-    let (issues_query, params_vec) = if let Some(ref id) = projectId {
+    let (issues_query, params_vec) = if let Some(ref id) = project_id {
         if id.is_empty() {
             ("SELECT i.entity_id, i.severity, s.category FROM audit_issues i LEFT JOIN custom_scenarios s ON i.issue_title = s.name WHERE i.severity IN ('Critical', 'High', 'Medium')".to_string(), vec![])
         } else {
@@ -475,7 +606,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     // [REFACTOR] Aggregation Logic:
     // 1. Exposure (Systemic Risk): Group by Entity and take MAX exposure to avoid double-counting finding overlap.
     // 2. Detected Amount (Direct Loss): Sum of the actual transactional values from findings.
-    let mut actual_sum: f64 = 0.0;
+    let mut orphan_exposure: f64 = 0.0;
     let mut entity_max_exposure: std::collections::HashMap<i64, f64> = std::collections::HashMap::new();
     
     for (entity_id_opt, severity, category_opt) in issues_rows {
@@ -489,10 +620,23 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
                 }
                 val
             } else {
-                50_000_000.0
+                let sev_multiplier = match severity.to_uppercase().as_str() {
+                    "HIGH" | "CRITICAL" => 80_000_000.0,
+                    "MEDIUM" => 30_000_000.0,
+                    "LOW" => 5_000_000.0,
+                    _ => 0.0
+                };
+                sev_multiplier
             }
         } else {
-            50_000_000.0
+            let val = match severity.to_uppercase().as_str() {
+                "HIGH" | "CRITICAL" => 100_000_000.0,
+                "MEDIUM" => 40_000_000.0,
+                "LOW" => 10_000_000.0,
+                _ => 0.0
+            };
+            orphan_exposure += val;
+            val
         };
 
         // B. Attribution by category for charts
@@ -500,8 +644,98 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         *exposure_by_category.entry(cat).or_insert(0.0) += exposure;
     }
 
-    // [DASHBOARD SYNC] The 'Total Exposure' displayed on the main card is the sum of unique entity risks.
-    total_exposure = entity_max_exposure.values().sum();
+    // 2. Add exposure from Flux risk_signals (The Flux Engine)
+    let flux_signals_data: Vec<(String, String, String, f64, String)> = if let Some(ref id) = project_id {
+        let mut stmt = conn.prepare("SELECT id, signal_type, description, score, metadata FROM risk_signal WHERE project_id = ?1").map_err(|e| e.to_string())?;
+        let res = stmt.query_map(params![id], |row| {
+           Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get::<_, String>(4)?))
+        }).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+        res
+    } else {
+        let mut stmt = conn.prepare("SELECT id, signal_type, description, score, metadata FROM risk_signal").map_err(|e| e.to_string())?;
+        let res = stmt.query_map([], |row| {
+           Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get::<_, String>(4)?))
+        }).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+        res
+    };
+
+    let mut dashboard_flux_list = Vec::new();
+    for (fid, ftype, fdesc, fscore, meta_json) in &flux_signals_data {
+        let meta: serde_json::Value = serde_json::from_str(&meta_json).unwrap_or(serde_json::json!({}));
+        
+        let mut amt = meta["amount"].as_f64()
+            .or_else(|| meta["total"].as_f64())
+            .unwrap_or(0.0);
+
+        // [DYNAMIC LOOKUP] If amount is missing, try a real-time trace in the database
+        if amt < 0.01 {
+            if let Some(acc_code) = meta["account"].as_str() {
+                // Find source_object_id for this signal
+                if let Ok(obj_id) = conn.query_row("SELECT object_id FROM risk_signal WHERE id = ?1", params![fid], |r| r.get::<_, String>(0)) {
+                    amt = conn.query_row(
+                        "SELECT SUM(ABS(net_amount)) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2",
+                        params![obj_id, acc_code],
+                        |r| r.get(0)
+                    ).unwrap_or(0.0);
+                }
+            }
+        }
+        
+        let acc = meta["account"].as_str().map(|s| s.to_string());
+        
+        let weighted_amt = amt * fscore;
+        total_exposure += weighted_amt;
+        *exposure_by_category.entry("Flux Analysis (시계열 변화)".to_string()).or_insert(0.0) += weighted_amt;
+
+        dashboard_flux_list.push(json!({
+            "id": fid,
+            "type": ftype,
+            "description": fdesc,
+            "score": fscore,
+            "amount": amt,
+            "weighted_exposure": weighted_amt,
+            "account": acc
+        }));
+    }
+    
+    // [DASHBOARD SYNC] The 'Total Exposure' displayed on the main card is the sum of unique entity risks + flux signals + orphan risks + AI suspicions.
+    total_exposure += entity_max_exposure.values().sum::<f64>();
+    total_exposure += orphan_exposure;
+    total_exposure += total_suspicion_exposure;
+
+    // [DRILL-DOWN DATA] Top contributors for the "Click for Details" UI
+    let mut exposure_details = Vec::new();
+    for (fid, _ftype, fdesc, fscore, meta_json) in flux_signals_data.iter().take(5) {
+         let meta: serde_json::Value = serde_json::from_str(&meta_json).unwrap_or(serde_json::json!({}));
+         let amt = meta["amount"].as_f64().unwrap_or(0.0);
+         exposure_details.push(json!({
+             "origin": "Temporal Flux Radar",
+             "subject": meta["account_name"].as_str().unwrap_or(meta["account"].as_str().unwrap_or("Unknown")),
+             "reason": fdesc,
+             "amount": amt * fscore,
+             "severity": if *fscore > 0.8 { "High" } else { "Medium" }
+         }));
+    }
+    
+    // Add top entities from audit_issues with CFO categorization
+    let mut entity_items: Vec<_> = entity_max_exposure.iter().collect();
+    entity_items.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
+    for (eid, _exp) in entity_items.iter().take(5) {
+        if let Ok(verdict) = crate::compliance_judge::judge_commercial_risk(&db_path, **eid, "HIGH") {
+            exposure_details.push(json!({
+                 "origin": "Direct Financial Risk",
+                 "subject": verdict.entity_name,
+                 "reason": verdict.cfo_commentary,
+                 "amount": verdict.calculated_exposure,
+                 "severity": verdict.risk_level,
+                 "breakdown": {
+                     "leakage": verdict.leakage_impact,
+                     "penalty": verdict.penalty_risk,
+                     "waste": verdict.operational_waste
+                 }
+            }));
+        }
+    }
 
     // Sort categories by exposure to find top drivers
     let mut sorted_cats: Vec<_> = exposure_by_category.iter().collect();
@@ -555,7 +789,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     }
 
     // [LINKAGE UPGRADE] Count real pending reviewer tasks for the "Pending Reviews" card
-    let pending_review_count: i64 = if let Some(ref id) = projectId {
+    let pending_review_count: i64 = if let Some(ref id) = project_id {
         if id.is_empty() {
             conn.query_row("SELECT COUNT(*) FROM review_tasks WHERE status = 'PENDING'", [], |r| r.get(0)).unwrap_or(0)
         } else {
@@ -566,8 +800,9 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
     };
 
     // [PHASE 5] Extract actual numeric amounts from descriptions for a "Direct Loss" metric
-    let amount_regex = regex::Regex::new(r"([\d,.]+)\s*원").unwrap();
-    let (issues_detail_query, detail_params) = if let Some(ref id) = projectId {
+    // [IMPROVED REGEX] Now matches ₩1,000, 1,000원, and raw numbers with commas. Length range 3-30 for safety.
+    let amount_regex = regex::Regex::new(r"(?:₩|금액:?\s*|약\s*)?([\d,]{3,30})(?:\s*원)?").unwrap();
+    let (issues_detail_query, detail_params) = if let Some(ref id) = project_id {
         if id.is_empty() { ("SELECT description FROM audit_issues".to_string(), vec![]) }
         else { ("SELECT description FROM audit_issues WHERE audit_id = ?1 OR project_type = ?1".to_string(), vec![id.to_string()]) }
     } else { ("SELECT description FROM audit_issues".to_string(), vec![]) };
@@ -588,6 +823,9 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         }
     }
 
+    // Also include direct amounts from suspicion inbox
+    actual_loss_sum += total_suspicion_exposure;
+
     Ok(json!({ 
         "total_risks": pillar_governance, 
         "ai_signals": ai_signals, 
@@ -599,9 +837,10 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         "risk_score": risk_score, 
         "potential_impact_value": impact_value,
         "actual_detected_value": actual_loss_sum as i64,
+        "exposure_details": exposure_details,
         "exposure_breakdown": {
             "governance_pct": gov_pct,
-            "process_pct": proc_exp as i64, // Using actual values for breakdown
+            "process_pct": proc_pct, // Corrected from proc_exp as i64
             "behavioral_pct": beh_pct,
             "governance_val": gov_exp as i64,
             "process_val": proc_exp as i64,
@@ -609,6 +848,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, projectId: Option<String>) -
         },
         "key_drivers": key_drivers,
         "trends": trends,
+        "flux_signals": dashboard_flux_list,
         "signal_summary": if raw_signals > 0 { 
             format!(
                 "식별된 직접 위반 금액은 약 {}원이며, 이에 따른 전사적 리스크 노출액(Calculated Exposure)은 약 {}원입니다.", 
@@ -1020,7 +1260,8 @@ pub fn get_system_events(app_handle: AppHandle, projectId: Option<String>) -> Re
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     
-    let mut query = "SELECT id, timestamp, event_type, description, related_entity_id, audit_id FROM system_events".to_string();
+    // 1. Fetch from system_events
+    let mut query = "SELECT id, timestamp, event_type, description, CAST(related_entity_id AS INTEGER), audit_id FROM system_events".to_string();
     if let Some(ref id) = projectId {
         if !id.is_empty() {
              query.push_str(&format!(" WHERE audit_id = '{}' OR audit_id IS NULL", id));
@@ -1042,6 +1283,34 @@ pub fn get_system_events(app_handle: AppHandle, projectId: Option<String>) -> Re
     
     let mut list: Vec<crate::models::SystemEvent> = Vec::new();
     for r in rows { if let Ok(e) = r { list.push(e); } }
+
+    // 2. [UPGRADE] Fetch from risk_signal and interleave as AI_SIGNAL
+    let mut risk_query = "SELECT id, created_at, signal_type, description, object_id FROM risk_signal".to_string();
+    if let Some(ref id) = projectId {
+        if !id.is_empty() {
+            risk_query.push_str(&format!(" WHERE object_id = '{}'", id));
+        }
+    }
+    risk_query.push_str(" ORDER BY created_at DESC LIMIT 20");
+
+    if let Ok(mut stmt) = conn.prepare(&risk_query) {
+        let risk_rows = stmt.query_map([], |r| {
+             Ok(crate::models::SystemEvent {
+                 id: r.get(0)?,
+                 timestamp: r.get(1)?,
+                 event_type: format!("AI:{}", r.get::<_, String>(2)?),
+                 description: r.get(3)?,
+                 related_entity_id: None,
+                 audit_id: r.get(4)?,
+             })
+        }).unwrap();
+        for r in risk_rows { if let Ok(e) = r { list.push(e); } }
+    }
+
+    // Sort combined list by timestamp
+    list.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    list.truncate(50);
+
     Ok(list)
 }
 
@@ -1206,20 +1475,6 @@ pub fn create_audit_project(app_handle: AppHandle, mut project: AuditProject) ->
 
 
 #[tauri::command]
-pub fn reset_system_data(app_handle: AppHandle) -> Result<String, String> {
-    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    // Strict Reality: Wipe only findings and events. Keep Projects.
-    let _ = conn.execute("DELETE FROM audit_issues", []);
-    let _ = conn.execute("DELETE FROM system_events", []);
-    
-    // Reset Risk Scores in Universe to Clean State
-    let _ = conn.execute("UPDATE audit_universe SET impact_score = 0, likelihood_score = 0, ai_analysis_data = NULL", []);
-    
-    Ok("System Data Purged. Ready for Real Analysis.".into())
-}
-
-#[tauri::command]
 pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
@@ -1227,7 +1482,7 @@ pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
     // [CONSTITUTIONAL ACT] Forceful cleanup requires disabling FK checks temporarily
     let _ = conn.execute("PRAGMA foreign_keys = OFF", []);
     
-    // 1. Level 3: Leaf Nodes (Review, Relations, Events, Cases)
+    // 1. Level 3: Leaf Nodes (Review, Relations, Events, Cases, Signals)
     let _ = conn.execute("DELETE FROM review_tasks", []);
     let _ = conn.execute("DELETE FROM re_evaluation_event", []);
     let _ = conn.execute("DELETE FROM relation_candidate", []);
@@ -1235,6 +1490,8 @@ pub fn reset_database(app_handle: AppHandle) -> Result<String, String> {
     let _ = conn.execute("DELETE FROM system_events", []);
     let _ = conn.execute("DELETE FROM engine_metrics", []);
     let _ = conn.execute("DELETE FROM audit_cases", []);
+    let _ = conn.execute("DELETE FROM risk_signal", []);
+    let _ = conn.execute("DELETE FROM entity_event", []);
     
     // 2. Level 2: Intermediate (Sessions, Objects, Issues)
     let _ = conn.execute("DELETE FROM audit_session", []);
@@ -1594,7 +1851,7 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
     
     // Construct Specialized Auditor Prompt (Extreme High Precision)
     let system_prompt = format!(r#"
-    ROLE: Elite Senior Internal Auditor & Forensic Specialist.
+    ROLE: Elite Senior Internal Auditor & Investigative Specialist.
     CONTEXT: Deep Dive Audit of '{}' department (Project Context: {}).
     
     CRITICAL OBJECTIVE: You MUST find at least 3-5 high-quality audit findings (risks/anomalies) from the provided 'RAW DATA'. 
@@ -2752,7 +3009,56 @@ pub fn get_audit_sessions(app_handle: tauri::AppHandle, projectId: Option<String
 #[allow(non_snake_case)]
 pub fn get_review_queue(app_handle: tauri::AppHandle, sessionId: String) -> Result<Vec<crate::models::ReviewItem>, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
-    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
+
+    // Check if queue is empty for this session
+    let existing_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM review_tasks WHERE session_id = ?1",
+        params![&sessionId],
+        |r| r.get(0)
+    ).unwrap_or(0);
+
+    // Auto-populate from structural insights if empty
+    if existing_count == 0 {
+        println!(">>> [Queue] EMPTY active queue for session {}. Populating from structural insights...", sessionId);
+        if let Ok(insights) = crate::assurance::flow_analysis::get_structural_top_accounts_impl(&db_path) {
+            let mut added = 0;
+            for insight in insights.iter().filter(|i| i.recommended_focus && i.structural_score >= 0.5) {
+                let task_reason = format!("[구조적 위험] {} - {}", insight.account, insight.status);
+                // Check dupes 
+                let check: i64 = conn.query_row(
+                    "SELECT COUNT(*) FROM review_tasks WHERE session_id = ?1 AND reason = ?2",
+                    params![&sessionId, &task_reason],
+                    |r| r.get(0)
+                ).unwrap_or(0);
+
+                if check == 0 {
+                    conn.execute(
+                        "INSERT INTO review_tasks (id, session_id, object_id, relation_candidate_id, reason, status, snapshot_data, created_at) VALUES (?1, ?2, ?3, ?4, ?5, 'PENDING', ?6, CURRENT_TIMESTAMP)",
+                        params![
+                            uuid::Uuid::new_v4().to_string(),
+                            &sessionId,
+                            &insight.account,
+                            "STRUCTURAL_AUTO",
+                            &task_reason,
+                            serde_json::json!({
+                                "score": insight.structural_score,
+                                "volatility": insight.volatility,
+                                "hhi": insight.hhi_index,
+                                "reasons": insight.reasons
+                            }).to_string()
+                        ]
+                    ).ok();
+                    added += 1;
+                }
+            }
+            println!(">>> [Queue] Auto-populated {} tasks into session {}.", added, sessionId);
+        } else {
+            println!(">>> [Queue] FAILED to get structural insights for auto-population.");
+        }
+    } else {
+        println!(">>> [Queue] Found {} existing tasks for session {}.", existing_count, sessionId);
+    }
 
     let mut stmt = conn.prepare("SELECT id, session_id, object_id, relation_candidate_id, reason, status, snapshot_data, reviewer_note, reviewer_final_note, created_at FROM review_tasks WHERE session_id = ?1 ORDER BY created_at ASC")
         .map_err(|e| e.to_string())?;
@@ -3157,7 +3463,24 @@ pub fn get_gemini_api_key(app_handle: AppHandle) -> Result<String, String> {
 pub async fn get_entity_timeline(app_handle: AppHandle, entityId: String) -> Result<crate::models::EntityTimelineResponse, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    crate::entity_resolver::get_entity_timeline(&conn, &entityId)
+
+    // [RESOLUTION BRIDGE]
+    // If entityId is numeric, it's likely an audit_universe ID.
+    // We need to find the canonical name for it and then find the corresponding ENT- ID.
+    let target_id = if entityId.parse::<i64>().is_ok() {
+        let (name, category): (String, String) = conn.query_row(
+            "SELECT unit_name, category FROM audit_universe WHERE id = ?1",
+            params![entityId.parse::<i64>().unwrap()],
+            |r| Ok((r.get(0)?, r.get(1)?))
+        ).map_err(|_| format!("Audit Universe Entity not found for ID: {}", entityId))?;
+        
+        // Resolve or find the ENT- ID using the canonical name
+        crate::entity_resolver::resolve_entity(&conn, &name, &category)?
+    } else {
+        entityId
+    };
+
+    crate::entity_resolver::get_entity_timeline(&conn, &target_id)
 }
 
 #[tauri::command]
@@ -3182,10 +3505,116 @@ pub fn get_structural_insight(app_handle: AppHandle, accountName: String) -> Res
 }
 
 #[tauri::command]
+pub fn get_multi_year_financial_summary(app_handle: tauri::AppHandle) -> Result<Vec<crate::assurance::flow_analysis::MultiYearAccountSummary>, String> {
+    let db_path = match app_handle.path().app_data_dir() {
+        Ok(path) => path.join("audit_data_v4.db"),
+        Err(_) => return Err("Failed to resolve app data directory".to_string()),
+    };
+    crate::assurance::flow_analysis::get_multi_year_financial_summary_impl(&db_path)
+}
+
+#[tauri::command]
 pub fn get_structural_top_accounts(app_handle: AppHandle) -> Result<Vec<crate::assurance::flow_analysis::StructuralInsight>, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     crate::assurance::flow_analysis::get_structural_top_accounts_impl(&db_path)
 }
 
+#[tauri::command]
+pub fn get_multi_year_trial_balance(app_handle: tauri::AppHandle) -> Result<Vec<crate::models::AccountTrendSummary>, String> {
+    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let db_path = app_dir.join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
+    let sql = "
+        SELECT 
+            json_extract(metadata, '$.account') as account,
+            strftime('%Y', event_date) as year,
+            SUM(amount) as total
+        FROM entity_event
+        WHERE source_type = 'LEDGER' AND account IS NOT NULL
+        GROUP BY account, year
+        ORDER BY account, year;
+    ";
 
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |row| {
+        let account: String = row.get(0)?;
+        let year_str: Option<String> = row.get(1)?;
+        let total: f64 = row.get::<_, Option<f64>>(2)?.unwrap_or(0.0);
+        Ok((account, year_str, total))
+    }).map_err(|e| e.to_string())?;
+
+    let mut account_map: std::collections::HashMap<String, std::collections::BTreeMap<i32, f64>> = std::collections::HashMap::new();
+
+    for row_res in rows {
+        let (account, year_str, total) = row_res.map_err(|e| e.to_string())?;
+        if let Some(ys) = year_str {
+            if let Ok(year) = ys.parse::<i32>() {
+                account_map.entry(account).or_default().insert(year, total);
+            }
+        }
+    }
+
+    println!("[DEBUG] multi_year_trial_balance: Started processing. Total account entries in map: {}", account_map.len());
+
+    let mut summaries = Vec::new();
+
+    for (account, yearly_totals) in account_map {
+        // Rule 1: Exclude accounts with less than 2 years of data
+        if yearly_totals.len() < 2 {
+            continue;
+        }
+
+        let mut yoy = std::collections::BTreeMap::new();
+        let mut max_abs_yoy = 0.0;
+        
+        let mut years: Vec<i32> = yearly_totals.keys().cloned().collect();
+        years.sort();
+
+        for i in 1..years.len() {
+            let prev_year = years[i-1];
+            let curr_year = years[i];
+            
+            let prev_total = *yearly_totals.get(&prev_year).unwrap_or(&0.0);
+            let curr_total = *yearly_totals.get(&curr_year).unwrap_or(&0.0);
+
+            if prev_total != 0.0 {
+                let change = (curr_total - prev_total) / prev_total;
+                yoy.insert(curr_year, change);
+                
+                if change.abs() > max_abs_yoy {
+                    max_abs_yoy = change.abs();
+                }
+            }
+        }
+
+        // Rule 2 & 3: Exclude if max_abs_yoy is 0 or > 1000% (noise)
+        if max_abs_yoy == 0.0 || max_abs_yoy > 10.0 {
+            continue;
+        }
+
+        summaries.push(crate::models::AccountTrendSummary {
+            account,
+            yearly_totals,
+            yoy,
+            max_abs_yoy,
+        });
+    }
+
+    println!("[DEBUG] summaries after filtering: {}", summaries.len());
+
+    // Rule 4: Stable sort by max_abs_yoy descending
+    summaries.sort_by(|a, b| b.max_abs_yoy.partial_cmp(&a.max_abs_yoy).unwrap_or(std::cmp::Ordering::Equal));
+
+    if !summaries.is_empty() {
+        println!("[DEBUG] Top 1 Account: {} with max_abs_yoy: {:.2}%", summaries[0].account, summaries[0].max_abs_yoy * 100.0);
+    }
+
+    // Rule 5: Return top 10 only
+    summaries.truncate(10);
+
+    println!("[DEBUG] Resulting summaries: {:?}", summaries);
+    println!("Trial Balance Output: {:?}", summaries);
+
+    Ok(summaries)
+}

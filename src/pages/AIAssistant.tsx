@@ -99,7 +99,7 @@ export default function AIAssistant() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-black text-white tracking-tight">AI Audit Assistant</h1>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mt-1">Enterprise-Grade Forensic Engine</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mt-1">Enterprise-Grade Intelligence Engine</p>
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -187,7 +187,7 @@ export default function AIAssistant() {
                     </div>
                 </div>
                 <p className="text-center mt-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] opacity-50">
-                    Proprietary Forensic engine v4.0.5 • Enterprise Secure
+                    Proprietary Intelligence engine v4.0.5 • Enterprise Secure
                 </p>
             </div>
             <style dangerouslySetInnerHTML={{

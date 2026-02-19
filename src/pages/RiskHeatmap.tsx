@@ -277,7 +277,7 @@ export default function RiskHeatmap() {
                     <div className="flex gap-4 items-center">
                         <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-5 py-3 rounded-2xl shadow-xl transition-all hover:bg-white/10">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">Forensic Engine</span>
+                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1.5">Audit Engine</span>
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ${useLiveAi ? 'bg-blue-500 animate-pulse' : 'bg-slate-700'}`} />
                                     <span className={`text-[10px] font-black uppercase tracking-tight ${useLiveAi ? 'text-blue-400' : 'text-slate-600'}`}>
@@ -519,7 +519,7 @@ export default function RiskHeatmap() {
                                 <div className="absolute top-0 right-0 p-8 opacity-5"><BrainCircuit size={64} /></div>
                                 <div className="flex items-center gap-3 mb-4">
                                     <BrainCircuit size={18} className="text-blue-500" />
-                                    <span className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em]">Forensic Logic Explanation</span>
+                                    <span className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em]">Quantification Logic Explanation</span>
                                 </div>
                                 <p className="text-base text-slate-300 font-medium leading-[1.8] italic relative z-10">
                                     {aiAnalysis ? `"${aiAnalysis.reason}"` : "시스템이 상시 모니터링 중인 리스크 패턴 분석 데이터가 없습니다. 상단 'AI 전문가 진단'을 통해 최신 리스크 매트릭스를 구성하십시오."}

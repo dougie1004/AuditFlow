@@ -1,0 +1,355 @@
+warning: unused variable: `p10_idx`
+  --> src\bin\analyze_anomaly_dist.rs:44:9
+   |
+44 |     let p10_idx = (count * 0.1) as usize;
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_p10_idx`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cr1`
+  --> src\bin\report_top10.rs:86:60
+   |
+86 | ...core, a_score, cv, cr1, hhi, trend) = r?;
+   |                       ^^^ help: if this is intentional, prefix it with an underscore: `_cr1`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `trend_str`
+  --> src\bin\report_top10.rs:88:25
+   |
+88 | ...             let trend_str = trend.map(|t| format!("...
+   |                     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_trend_str`
+
+warning: unused import: `params`
+ --> src\bin\diagnose_structural.rs:1:16
+  |
+1 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+    Checking auditflow v0.1.0 (C:\Users\user\.gemini\antigravity\playground\AuditFlow\src-tauri)
+warning: field `id` is never read
+ --> src\bin\rescan_split_signals.rs:9:5
+  |
+8 | struct Event {
+  |        ----- field in this struct
+9 |     id: String,
+  |     ^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `get_entity_risk_multiplier` is never used
+  --> src\bin\rescan_split_signals.rs:16:4
+   |
+16 | fn get_entity_risk_multiplier(conn: &Connection, entity...
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `auditflow` (bin "analyze_anomaly_dist") generated 1 warning (run `cargo fix --bin "analyze_anomaly_dist" -p auditflow` to apply 1 suggestion)
+warning: `auditflow` (bin "report_top10") generated 2 warnings (run `cargo fix --bin "report_top10" -p auditflow` to apply 2 suggestions)
+warning: `auditflow` (bin "diagnose_structural") generated 1 warning (run `cargo fix --bin "diagnose_structural" -p auditflow` to apply 1 suggestion)
+warning: `auditflow` (bin "rescan_split_signals") generated 2 warnings
+warning: unused import: `regex::Regex`
+ --> src\audit_engine.rs:5:5
+  |
+5 | use regex::Regex;
+  |     ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Path`
+ --> src\compliance_dd_flow.rs:3:17
+  |
+3 | use std::path::{Path, PathBuf};
+  |                 ^^^^
+
+warning: unused import: `Value`
+ --> src\debug_api.rs:3:24
+  |
+3 | use serde_json::{json, Value};
+  |                        ^^^^^
+
+warning: unused import: `Manager`
+ --> src\constitution.rs:1:24
+  |
+1 | use tauri::{AppHandle, Manager};
+  |                        ^^^^^^^
+
+warning: unused import: `std::path::Path`
+ --> src\constitution.rs:3:5
+  |
+3 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `params`
+ --> src\assurance\flow_analysis.rs:2:16
+  |
+2 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+
+warning: unused import: `params`
+ --> src\compliance_judge.rs:2:16
+  |
+2 | use rusqlite::{params, Connection};
+  |                ^^^^^^
+
+warning: unused import: `crate::file_loader::load_file_rows`
+ --> src\ledger_engine.rs:3:5
+  |
+3 | use crate::file_loader::load_file_rows;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `chrono::Datelike`
+ --> src\simulator.rs:4:5
+  |
+4 | use chrono::Datelike;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> src\commands.rs:486:9
+    |
+486 |     let mut actual_sum: f64 = 0.0;
+    |         ----^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0597]: `stmt` does not live long enough
+   --> src\commands.rs:514:9
+    |
+513 |         let mut stmt = conn.prepare("SELECT score, metadata FROM risk_signal WHERE object_id = ?1").map_err(|e| e.to_string())?;
+    |             -------- binding `stmt` declared here
+514 |         stmt.query_map(params![id], |row| Ok((row.get(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?.filter_map(|r| r.ok())...
+    |         ^^^^------------------------------------------------------------------------------------------------------
+    |         |
+    |         borrowed value does not live long enough
+    |         a temporary with access to the borrow is created here ...
+515 |     } else {
+    |     -
+    |     |
+    |     `stmt` dropped here while still borrowed
+    |     ... and the borrow might be used here, when that temporary is dropped and runs the destructor for type `ControlFlow<Result<Infallible, std::string::String>, MappedRows<'_, {closure@src\commands.rs:514:37: 514:42}>>`
+    |
+    = note: the temporary is part of an expression at the end of a block;
+            consider forcing this temporary to be dropped sooner, before the block's local variables are dropped
+help: for example, you could save the expression's value in a new local variable `x` and then make `x` be the expression at the end of the block
+    |
+514 |         let x = stmt.query_map(params![id], |row| Ok((row.get(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect(); x
+    |         +++++++                                                                                                                                            +++
+
+error[E0597]: `stmt` does not live long enough
+   --> src\commands.rs:517:9
+    |
+516 |         let mut stmt = conn.prepare("SELECT score, metadata FROM risk_signal").map_err(|e| e.to_string())?;
+    |             -------- binding `stmt` declared here
+517 |         stmt.query_map([], |row| Ok((row.get(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect()
+    |         ^^^^---------------------------------------------------------------------------------------------
+    |         |
+    |         borrowed value does not live long enough
+    |         a temporary with access to the borrow is created here ...
+518 |     };
+    |     -
+    |     |
+    |     `stmt` dropped here while still borrowed
+    |     ... and the borrow might be used here, when that temporary is dropped and runs the destructor for type `ControlFlow<Result<Infallible, std::string::String>, MappedRows<'_, {closure@src\commands.rs:517:28: 517:33}>>`
+    |
+    = note: the temporary is part of an expression at the end of a block;
+            consider forcing this temporary to be dropped sooner, before the block's local variables are dropped
+help: for example, you could save the expression's value in a new local variable `x` and then make `x` be the expression at the end of the block
+    |
+517 |         let x = stmt.query_map([], |row| Ok((row.get(0)?, row.get::<_, String>(1)?))).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect(); x
+    |         +++++++                                                                                                                                   +++
+
+warning: unused variable: `pillar_culture`
+   --> src\commands.rs:396:9
+    |
+396 |     let pillar_culture = conn.query_row(
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pillar_culture`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `actual_sum`
+   --> src\commands.rs:486:9
+    |
+486 |     let mut actual_sum: f64 = 0.0;
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actual_sum`
+
+warning: unused variable: `proc_pct`
+   --> src\commands.rs:561:9
+    |
+561 |     let proc_pct = if total_exposure > 0.0 { (proc_exp / total_exposure * 100.0) as i64 } else { 0 };
+    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_proc_pct`
+
+warning: variable `issue_filter` is assigned to, but never used
+   --> src\commands.rs:876:9
+    |
+876 |     let mut issue_filter = "WHERE status = 'Accepted'".to_string();
+    |         ^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_issue_filter` instead
+
+warning: value assigned to `issue_filter` is never read
+   --> src\commands.rs:880:14
+    |
+880 |              issue_filter = format!(
+    |              ^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `projectType`
+    --> src\commands.rs:1341:61
+     |
+1341 | pub async fn analyze_process_mining(_app_handle: AppHandle, projectType: String) -> Result<Value, String> {
+     |                                                             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_projectType`
+
+warning: unused variable: `name`
+    --> src\commands.rs:2814:10
+     |
+2814 |     let (name, start, end, report_sections) = {
+     |          ^^^^ help: if this is intentional, prefix it with an underscore: `_name`
+
+warning: unused variable: `start`
+    --> src\commands.rs:2814:16
+     |
+2814 |     let (name, start, end, report_sections) = {
+     |                ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
+
+warning: unused variable: `end`
+    --> src\commands.rs:2814:23
+     |
+2814 |     let (name, start, end, report_sections) = {
+     |                       ^^^ help: if this is intentional, prefix it with an underscore: `_end`
+
+warning: variable does not need to be mutable
+  --> src\audit_engine.rs:38:9
+   |
+38 |     let mut stmt = conn.prepare("SELECT to_object_id FROM relation_candidate WHERE from_object_id = ?1").ok();
+   |         ----^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\audit_engine.rs:51:9
+   |
+51 |     let mut stmt2 = conn.prepare("SELECT from_object_id FROM relation_candidate WHERE to_object_id = ?1").ok();
+   |         ----^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `other_type`
+   --> src\audit_engine.rs:261:20
+    |
+261 |     for (other_id, other_type, other_fields_str) in candidates {
+    |                    ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_other_type`
+
+warning: unused variable: `structural_label`
+   --> src\audit_engine.rs:366:13
+    |
+366 |         let structural_label = crate::risk_interpret::interpret_structural_score(structural_score);
+    |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_structural_label`
+
+warning: unused variable: `domain`
+  --> src\debug_api.rs:45:21
+   |
+45 |     for (id, title, domain, risk) in sample_projects {
+   |                     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_domain`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:18:34
+   |
+18 | pub fn validate_execution_safety(app_handle: &AppHandle, scope: &str) -> Result<(), String> {
+   |                                  ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_handle`
+
+warning: unused variable: `forbidden_literals`
+  --> src\constitution.rs:22:9
+   |
+22 |     let forbidden_literals = vec!["15420", "placeholder", "mock_user"];
+   |         ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_forbidden_literals`
+
+warning: unused variable: `app_handle`
+  --> src\constitution.rs:48:31
+   |
+48 | pub fn check_system_integrity(app_handle: AppHandle) -> Result<Value, String> {
+   |                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_app_handle`
+
+warning: unused variable: `rel_id`
+   --> src\simulator.rs:250:29
+    |
+250 |                         let rel_id = format!("REL-{}", Uuid::new_v4().to_string().split('-').next().unwrap());
+    |                             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_rel_id`
+
+warning: variable `success_count` is assigned to, but never used
+  --> src\simulator.rs:91:9
+   |
+91 |     let mut success_count = 0;
+   |         ^^^^^^^^^^^^^^^^^
+   |
+   = note: consider using `_success_count` instead
+
+warning: value assigned to `success_count` is never read
+   --> src\simulator.rs:359:22
+    |
+359 |             Ok(_) => success_count += 1,
+    |                      ^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `cat_lower`
+   --> src\simulator.rs:385:9
+    |
+385 |     let cat_lower = scenario.category.to_lowercase();
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cat_lower`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:25:13
+   |
+25 |         let mut fmt_dash = 0; // %Y-%m-%d
+   |             ----^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:26:13
+   |
+26 |         let mut fmt_slash = 0; // %Y/%m/%d
+   |             ----^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:27:13
+   |
+27 |         let mut fmt_dot = 0; // %Y.%m.%d
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:28:13
+   |
+28 |         let mut fmt_raw = 0; // %Y%m%d
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src\ingestion\ledger_builder.rs:29:13
+   |
+29 |         let mut fmt_us = 0; // %m/%d/%Y or %d/%m/%Y
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: value assigned to `total_rows` is never read
+  --> src\ingestion\ledger_builder.rs:42:14
+   |
+42 |              total_rows = rows.len();
+   |              ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+
+For more information about this error, try `rustc --explain E0597`.
+warning: `auditflow` (bin "auditflow") generated 37 warnings
+error: could not compile `auditflow` (bin "auditflow") due to 2 previous errors; 37 warnings emitted

@@ -27,7 +27,7 @@ mod risk_score;
 mod rule_weights;
 mod error;
 
-mod forensic_engine;
+mod flux_engine;
 
 use database::initialize_database;
 use std::fs;
@@ -139,6 +139,8 @@ fn main() {
             commands::get_account_flow_graph,
             commands::get_structural_insight,
             commands::get_structural_top_accounts,
+            commands::get_strategic_deviations,
+            commands::get_multi_year_financial_summary,
             dedup::remove_duplicate_issues,
             commands::optimize_database,
             commands::clean_temp_files,
@@ -176,7 +178,8 @@ fn main() {
             simulator::generate_annual_audit_data,
             commands::set_gemini_api_key,
             commands::get_gemini_api_key,
-            commands::run_forensic_scan
+            commands::run_flux_scan,
+            commands::get_multi_year_trial_balance
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

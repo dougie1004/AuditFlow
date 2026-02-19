@@ -50,31 +50,39 @@ impl EventBuilder for LedgerBuilder {
              let mut acc_code_idx = None;
              let mut cp_idx = None;
              let mut desc_idx = None;
+             let mut header_row_idx = 0;
 
-             if let Some(header_row) = rows.get(0) {
-                 println!(">>> [INGESTION] Normalizing Headers...");
-                 for (idx, original_header) in header_row.iter().enumerate() {
-                     // 1. BOM 제거 + 공백 제거 + 소문자 변환
-                     let h = original_header.trim_start_matches('\u{feff}')
-                         .replace(" ", "")
-                         .replace("\t", "")
-                         .to_lowercase();
-                     
-                     // 2. Contains 기반 매칭
-                     if h.contains("일자") || h.contains("날짜") || h.contains("date") { date_idx = Some(idx); }
-                     else if h.contains("차변") || h.contains("debit") { debit_idx = Some(idx); }
-                     else if h.contains("대변") || h.contains("credit") { credit_idx = Some(idx); }
-                     else if h.contains("금액") || h.contains("amount") { amount_idx = Some(idx); }
-                     else if (h.contains("계정") && h.contains("명")) || h.contains("accountname") || h.contains("과목") { acc_name_idx = Some(idx); }
-                     else if (h.contains("계정") && (h.contains("코드") || h.contains("번호"))) || h.contains("accountcode") { acc_code_idx = Some(idx); }
-                     else if h.contains("거래처") || h.contains("entity") || h.contains("customer") || h.contains("vendor") { cp_idx = Some(idx); }
-                     else if h.contains("적요") || h.contains("내용") || h.contains("desc") || h.contains("rem") { desc_idx = Some(idx); }
-                 }
-                 
-                 println!(">>> [INGESTION] Column Mapping Results:");
-                 println!("  - Date: {:?}, Amount(D/C): {:?}/{:?}, BaseAmt: {:?}", date_idx, debit_idx, credit_idx, amount_idx);
-                 println!("  - Account: {:?}/{:?}, Counterparty: {:?}, Desc: {:?}", acc_name_idx, acc_code_idx, cp_idx, desc_idx);
+             // Scan top 10 rows to find header
+             for r_idx in 0..10.min(rows.len()) {
+                let mut matches = 0;
+                let row = &rows[r_idx];
+                
+                for (c_idx, original_header) in row.iter().enumerate() {
+                    let h = original_header.trim_start_matches('\u{feff}')
+                        .replace(" ", "")
+                        .replace("\t", "")
+                        .to_lowercase();
+                    
+                    if h.contains("일자") || h.contains("날짜") || h.contains("date") { date_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("차변") || h.contains("debit") { debit_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("대변") || h.contains("credit") { credit_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("금액") || h.contains("amount") { amount_idx = Some(c_idx); matches += 1; }
+                    else if (h.contains("계정") && h.contains("명")) || h.contains("accountname") || h.contains("과목") { acc_name_idx = Some(c_idx); matches += 1; }
+                    else if (h.contains("계정") && (h.contains("코드") || h.contains("번호"))) || h.contains("accountcode") { acc_code_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("거래처") || h.contains("entity") || h.contains("customer") || h.contains("vendor") { cp_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("적요") || h.contains("내용") || h.contains("desc") || h.contains("rem") { desc_idx = Some(c_idx); matches += 1; }
+                }
+
+                if matches >= 2 {
+                    header_row_idx = r_idx;
+                    println!(">>> [INGESTION] Identified header at row {}: {:?}", header_row_idx, row);
+                    break;
+                }
              }
+                
+             println!(">>> [INGESTION] Column Mapping Results:");
+             println!("  - Date: {:?}, Amount(D/C): {:?}/{:?}, BaseAmt: {:?}", date_idx, debit_idx, credit_idx, amount_idx);
+             println!("  - Account: {:?}/{:?}, Counterparty: {:?}, Desc: {:?}", acc_name_idx, acc_code_idx, cp_idx, desc_idx);
 
              total_rows = rows.len();
              println!("--------------------------------------------------");
@@ -83,7 +91,7 @@ impl EventBuilder for LedgerBuilder {
              println!("- Total Rows: {}", total_rows);
 
              for (idx, row) in rows.iter().enumerate() {
-                 if idx == 0 { continue; } // Header Skip
+                 if idx <= header_row_idx { continue; } // Header 및 그 이전 Row Skip
                  if row.len() < 3 { continue; }
 
                  // 1. Date Detection (Use mapped idx or search fallback)

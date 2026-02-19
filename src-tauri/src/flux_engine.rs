@@ -2,9 +2,9 @@ use rusqlite::Connection;
 use rusqlite::params;
 use serde_json::json;
 
-pub struct ForensicEngine;
+pub struct FluxEngine;
 
-impl ForensicEngine {
+impl FluxEngine {
     pub fn run_correlations(conn: &Connection) -> Result<usize, String> {
         let mut links_found = 0;
         

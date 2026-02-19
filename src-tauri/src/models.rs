@@ -1,4 +1,5 @@
 ﻿use serde::{Serialize, Deserialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditIssue { 
@@ -311,4 +312,19 @@ pub struct EntityTimelineResponse {
     pub canonical_name: String,
     pub summary: EntitySummary,
     pub events: Vec<EntityEvent>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RawAccountYearBalance {
+    pub account: String,
+    pub year: i32,
+    pub total: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AccountTrendSummary {
+    pub account: String,
+    pub yearly_totals: BTreeMap<i32, f64>,
+    pub yoy: BTreeMap<i32, f64>,
+    pub max_abs_yoy: f64,
 }

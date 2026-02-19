@@ -32,6 +32,7 @@ import StagingArea from "./pages/StagingArea";
 import AIAnalysisReport from "./components/AIAnalysisReport";
 import ExpertConsole from "./pages/ExpertConsole";
 import EntityTimeline from "./pages/EntityTimeline";
+import FluxAnalysis from "./pages/FluxAnalysis";
 
 // Debug Pages
 import AuditLifecycle from "./pages/debug/AuditLifecycle";
@@ -239,6 +240,7 @@ function Layout() {
           <NavItem to="/import" icon={<Database size={18} />} label="감사 데이터 업로드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
           <NavItem to="/workspace" icon={<Layers size={18} />} label="감사 실행 워크스페이스" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
           <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AuditFlow AI 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <NavItem to="/flux-analysis" icon={<BrainCircuit size={18} />} label="Flux (시계열 변화 분석)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Management</p>
           <NavItem to="/portfolio" icon={<FileText size={18} />} label="감사 프로젝트 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
@@ -313,6 +315,7 @@ function Layout() {
             <Route path="/project/:id" element={<ProjectDetail />} />
             <Route path="/history" element={<AuditHistory />} />
             <Route path="/entity/:entityId/timeline" element={<EntityTimeline />} />
+            <Route path="/flux-analysis" element={<FluxAnalysis />} />
 
             {/* Debug Routes (Hidden) */}
             <Route path="/debug/audit-lifecycle" element={<AuditLifecycle />} />

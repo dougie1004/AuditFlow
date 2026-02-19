@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSummary, SystemEvent, AuditProject, AuditIssue } from '../types';
 
 interface AuditObject {
@@ -42,6 +43,7 @@ const Dashboard = () => {
     const [optStats, setOptStats] = useState<any>(null);
     const [integrityStatus, setIntegrityStatus] = useState<'checking' | 'passed' | 'failed'>('checking');
 
+    const [showExposureDetails, setShowExposureDetails] = useState(false);
     const [loading, setLoading] = useState(true);
     const [assuranceMap, setAssuranceMap] = useState<any[]>([]);
     const [auditObjects, setAuditObjects] = useState<AuditObject[]>([]);
@@ -97,18 +99,6 @@ const Dashboard = () => {
         }
     };
 
-    useEffect(() => {
-        fetchData();
-
-        // [LISTEN] Real-time topology sync when findings are accepted elsewhere
-        const handleTopologySync = () => {
-            console.log(">>> [Dashboard] Topology sync triggered by finding update.");
-            fetchData();
-        };
-
-        window.addEventListener('topology-updated', handleTopologySync);
-        return () => window.removeEventListener('topology-updated', handleTopologySync);
-    }, [activeProject]);
 
     const fetchData = async () => {
         try {
@@ -216,20 +206,39 @@ const Dashboard = () => {
         }
     };
 
+    // [SINGLE SOURCE OF TRUTH] Unified initialization and fetch logic
     useEffect(() => {
-        const init = async () => {
+        let isViewMounted = true;
+
+        const initDashboard = async () => {
+            if (!isViewMounted) return;
             setLoading(true);
             setIntegrityStatus('checking');
+
             await fetchData();
-            setLoading(false);
-            // [INTEGRITY SIMULATION] Multi-stage assurance check for "Trust" effect
-            setTimeout(() => {
+
+            if (isViewMounted) {
+                setLoading(false);
+                // [INTEGRITY SIMULATION] Multi-stage assurance check
                 setTimeout(() => {
-                    setIntegrityStatus('passed');
+                    if (isViewMounted) setIntegrityStatus('passed');
                 }, 1600);
-            }, 500);
+            }
         };
-        init();
+
+        initDashboard();
+
+        // [LISTEN] Real-time topology sync
+        const handleTopologySync = () => {
+            if (isViewMounted) fetchData();
+        };
+
+        window.addEventListener('topology-updated', handleTopologySync);
+
+        return () => {
+            isViewMounted = false;
+            window.removeEventListener('topology-updated', handleTopologySync);
+        }
     }, [activeProject]);
 
     const handleAuditChange = async (id: string | null) => {
@@ -763,8 +772,11 @@ const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col gap-1 relative z-10">
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">Systemic Risk Exposure</p>
+                                        <div className="flex flex-col gap-1 relative z-10" onClick={() => setShowExposureDetails(!showExposureDetails)}>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">Systemic Risk Exposure</p>
+                                                <span className="text-[9px] px-1.5 py-0.5 bg-white/5 rounded text-slate-500 border border-white/5 font-black uppercase tracking-widest hover:text-rose-400 hover:border-rose-400/30 transition-all">Click for Details</span>
+                                            </div>
                                             <p className="text-4xl font-black text-white italic tracking-tighter group-hover:scale-105 transition-transform origin-left">
                                                 ₩{(exposureValue / 100000000).toFixed(1)}억 <span className="text-sm text-slate-400 font-bold not-italic tracking-normal ml-1">잠재적 노출</span>
                                             </p>
@@ -783,7 +795,77 @@ const Dashboard = () => {
                                             />
                                         </div>
 
-                                        {/* Hover Overlay Breakdown */}
+                                        {/* ── Detailed Risk Breakdown Overlay (Drill-Down) ── */}
+                                        <AnimatePresence>
+                                            {showExposureDetails && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    className="absolute inset-0 bg-slate-900/98 backdrop-blur-2xl z-20 p-6 flex flex-col border border-rose-500/20 rounded-[40px] shadow-2xl overflow-hidden"
+                                                >
+                                                    <div className="flex justify-between items-center mb-6">
+                                                        <p className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                                            <Activity size={12} className="text-rose-500" /> Exposure Breakdown
+                                                        </p>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setShowExposureDetails(false); }}
+                                                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-all"
+                                                        >
+                                                            <Zap size={10} className="fill-current" />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                                                        {(summary.exposure_details || []).length > 0 ? (
+                                                            (summary.exposure_details as any[]).map((detail, idx) => (
+                                                                <div key={idx} className="bg-white/5 border border-white/5 rounded-2xl p-3 space-y-1 hover:border-white/10 transition-all">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <span className="text-[8px] font-black text-rose-500/70 border border-rose-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter bg-rose-500/5">
+                                                                            {detail.origin}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-mono font-black text-white">
+                                                                            ₩{(detail.amount / 1000000).toFixed(1)}M
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-[10px] font-black text-white truncate">{detail.subject}</p>
+                                                                    <p className="text-[9px] text-slate-500 font-bold leading-tight line-clamp-2">{detail.reason}</p>
+
+                                                                    {detail.breakdown && (
+                                                                        <div className="mt-2 grid grid-cols-3 gap-1 pt-2 border-t border-white/5">
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] text-slate-600 font-black uppercase">Leakage</p>
+                                                                                <p className="text-[9px] font-mono text-rose-400">₩{(detail.breakdown.leakage / 1000000).toFixed(1)}M</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] text-slate-600 font-black uppercase">Penalty</p>
+                                                                                <p className="text-[9px] font-mono text-amber-400">₩{(detail.breakdown.penalty / 1000000).toFixed(1)}M</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <p className="text-[7px] text-slate-600 font-black uppercase">Waste</p>
+                                                                                <p className="text-[9px] font-mono text-blue-400">₩{(detail.breakdown.waste / 1000000).toFixed(1)}M</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <div className="py-20 text-center opacity-40">
+                                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No detailed items found</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-4 pt-4 border-t border-white/10">
+                                                        <p className="text-[8px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">
+                                                            * Systemic Exposure reflects projected impact based on materiality and failure probability. Direct loss is verified finding total.
+                                                        </p>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Hover Overlay Breakdown (Legacy Hover) */}
                                         <div className="absolute inset-0 bg-slate-900/98 backdrop-blur-xl z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col p-6 custom-scrollbar overflow-y-auto translate-y-4 group-hover:translate-y-0">
                                             <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exposure Composition</p>
@@ -853,6 +935,50 @@ const Dashboard = () => {
 
                             </div>
 
+                            {/* Flux Analysis Section */}
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 pb-2">
+                                    <BrainCircuit size={14} /> Temporal Flux Radar (시계열 이상 징후)
+                                </p>
+                                {summary?.flux_signals && summary.flux_signals.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {(summary.flux_signals || []).map((sig: any) => (
+                                            <div
+                                                key={sig.id}
+                                                onClick={() => navigate(`/audit-workspace/${activeProject}`, { state: { metric: 'Pending Reviews' } })}
+                                                className="bg-slate-800/40 border border-white/5 p-5 rounded-[32px] hover:border-emerald-500/30 transition-all group/card cursor-pointer active:scale-95"
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded">
+                                                        {sig.account || "Structural Break"}
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-rose-500 uppercase">
+                                                        Risk {(sig.score * 100).toFixed(0)}%
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-semibold text-slate-300 leading-relaxed mb-3">
+                                                    {sig.description}
+                                                </p>
+                                                <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight italic">Estimated Impact</span>
+                                                    <span className="text-sm font-black text-white italic tracking-tighter">
+                                                        {sig.amount > 0
+                                                            ? `₩${(sig.amount / 100000000).toFixed(1)}억`
+                                                            : (sig.score > 0.8 ? "분석 필요 (High)" : "산정 중...")}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-12 flex flex-col items-center justify-center opacity-30">
+                                        <Zap size={32} className="text-slate-500 mb-2" />
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No Flux Detected</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mt-8 mb-4 border-b border-white/5 pb-2">시스템 활동 로그 (Operational Logs)</p>
                             {events.map((evt) => (
                                 <div key={evt.id} className="space-y-2 group">
                                     <div className="flex justify-between items-center">

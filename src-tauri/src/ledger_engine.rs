@@ -111,8 +111,8 @@ pub async fn run_ledger_only_scan(
         for r in rows {
             if let Ok((acc, mon, total, avg)) = r {
                 save_issue(&conn, project_type.to_string(), "LDG-05".to_string(), "계정 사용 액티비티 변동 (Account Volatility)".to_string(),
-                    format!("계정 '{}'의 {}월 집행액(₩{})이 평균(₩{}) 대비 300% 이상 급증했습니다.", acc, mon, format_num(total), format_num(avg)),
-                    "Medium".to_string(), "해당 부서의 사업 계획 변경이나 예산 추가 전용 여부를 확인하세요.".to_string()).ok();
+                    format!("계정 '{}'의 {}월 집행액(₩{}원)이 평균(₩{}원) 대비 300% 이상 급증했습니다.", acc, mon, format_num(total), format_num(avg)),
+                    "Medium".to_string(), "해당 부서의 사업 계획 변경이나 예산 추가 전용 여부를 확인하세요.".to_string(), None).ok();
                 
                 conn.execute(
                     "UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 10.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-05' 
@@ -129,13 +129,14 @@ pub async fn run_ledger_only_scan(
         let count: i64 = conn.query_row("SELECT COUNT(*) FROM ldg_temp_scan", [], |r| r.get(0)).unwrap_or(0);
         if count > 0 {
             let limit = (count as f64 * 0.01).max(1.0) as i64;
-            let mut stmt = conn.prepare("SELECT id, date_str, account, vendor, description, amount FROM ldg_temp_scan ORDER BY amount DESC LIMIT ?1").map_err(|e| e.to_string())?;
-            let rows = stmt.query_map([limit], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?, r.get::<_, f64>(5)?))).map_err(|e| e.to_string())?;
+            let mut stmt = conn.prepare("SELECT id, date_str, account, vendor, description, amount, entity_id FROM ldg_temp_scan ORDER BY amount DESC LIMIT ?1").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([limit], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?, r.get::<_, f64>(5)?, r.get::<_, Option<String>>(6)?))).map_err(|e| e.to_string())?;
             for r in rows {
-                if let Ok((ev_id, d, a, v, desc, amt)) = r {
+                if let Ok((ev_id, d, a, v, desc, amt, ent_id_str)) = r {
+                    let ent_id = ent_id_str.and_then(|s| s.parse::<i64>().ok());
                     save_issue(&conn, project_type.to_string(), "LDG-01".to_string(), "고액 상위 1% 전표".to_string(),
-                        format!("금액: ₩{}, 계정: {}, 거래처: {}, 적요: {}, 일자: {}", format_num(amt), a, v, desc, d),
-                        "High".to_string(), "해당 전표의 승인 문서 및 계약서를 요청하세요.".to_string()).ok();
+                        format!("금액: ₩{}원, 계정: {}, 거래처: {}, 적요: {}, 일자: {}", format_num(amt), a, v, desc, d),
+                        "High".to_string(), "해당 전표의 승인 문서 및 계약서를 요청하세요.".to_string(), ent_id).ok();
                     
                     conn.execute("UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 30.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-01' WHERE id = ?1", [ev_id]).ok();
                     total_findings += 1;
@@ -156,8 +157,8 @@ pub async fn run_ledger_only_scan(
         for r in rows {
             if let Ok((amt, c)) = r {
                  save_issue(&conn, project_type.to_string(), "LDG-02".to_string(), "라운드 금액 반복 패턴".to_string(),
-                    format!("금액 ₩{} 이(가) {}회 반복 발생했습니다. 인위적 금액 설정 가능성이 있습니다.", format_num(amt), c),
-                    "Medium".to_string(), "해당 금액 기준 승인 한도 정책을 확인하세요.".to_string()).ok();
+                    format!("금액 ₩{}원 이(가) {}회 반복 발생했습니다. 인위적 금액 설정 가능성이 있습니다.", format_num(amt), c),
+                    "Medium".to_string(), "해당 금액 기준 승인 한도 정책을 확인하세요.".to_string(), None).ok();
                  
                  conn.execute(
                     "UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 15.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-02' 
@@ -180,15 +181,16 @@ pub async fn run_ledger_only_scan(
         ").map_err(|e| e.to_string())?;
         let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, f64>(3)?, r.get::<_, String>(4)?))).map_err(|e| e.to_string())?;
         for r in rows {
-            if let Ok((v, d, total, ent_id)) = r {
+            if let Ok((v, d, total, ent_id_str)) = r {
+                let ent_id = ent_id_str.parse::<i64>().ok();
                 save_issue(&conn, project_type.to_string(), "LDG-06".to_string(), "특정 부서 집중 거래 (Departmental Outlier)".to_string(),
-                    format!("거래처 '{}'에 대한 지출의 90% 이상(₩{})이 부서 '{}'에서 발생했습니다.", v, format_num(total), d),
-                    "Medium".to_string(), "해당 벤더와 부서 담당자 간의 유착 가능성을 검토하세요.".to_string()).ok();
+                    format!("거래처 '{}'에 대한 지출의 90% 이상(₩{}원)이 부서 '{}'에서 발생했습니다.", v, format_num(total), d),
+                    "Medium".to_string(), "해당 벤더와 부서 담당자 간의 유착 가능성을 검토하세요.".to_string(), ent_id).ok();
                 
                 conn.execute(
                     "UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 20.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-06' 
                      WHERE entity_id = ?1 AND id IN (SELECT id FROM ldg_temp_scan WHERE dept = ?2)",
-                    params![ent_id, d]
+                    params![ent_id_str, d]
                 ).ok();
                 total_findings += 1;
             }
@@ -199,13 +201,14 @@ pub async fn run_ledger_only_scan(
     {
         let danger_keywords = vec!["상품권", "자문료", "정산", "기타", "선지급", "임시", "gift", "consultant"];
         for kw in danger_keywords {
-            let mut stmt = conn.prepare("SELECT id, description, amount FROM ldg_temp_scan WHERE description LIKE ?1").map_err(|e| e.to_string())?;
-            let rows = stmt.query_map([format!("%{}%", kw)], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, f64>(2)?))).map_err(|e| e.to_string())?;
+            let mut stmt = conn.prepare("SELECT id, description, amount, entity_id FROM ldg_temp_scan WHERE description LIKE ?1").map_err(|e| e.to_string())?;
+            let rows = stmt.query_map([format!("%{}%", kw)], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, f64>(2)?, r.get::<_, Option<String>>(3)?))).map_err(|e| e.to_string())?;
             for r in rows {
-                if let Ok((ev_id, desc, amt)) = r {
+                if let Ok((ev_id, desc, amt, ent_id_str)) = r {
+                     let ent_id = ent_id_str.and_then(|s| s.parse::<i64>().ok());
                      save_issue(&conn, project_type.to_string(), "LDG-07".to_string(), "적요 키워드 위험 탐지".to_string(),
-                        format!("위찰 키워드 '{}'이(가) 포함된 전표가 발견되었습니다. (₩{}, 적요: {})", kw, format_num(amt), desc),
-                        "High".to_string(), "실제 수령자 증빙 및 자문 결과물 등의 실질 증거를 요청하세요.".to_string()).ok();
+                        format!("위찰 키워드 '{}'이(가) 포함된 전표가 발견되었습니다. (₩{}원, 적요: {})", kw, format_num(amt), desc),
+                        "High".to_string(), "실제 수령자 증빙 및 자문 결과물 등의 실질 증거를 요청하세요.".to_string(), ent_id).ok();
                      
                      conn.execute("UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 25.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-07' WHERE id = ?1", [ev_id]).ok();
                      total_findings += 1;
@@ -227,12 +230,13 @@ fn save_issue(
     title: String, 
     desc: String, 
     severity: String, 
-    recom: String
+    recom: String,
+    entity_id: Option<i64>
 ) -> rusqlite::Result<()> {
     conn.execute(
-        "INSERT INTO audit_issues (project_type, issue_title, description, severity, status, verdict_mode, recommendations, detected_at) 
-         VALUES (?1, ?2, ?3, ?4, 'Open', 'STATISTICAL', ?5, CURRENT_TIMESTAMP)",
-        params![project_type, format!("[{}] {}", scenario_id, title), desc, severity, recom]
+        "INSERT INTO audit_issues (project_type, issue_title, description, severity, status, verdict_mode, recommendations, detected_at, entity_id) 
+         VALUES (?1, ?2, ?3, ?4, 'Open', 'STATISTICAL', ?5, CURRENT_TIMESTAMP, ?6)",
+        params![project_type, format!("[{}] {}", scenario_id, title), desc, severity, recom, entity_id]
     )?;
     Ok(())
 }

@@ -9,7 +9,7 @@ interface Message {
 }
 
 interface WorkspaceState {
-    activeTab: 'explorer' | 'queue';
+    activeTab: 'explorer' | 'queue' | 'financials';
     role: 'Auditor' | 'Reviewer';
     currentSessionId: string | null;
 }

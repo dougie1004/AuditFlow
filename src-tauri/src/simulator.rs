@@ -230,7 +230,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                     total_events += 1;
 
                     if status == "CONFIRMED" || status == "PENDING" {
-                        // [FORENSIC UPGRADE] Linkage: Find another transaction in the same project to link to
+                        // [INTELLIGENCE UPGRADE] Linkage: Find another transaction in the same project to link to
                         // To keep it simple, we link to the previous transaction if it exists
                         let prev_object_id = format!("OBJ-PREV-{}", unit.id);
                         let _ = conn.execute(
@@ -295,7 +295,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                             ]
                         );
 
-                        // [PHASE 6] Case Elevation & Forensic Clusters
+                        // [PHASE 6] Case Elevation & Analysis Clusters
                         if count >= 3 {
                             let case_id = format!("CASE-{}-{}", unit.id, scenario.id);
                             let _ = conn.execute(
@@ -312,7 +312,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                                 ]
                             );
 
-                            // Emit Forensic Event
+                            // Emit Intelligence Event
                             let _ = conn.execute(
                                 "INSERT INTO system_events (id, event_type, description, audit_id) VALUES (?1, ?2, ?3, ?4)",
                                 params![

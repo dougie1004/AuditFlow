@@ -67,7 +67,7 @@ export default function IssueTracker() {
                                 <Bot size={20} className="text-blue-400" />
                             </div>
                             <p className="text-[11px] font-black text-blue-400 uppercase tracking-widest leading-relaxed">
-                                Forensic Core: 요청 시점 기준, AI가 전사 ERP 원장과 비정형 문서(전자결재, 메신저 로그)를 즉각 교차 실사 분석합니다.
+                                Analytical Core: 요청 시점 기준, AI가 전사 ERP 원장과 비정형 문서(전자결재, 메신저 로그)를 즉각 교차 실사 분석합니다.
                             </p>
                         </div>
                     </div>

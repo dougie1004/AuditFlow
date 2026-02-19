@@ -17,8 +17,17 @@ export interface RelationCandidate {
     created_at: string;
 }
 
+export type AccountBehavior =
+    | 'StructuralConcentrationAllowed'
+    | 'DistributionExpected'
+    | 'VolatilityObserved'
+    | 'AdjustmentSensitive'
+    | 'EarningsManagementSensitive'
+    | 'Normal';
+
 export interface StructuralInsight {
     account: string;
+    behavior: AccountBehavior;
     volatility: number;
     concentration_ratio_1: number;
     concentration_ratio_3: number;
@@ -189,14 +198,14 @@ export interface EntityTimelineResponse {
 }
 
 export interface ExposureVerdict {
-    entity_name: string;
-    budget_tier: string;
-    risk_level: string;
+    entity_name: String;
+    risk_level: String;
     calculated_exposure: number;
-    control_leakage_ratio: number;
-    materiality_impact_ratio: number;
-    policy_version: string;
+    leakage_impact: number;      // 현금 유출
+    penalty_risk: number;        // 과징금 리스크
+    operational_waste: number;   // 운영 비효율
     formula_used: string;
+    cfo_commentary: string;
 }
 
 export interface DashboardSummary {
@@ -220,6 +229,8 @@ export interface DashboardSummary {
     };
     key_drivers?: { label: string; val: string; exposure: number }[];
     trends: { day: string; value: number }[];
+    flux_signals: { id: string; type: string; description: string; score: number; amount: number; account?: string }[];
+    exposure_details: any[];
 }
 
 export interface AppConfig {

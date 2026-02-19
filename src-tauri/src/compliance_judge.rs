@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
 use rusqlite::{params, Connection};
 
+// f64 to String helper for internal logic
+trait FloatExt { fn to_fixed(&self, precision: usize) -> String; }
+impl FloatExt for f64 {
+    fn to_fixed(&self, precision: usize) -> String {
+        format!("{:.1$}", self, precision)
+    }
+}
+
 /// [JUDGE LAYOUT]
 /// 이 모듈은 "배심원(AI)"이 제출한 Fact와 Evidence를 바탕으로,
 /// "판사(Code)"가 확정적인 재무적/법적 판단을 내리는 로직을 담당합니다.
@@ -18,81 +26,69 @@ use rusqlite::{params, Connection};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ExposureVerdict {
     pub entity_name: String,
-    pub budget_tier: String,      
     pub risk_level: String,       
-    pub calculated_exposure: f64,    // 재무적 영향액 (KRW)
-    pub control_leakage_ratio: f64,  // 통제 오염도 (%)
-    pub materiality_impact_ratio: f64, // 재무 중요도 (%)
-    pub policy_version: String,
+    pub calculated_exposure: f64,    // 통합 재무 익스포저
+    pub leakage_impact: f64,         // 직접 손실 (현금 유출)
+    pub penalty_risk: f64,           // 과징금/추징금 위험
+    pub operational_waste: f64,      // 운영 비효율 손실
     pub formula_used: String,        
+    pub cfo_commentary: String,
 }
 
-const POLICY_VERSION: &str = "AuditFlow Dual-Track Model v2026.02";
-
-// ============================================================================
-// 2. Logic Implementation
-// ============================================================================
-
-/// 메인 판결 함수
+/// CFO 전용 리스크 판결 함수
 pub fn judge_commercial_risk(db_path: &std::path::PathBuf, entity_id: i64, severity: &str) -> Result<ExposureVerdict, String> {
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     
-    // 부서 정보 조회
-    let (name, budget_str, profit_str): (String, String, String) = conn.query_row(
-        "SELECT unit_name, budget_size, operating_profit FROM audit_universe WHERE id = ?1",
+    let (name, revenue_str, budget_str, profit_str, imp_score, lik_score): (String, String, String, String, i32, i32) = conn.query_row(
+        "SELECT unit_name, revenue, budget_size, operating_profit, impact_score, likelihood_score FROM audit_universe WHERE id = ?1",
         [entity_id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-    ).map_err(|_| "Entity not found in Audit Universe".to_string())?;
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?))
+    ).map_err(|_| "Entity not found".to_string())?;
 
+    let rev_krw = parse_amount_to_krw(&revenue_str);
     let budget_krw = parse_amount_to_krw(&budget_str);
     let profit_krw = parse_amount_to_krw(&profit_str);
     
     // ------------------------------------------------------------------------
-    // 축 1. Control Impact (예산 대비 가중치 - 통제 엔진의 오염도)
+    // [REALISM CALIBRATION] 
+    // CFOs don't see 100% of budget at risk. We use "Micro-Materiality" factors.
+    // Leakage: 0.01% (Normal) to 0.05% (High) of base volume.
+    // Waste: 0.02% (Normal) to 0.10% (High) of base volume.
     // ------------------------------------------------------------------------
-    let control_ratio = match severity.to_uppercase().as_str() {
-        "HIGH" | "CRITICAL" => 0.050, // "이 프로세스는 5%나 신뢰할 수 없습니다."
-        "MEDIUM" =>            0.020, 
-        _ =>                   0.005, 
+    
+    let base_volume = if profit_krw > 0.0 { profit_krw } else { budget_krw };
+    let (leak_factor, waste_factor) = match severity.to_uppercase().as_str() {
+        "HIGH" | "CRITICAL" => (0.0005, 0.0010), // 0.05%, 0.10%
+        "MEDIUM" =>            (0.0002, 0.0005), // 0.02%, 0.05%
+        _ =>                   (0.0001, 0.0002), // 0.01%, 0.02%
     };
 
-    // ------------------------------------------------------------------------
-    // 축 2. Financial Materiality (영업이익 대비 가중치 - 실질적 타격)
-    // ------------------------------------------------------------------------
-    let materiality_ratio = match severity.to_uppercase().as_str() {
-        "HIGH" | "CRITICAL" => 0.050, // "영업이익의 5%를 흔드는 중대한 위협입니다."
-        "MEDIUM" =>            0.020, 
-        _ =>                   0.010, 
-    };
+    // 1. [LEAKAGE] 실제 누수 (현금화/횡령/오지급 가능성)
+    let leakage = base_volume * leak_factor * (lik_score as f64 / 10.0);
 
-    // 최종 익스포저 계산 (재무적 영향 위주)
-    let exposure = if profit_krw > 0.0 {
-        profit_krw * materiality_ratio
-    } else {
-        budget_krw * (control_ratio * 0.2) // Cost Center는 예산 통제 오염도의 1/5 수준을 보수적 익스포저로 산출
-    };
+    // 2. [PENALTY] 세무/규제 (현실적으로 leakage의 20~30% 추징)
+    let penalty = (leakage * 0.3) + if severity == "CRITICAL" { 5_000_000.0 } else { 0.0 };
 
-    let formula = if profit_krw > 0.0 {
-        format!("Control Risk({:.1}%) & Profit Impact({:.1}%)", control_ratio * 100.0, materiality_ratio * 100.0)
-    } else {
-        format!("Control Risk({:.1}%) [Cost Center Logic Applied]", control_ratio * 100.0)
+    // 3. [WASTE] 운영상 비효율 (Friction)
+    let waste = base_volume * waste_factor * (imp_score as f64 / 10.0);
+
+    let total = leakage + penalty + waste;
+
+    let commentary = match severity.to_uppercase().as_str() {
+        "CRITICAL" => format!("현금 유출(₩{}M)과 과징금 리스크가 결합된 즉시 조치 대상입니다.", (total/1000000.0).to_fixed(1)),
+        "HIGH" => format!("운영 비효율(₩{}M)이 누적되어 연간 손실로 전이될 우려가 높습니다.", (waste/1000000.0).to_fixed(1)),
+        _ => "잠재적 리스크이나 기회 비용 측정 시 유의미한 수준입니다.".to_string(),
     };
 
     Ok(ExposureVerdict {
         entity_name: name,
-        budget_tier: get_budget_tier(budget_krw),
         risk_level: severity.to_uppercase(),
-        calculated_exposure: exposure,
-        control_leakage_ratio: control_ratio * 100.0,
-        materiality_impact_ratio: if profit_krw > 0.0 { 
-            materiality_ratio * 100.0 
-        } else if budget_krw > 0.0 { 
-            (exposure / budget_krw) * 100.0 
-        } else {
-            0.0
-        },
-        policy_version: POLICY_VERSION.to_string(),
-        formula_used: formula,
+        calculated_exposure: total,
+        leakage_impact: leakage,
+        penalty_risk: penalty,
+        operational_waste: waste,
+        formula_used: "CFO Triple-Loss Model (Leakage + Penalty + Waste)".to_string(),
+        cfo_commentary: commentary,
     })
 }
 
@@ -105,6 +101,7 @@ fn parse_amount_to_krw(raw_str: &str) -> f64 {
         .replace(",", "")
         .replace("krw", "")
         .replace("$", "")
+        .replace("₩", "")
         .trim().to_string();
     
     if let Some(idx) = clean.find('(') {

@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let conn = Connection::open(&db_path)?;
 
-    println!(">>> [FORENSIC REPAIR] Starting Native Statistical Backfill...");
+    println!(">>> [ANALYSIS REPAIR] Starting Native Statistical Backfill...");
 
     // 1. Fetch all profiles to repair
     let mut stmt = conn.prepare("SELECT account_code, fiscal_year FROM account_year_profile")?;
@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ).ok();
     }
 
-    println!(">>> [FORENSIC REPAIR] Successfully backfilled {} account profiles.", profiles.len());
+    println!(">>> [ANALYSIS REPAIR] Successfully backfilled {} account profiles.", profiles.len());
 
     Ok(())
 }

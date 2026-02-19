@@ -198,7 +198,7 @@ const DataUpload: React.FC<DataUploadProps> = ({ setActiveView, onAddScenarioAnd
                 <p className="text-blue-300 animate-pulse">&gt; 1/4 Data Ingestion (Raw Data Lake)... <Check className="w-3 h-3 inline-block ml-1" /></p>
                 <p className="text-blue-300 animate-pulse">&gt; 2/4 AI Pre-processing (NLP, OCR, Entity Extraction)... In progress</p>
                 <p className="text-yellow-400">&gt; 3/4 Data Linkage & Harmonization (PO-INV-PAY Cycle)... Pending</p>
-                <p className="text-green-400 font-bold">&gt; 4/4 AI Forensic Pattern Matching (Gemini Models)... Initializing</p>
+                <p className="text-green-400 font-bold">&gt; 4/4 AI Intelligence Pattern Matching (Gemini Models)... Initializing</p>
               </div>
               <p className="text-xs text-slate-400 mt-4">* 잠시만 기다려주시면 대시보드로 자동 이동합니다.</p>
             </div>
