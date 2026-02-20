@@ -43,14 +43,16 @@ impl AiConfig {
             .or_else(|_| CUSTOM_API_KEY.get().cloned().ok_or(std::env::VarError::NotPresent))
             .map_err(|_| "Missing GEMINI_API_KEY Environment Variable".to_string())?;
         
+        let app_cfg = crate::config::get_config();
+        
         let base_url = std::env::var("GEMINI_BASE_URL")
-            .unwrap_or_else(|_| "https://generativelanguage.googleapis.com".to_string());
+            .unwrap_or_else(|_| app_cfg.ai.base_url.clone());
         
         let model_pro = std::env::var("GEMINI_MODEL_PRO")
-            .unwrap_or_else(|_| "gemini-2.0-flash-exp".to_string());
+            .unwrap_or_else(|_| app_cfg.ai.model_pro.clone());
         
         let model_fast = std::env::var("GEMINI_MODEL_FAST")
-            .unwrap_or_else(|_| "gemini-2.0-flash-exp".to_string());
+            .unwrap_or_else(|_| app_cfg.ai.model_fast.clone());
 
         Ok(Self {
             api_key,
@@ -75,7 +77,7 @@ fn sanitize_model_or_default(input: &str) -> String {
 
     // 2) Allowlist check
     match corrected.as_str() {
-        "gemini-2.0-flash" | "gemini-2.0-flash-exp" | "gemini-1.5-flash" | "gemini-1.5-pro" => corrected,
+        "gemini-2.0-flash" | "gemini-1.5-flash" | "gemini-1.5-pro" => corrected,
         _ => "gemini-2.0-flash".to_string()
     }
 }

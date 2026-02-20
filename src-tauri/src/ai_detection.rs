@@ -172,10 +172,11 @@ pub fn vectorize_row(row_idx: usize, raw_text: &str) -> AuditSignalPayload {
         }
     }
     
+    let config = crate::config::get_config();
     // Amount Buckets
-    if max_val > 50_000_000.0 { signals.push("AMOUNT_BUCKET:CRITICAL".to_string()); }
-    else if max_val > 10_000_000.0 { signals.push("AMOUNT_BUCKET:HIGH".to_string()); }
-    else if max_val > 1_000_000.0 { signals.push("AMOUNT_BUCKET:MEDIUM".to_string()); }
+    if max_val > config.compliance.buckets.critical { signals.push("AMOUNT_BUCKET:CRITICAL".to_string()); }
+    else if max_val > config.compliance.buckets.high { signals.push("AMOUNT_BUCKET:HIGH".to_string()); }
+    else if max_val > config.compliance.buckets.medium { signals.push("AMOUNT_BUCKET:MEDIUM".to_string()); }
     else if max_val > 0.0 { signals.push("AMOUNT_BUCKET:LOW".to_string()); }
 
     // Pattern: Round Amount (e.g. 1,000,000) - often indicates gift or bribe
@@ -329,6 +330,7 @@ JSON Array of:
 
     // 3. Hybrid Synthesis (S + V + C)
     for (i, vector) in vectors.iter().enumerate() {
+        let config = crate::config::get_config();
         let row_idx = vector.meta_dimension.get("row_idx").and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
         let amount = amounts[i];
         
@@ -336,12 +338,12 @@ JSON Array of:
         let z_score = if std_dev > 0.0 { (amount - mean) / std_dev } else { 0.0 };
         let mut v_base = if z_score > 3.0 { 1.0 } else if z_score > 2.0 { 0.7 } else if z_score > 1.0 { 0.3 } else { 0.0 };
         
-        // [THRESHOLD DETECTOR] 5M KRW (Corporate limit)
-        // Check 95% ~ 99.9% proximity (e.g., 4,990,000 KRW)
-        let threshold_5m = 5_000_000.0;
-        let ratio_5m = amount / threshold_5m;
-        if ratio_5m >= 0.95 && ratio_5m < 1.0 {
-            v_base = 1.0; // Force MAX V-Score for 'Intentional Avoidance'
+        // [THRESHOLD DETECTOR] Corporate limit
+        // Check 95% ~ 99.9% proximity
+        let threshold_corp = config.compliance.corporate_limit;
+        let ratio_corp = amount / threshold_corp;
+        if ratio_corp >= 0.95 && ratio_corp < 1.0 {
+            v_base = 1.0; 
         }
         let v_score = v_base;
 
@@ -349,7 +351,7 @@ JSON Array of:
         let mut c_score = 0.0;
         let mut has_lounge = false;
         let mut has_night = false;
-        let is_high_value = amount >= 300_000.0;
+        let is_high_value = amount >= config.compliance.high_value_transaction;
 
         for sig in &vector.extracted_signals {
             if sig.contains("CTX:ENTERTAINMENT") || sig.contains("CTX:GOLF") { has_lounge = true; c_score += 0.4; } 

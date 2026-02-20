@@ -216,19 +216,20 @@ pub fn seed_master_scenarios(conn: &mut Connection) -> Result<(), String> {
     p!("LDG-09".to_string(), "Ledger-Only", "신규 원장/거래처 급증 (New Vendor Spike)", "Medium", "등록된 지 1개월 미만인 거래처로의 고액 송금 신호.", "거래처 실재성 점검(사업자 등록증, 등기부등본 확인)을 수행하세요.");
     p!("LDG-10".to_string(), "Ledger-Only", "벤더 노출도 분석 (Vendor Concentration)", "High", "전체 매입 중 특정 소수 벤더에 대한 의존도 급증.", "독점 공급 계약의 정당성 및 경쟁 입찰 미실시 사유를 확인하세요.");
 
+    let config = crate::config::get_config();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     for (id, cat, name, risk, desc, recom) in scenarios {
         let rules = match cat {
             "Procurement" => json!({
                 "logic": "Check for vendor IP matches, split PO patterns (multiple sums close to threshold), and market price deviations.",
                 "keywords": ["bid", "tender", "rigging", "vendor", "IP", "contract"],
-                "threshold": 5000000,
+                "threshold": config.detection_thresholds.procurement,
                 "auto_suggestion": recom
             }).to_string(),
             "Expense/Travel" | "EX Sector" => json!({
                 "logic": "Detect weekend usage, late night transactions (22:00-05:00), and duplicate merchant receipts within 30 minutes.",
                 "keywords": ["card", "receipt", "meal", "entertainment", "night", "weekend"],
-                "threshold": 100000,
+                "threshold": config.detection_thresholds.expense,
                 "auto_suggestion": recom
             }).to_string(),
             "Ledger-Only" => json!({

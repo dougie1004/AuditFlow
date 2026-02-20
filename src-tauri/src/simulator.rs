@@ -338,7 +338,12 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                         }
 
                         // [DASHBOARD SYNC] Update findings_count and risk_score for the project
-                        let increment = match risk_tag { "Critical" => 10, "High" => 5, _ => 2 };
+                        let config = crate::config::get_config();
+                        let increment = match risk_tag { 
+                            "Critical" => config.simulator_weights.critical_increment, 
+                            "High" => config.simulator_weights.high_increment, 
+                            _ => config.simulator_weights.general_increment 
+                        };
                         let _ = conn.execute(
                             "UPDATE audit_projects SET findings_count = findings_count + 1, risk_score = risk_score + ?1 WHERE id = ?2",
                             params![increment, &project_id]

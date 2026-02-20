@@ -56,18 +56,19 @@ pub fn judge_commercial_risk(db_path: &std::path::PathBuf, entity_id: i64, sever
     // Waste: 0.02% (Normal) to 0.10% (High) of base volume.
     // ------------------------------------------------------------------------
     
+    let config = crate::config::get_config();
     let base_volume = if profit_krw > 0.0 { profit_krw } else { budget_krw };
     let (leak_factor, waste_factor) = match severity.to_uppercase().as_str() {
-        "HIGH" | "CRITICAL" => (0.0005, 0.0010), // 0.05%, 0.10%
-        "MEDIUM" =>            (0.0002, 0.0005), // 0.02%, 0.05%
-        _ =>                   (0.0001, 0.0002), // 0.01%, 0.02%
+        "HIGH" | "CRITICAL" => (config.risk_factors.leakage_high, config.risk_factors.waste_high),
+        "MEDIUM" =>            (config.risk_factors.leakage_medium, config.risk_factors.waste_medium),
+        _ =>                   (config.risk_factors.leakage_medium * 0.5, config.risk_factors.waste_medium * 0.5),
     };
 
     // 1. [LEAKAGE] 실제 누수 (현금화/횡령/오지급 가능성)
     let leakage = base_volume * leak_factor * (lik_score as f64 / 10.0);
 
     // 2. [PENALTY] 세무/규제 (현실적으로 leakage의 20~30% 추징)
-    let penalty = (leakage * 0.3) + if severity == "CRITICAL" { 5_000_000.0 } else { 0.0 };
+    let penalty = (leakage * 0.3) + if severity == "CRITICAL" { config.risk_factors.penalty_base } else { 0.0 };
 
     // 3. [WASTE] 운영상 비효율 (Friction)
     let waste = base_volume * waste_factor * (imp_score as f64 / 10.0);
@@ -109,18 +110,30 @@ fn parse_amount_to_krw(raw_str: &str) -> f64 {
     }
 
     let is_usd = raw_str.contains('$');
-    let mut multiplier = if is_usd { 1300.0 } else { 1.0 };
+    let config = crate::config::get_config();
+    let mut multiplier = if is_usd { config.financials.fx_rate_usd_krw } else { 1.0 };
 
+    if clean.contains('조') {
+        multiplier *= 1_000_000_000_000.0;
+        clean = clean.replace("조", "");
+    }
     if clean.contains('억') {
         multiplier *= 100_000_000.0;
         clean = clean.replace("억", "");
-    } else if clean.contains('m') {
+    }
+    if clean.contains('천') {
+        multiplier *= 1_000.0;
+        clean = clean.replace("천", "");
+    }
+    if clean.contains('m') {
         multiplier *= 1_000_000.0;
         clean = clean.replace("m", "");
-    } else if clean.contains('b') {
+    }
+    if clean.contains('b') {
         multiplier *= 1_000_000_000.0;
         clean = clean.replace("b", "");
-    } else if clean.contains('k') {
+    }
+    if clean.contains('k') {
         multiplier *= 1_000.0;
         clean = clean.replace("k", "");
     }
@@ -129,9 +142,10 @@ fn parse_amount_to_krw(raw_str: &str) -> f64 {
 }
 
 fn get_budget_tier(amount_krw: f64) -> String {
-    if amount_krw > 130_000_000_000.0 { // $100M+
+    let config = crate::config::get_config();
+    if amount_krw > config.financials.materiality_thresholds.enterprise { 
         "Enterprise (Tier 1)".to_string()
-    } else if amount_krw > 13_000_000_000.0 { // $10M+
+    } else if amount_krw > config.financials.materiality_thresholds.growth { 
         "Growth (Tier 2)".to_string()
     } else {
         "Startup (Tier 3)".to_string()

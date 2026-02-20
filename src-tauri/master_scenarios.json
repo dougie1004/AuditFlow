@@ -1,0 +1,58 @@
+[
+    {
+        "id": "PR-01",
+        "category": "Procurement",
+        "name": "담합 의심 (Bid-rigging)",
+        "risk_level": "High",
+        "description": "동일 IP 또는 유사 제안서 패턴을 가진 업체 식별.",
+        "recommendation": ""
+    },
+    {
+        "id": "PR-02",
+        "category": "Procurement",
+        "name": "품의 분할 (Split PO)",
+        "risk_level": "Medium",
+        "description": "결재 한도를 회피하기 위해 단일 계약을 소액 PO로 분할.",
+        "recommendation": ""
+    },
+    {
+        "id": "PR-03",
+        "category": "Procurement",
+        "name": "시장가 격차 (Market Price Gap)",
+        "risk_level": "High",
+        "description": "시장 기준가보다 현저히 높은 가격으로 구매.",
+        "recommendation": ""
+    },
+    {
+        "id": "EX-01",
+        "category": "Expense/Travel",
+        "name": "Spilling Receipt",
+        "risk_level": "High",
+        "description": "Multiple receipts from same merchant in 10 mins.",
+        "recommendation": ""
+    },
+    {
+        "id": "EX-02",
+        "category": "Expense/Travel",
+        "name": "Weekend/Night Usage",
+        "risk_level": "Medium",
+        "description": "Corporate card usage after 11 PM or on Sundays.",
+        "recommendation": ""
+    },
+    {
+        "id": "FF-01",
+        "category": "Financial Integrity",
+        "name": "Rapid Money Cycling (Ping-pong)",
+        "risk_level": "Critical",
+        "description": "Detecting funds exiting the corporate account and returning via related parties within 24 hours.",
+        "recommendation": ""
+    },
+    {
+        "id": "LDG-01",
+        "category": "Ledger-Only",
+        "name": "고액 상위 1% 전표 리스트",
+        "risk_level": "High",
+        "description": "금액 기준 상위 1%에 해당하는 전표 자동 추출.",
+        "recommendation": "해당 전표의 승인 문서 및 계약서를 요청하세요."
+    }
+]
