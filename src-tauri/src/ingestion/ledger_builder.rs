@@ -63,14 +63,14 @@ impl EventBuilder for LedgerBuilder {
                         .replace("\t", "")
                         .to_lowercase();
                     
-                    if h.contains("일자") || h.contains("날짜") || h.contains("date") { date_idx = Some(c_idx); matches += 1; }
-                    else if h.contains("차변") || h.contains("debit") { debit_idx = Some(c_idx); matches += 1; }
-                    else if h.contains("대변") || h.contains("credit") { credit_idx = Some(c_idx); matches += 1; }
-                    else if h.contains("금액") || h.contains("amount") { amount_idx = Some(c_idx); matches += 1; }
+                    if h.contains("일자") || h.contains("날짜") || h.contains("date") || h.contains("승인") { date_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("차변") || h.contains("debit") || h.contains("출금") { debit_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("대변") || h.contains("credit") || h.contains("입금") { credit_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("금액") || h.contains("amount") || h.contains("합계") || h.contains("잔액") || h.contains("가액") { amount_idx = Some(c_idx); matches += 1; }
                     else if (h.contains("계정") && h.contains("명")) || h.contains("accountname") || h.contains("과목") { acc_name_idx = Some(c_idx); matches += 1; }
                     else if (h.contains("계정") && (h.contains("코드") || h.contains("번호"))) || h.contains("accountcode") { acc_code_idx = Some(c_idx); matches += 1; }
-                    else if h.contains("거래처") || h.contains("entity") || h.contains("customer") || h.contains("vendor") { cp_idx = Some(c_idx); matches += 1; }
-                    else if h.contains("적요") || h.contains("내용") || h.contains("desc") || h.contains("rem") { desc_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("거래처") || h.contains("entity") || h.contains("customer") || h.contains("vendor") || h.contains("가맹점") { cp_idx = Some(c_idx); matches += 1; }
+                    else if h.contains("적요") || h.contains("내용") || h.contains("desc") || h.contains("rem") || h.contains("비고") || h.contains("품명") { desc_idx = Some(c_idx); matches += 1; }
                 }
 
                 if matches >= 2 {

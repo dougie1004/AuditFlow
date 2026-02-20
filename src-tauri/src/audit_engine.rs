@@ -431,41 +431,51 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
             println!("Signature: {}", signature);
 
             // Risk Signal Escalation (if meaningful)
-            if last_delta > 0.3 {
-                 // [FIX] Target Specific Year for Financial Accuracy
-                 let target_year = audit_history.last().unwrap().0;
-                 
-                 let acc_total: f64 = conn.query_row(
-                     "SELECT SUM(ABS(net_amount)) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 AND strftime('%Y', event_date) = ?3",
-                     params![new_obj_id, acc, target_year.to_string()],
-                     |r| r.get(0)
-                 ).unwrap_or(0.0);
+                if last_delta > 0.3 {
+                     // [FIX] Target Specific Year for Financial Accuracy
+                     let target_year = audit_history.last().unwrap().0;
+                     let prev_year_data = audit_history.get(audit_history.len() - 2).unwrap();
+                     
+                     // [CFO CALIBRATION V3] Realism First.
+                     // Risk is not 2% of total volume, but a tiny fraction of the ACTUAL SHIFT in balance (delta).
+                     // If payroll increased by 100M, perhaps 0.5% (500k) is "statistically unverified".
+                     
+                     let current_balance: f64 = conn.query_row(
+                         "SELECT SUM(net_amount) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 AND strftime('%Y', event_date) = ?3",
+                         params![new_obj_id, acc, target_year.to_string()],
+                         |r| r.get(0)
+                     ).unwrap_or(0.0);
 
-                 // [FIX] Fetch Account Name for readability
-                 let acc_name: String = conn.query_row(
-                     "SELECT account_name FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 LIMIT 1",
-                     params![new_obj_id, acc],
-                     |r| r.get(0)
-                 ).unwrap_or(acc.to_string());
+                     let previous_balance: f64 = conn.query_row(
+                        "SELECT SUM(net_amount) FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 AND strftime('%Y', event_date) = ?3",
+                        params![new_obj_id, acc, prev_year_data.0.to_string()],
+                        |r| r.get(0)
+                    ).unwrap_or(0.0);
 
-                 // Identify the "Dominant Player" (entity with max share in the latest period)
-                 let dominant_entity: String = conn.query_row(
-                     "SELECT entity_id FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 AND strftime('%Y', event_date) = ?3 GROUP BY entity_id ORDER BY SUM(ABS(net_amount)) DESC LIMIT 1",
-                     params![new_obj_id, acc, target_year.to_string()],
-                     |r| r.get(0)
-                 ).unwrap_or_else(|_| "Unknown Player".to_string());
+                     let absolute_money_delta = (current_balance - previous_balance).abs();
+                     let exposure_amount = absolute_money_delta * 0.005; // 0.5% of the money that actually shifted in balance
+                     
+                     // [FIX] Fetch Account Name for readability
+                     let acc_name: String = conn.query_row(
+                         "SELECT account_name FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 LIMIT 1",
+                         params![new_obj_id, acc],
+                         |r| r.get(0)
+                     ).unwrap_or(acc.to_string());
 
-                 let latest_share = cr1_vec.last().unwrap_or(&0.0) * 100.0;
-                                  // [REALISTIC ADJUSTMENT] Only a fraction of a structural shift is actually "at risk" (Exposure).
-                  // CFOs don't see the whole shift as a loss, but as a "Control Gap". 
-                  // We take 20% of the delta as the 'unexplained/risky' portion.
-                  let exposure_amount = acc_total * last_delta * 0.20; 
+                     // Identify the "Dominant Player" (entity with max share in the latest period)
+                     let dominant_entity: String = conn.query_row(
+                         "SELECT entity_id FROM entity_event WHERE source_object_id = ?1 AND account_code = ?2 AND strftime('%Y', event_date) = ?3 GROUP BY entity_id ORDER BY SUM(ABS(net_amount)) DESC LIMIT 1",
+                         params![new_obj_id, acc, target_year.to_string()],
+                         |r| r.get(0)
+                     ).unwrap_or_else(|_| "Unknown Player".to_string());
 
-                 let observation = format!("[Flux Alert] '{}년' 계정 '{} ({})'에서 상당한 구조적 변화({})가 감지되었습니다. 주요 요인: '{}' (점유율: {:.1}%). 변동 위험 노출: ₩{}", 
-                    target_year, acc_name, acc, signature, dominant_entity, latest_share, num_format::ToFormattedString::to_formatted_string(&(exposure_amount as i64), &num_format::Locale::en));
-                                  // [DYNAMIC SCORING] Calculate score based on delta intensity
-                  let base_score = (last_delta * 1.5).min(0.95).max(0.6);
-                  let final_score = if latest_share > 90.0 { (base_score + 0.1).min(1.0) } else { base_score };
+                     let latest_share = cr1_vec.last().unwrap_or(&0.0) * 100.0;
+                     let observation = format!("[Flux Alert] '{}년' 계정 '{} ({})'에서 상당한 구조적 변화({})가 감지되었습니다. 주요 요인: '{}' (점유율: {:.1}%). 변동 위험 노출: ₩{}", 
+                        target_year, acc_name, acc, signature, dominant_entity, latest_share, num_format::ToFormattedString::to_formatted_string(&(exposure_amount as i64), &num_format::Locale::en));
+                     
+                     // [DYNAMIC SCORING] Calculate score based on delta intensity
+                     let base_score = (last_delta * 1.5).min(0.95).max(0.6);
+                     let final_score = if latest_share > 90.0 { (base_score + 0.1).min(1.0) } else { base_score };
 
                   let sig_id = uuid::Uuid::new_v4().to_string();
                   let metadata = serde_json::json!({ 
@@ -476,7 +486,7 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
                       "share_pct": latest_share,
                       "delta": last_delta,
                       "amount": exposure_amount,
-                      "total_volume": acc_total,
+                      "total_volume": current_balance,
                       "fiscal_year": target_year,
                       "confidence": if last_delta > 0.6 { "High" } else { "Medium" },
                       "detection_method": "FluxV2:SequentialBreak"

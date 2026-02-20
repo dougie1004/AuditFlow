@@ -291,13 +291,34 @@ export default function DataUpload() {
     };
 
     const renderPreview = (file: UploadedFile) => {
+        let tableData = file.preview;
+        if (file.multiSheets && file.multiSheets.length > 0) {
+            const activeSheet = file.multiSheets[file.activeSheetIdx] || file.multiSheets[0];
+            tableData = activeSheet.data;
+        }
+
         if (file.isTable) {
-            // Default to preview, but override if multiSheets exist
-            let tableData = file.preview;
-            if (file.multiSheets && file.multiSheets.length > 0) {
-                const activeSheet = file.multiSheets[file.activeSheetIdx] || file.multiSheets[0];
-                tableData = activeSheet.data;
+            // Find the most likely header row (the one with the most accounting-related keywords)
+            const keywords = ['일자', '날짜', 'date', '금액', '차변', '대변', 'amount', '계정', '과목', '적요', '내용'];
+            let headerRowIdx = 0;
+            let maxMatches = -1;
+
+            // Scan top 10 rows for keywords
+            for (let i = 0; i < Math.min(10, tableData.length); i++) {
+                let matches = 0;
+                tableData[i]?.forEach(cell => {
+                    const c = (cell || "").toLowerCase().replace(/\s/g, "");
+                    if (keywords.some(k => c.includes(k))) matches++;
+                });
+                if (matches > maxMatches && matches > 0) {
+                    maxMatches = matches;
+                    headerRowIdx = i;
+                }
             }
+
+            // Ensure we use the maximum column count found in the preview
+            const maxCols = Math.max(...tableData.map(r => r.length), 1);
+            const displayHeader = tableData[headerRowIdx] || [];
 
             return (
                 <div className="flex flex-col h-full bg-[#080E1A]">
@@ -334,16 +355,16 @@ export default function DataUpload() {
                                     <th className="p-3 w-12 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-b border-white/10 bg-[#0B1221]">
                                         AI
                                     </th>
-                                    {tableData[0]?.map((col, i) => (
+                                    {Array.from({ length: maxCols }).map((_, i) => (
                                         <th key={i} className="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap border-b border-white/10 bg-[#0B1221]">
-                                            {col || `Col ${i + 1}`}
+                                            {displayHeader[i] || `COL ${i + 1}`}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {tableData.slice(1, 150).map((row, ri) => (
-                                    <tr key={ri} className="group hover:bg-blue-500/5 transition-colors">
+                                {tableData.map((row, ri) => (
+                                    <tr key={ri} className={`group hover:bg-blue-500/5 transition-colors ${ri === headerRowIdx ? 'bg-blue-500/10' : ''}`}>
                                         {/* Vector Preview Button */}
                                         <td className="p-2 border-r border-white/5 text-center">
                                             <button
@@ -357,10 +378,10 @@ export default function DataUpload() {
                                                 <Eye size={14} />
                                             </button>
                                         </td>
-                                        {row.map((cell, ci) => (
-                                            <td key={ci} className="p-3 text-xs font-medium text-slate-400 border-r border-white/5 last:border-0 whitespace-nowrap max-w-[400px] truncate" title={cell}>
-                                                <span className={isMasked && (cell.includes('*') || cell.includes('***')) ? "bg-blue-500/10 text-blue-400 font-bold px-1 rounded-sm border border-blue-500/20" : ""}>
-                                                    {cell}
+                                        {Array.from({ length: maxCols }).map((_, ci) => (
+                                            <td key={ci} className="p-3 text-xs font-medium text-slate-400 border-r border-white/5 last:border-0 whitespace-nowrap max-w-[400px] truncate" title={row[ci]}>
+                                                <span className={isMasked && (row[ci]?.includes('*') || row[ci]?.includes('***')) ? "bg-blue-500/10 text-blue-400 font-bold px-1 rounded-sm border border-blue-500/20" : ""}>
+                                                    {row[ci] || ""}
                                                 </span>
                                             </td>
                                         ))}
