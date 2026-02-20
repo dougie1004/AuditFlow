@@ -419,9 +419,9 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
             |row| row.get(0)
         ).unwrap_or(0);
 
-        // [MANIFESTO 4.1-4.3] Weighted Risk Score (IS: 20pt, OV: 5pt)
-        // This is a derived indicator, not a random guess.
-        let r_score = std::cmp::min(100, (h_count * 20) + (f_count as i32 * 5));
+        let config = crate::config::get_config();
+        // [MANIFESTO 4.1-4.3] Weighted Risk Score
+        let r_score = std::cmp::min(100, (h_count * config.risk_factors.score_high_weight) + (f_count as i32 * config.risk_factors.score_general_weight));
 
         conn.execute(
             "UPDATE audit_projects SET findings_count = ?1, risk_score = ?2, status = 'Reporting', progress_pct = 100 WHERE id = ?3 OR title = ?3",
@@ -480,6 +480,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         Ok(path) => path.join("audit_data_v4.db"),
         Err(_) => return Err("Failed to resolve app data directory".to_string()),
     };
+    let config = crate::config::get_config();
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
     let mut filter_base = " WHERE 1=1".to_string();
@@ -621,18 +622,18 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
                 val
             } else {
                 let sev_multiplier = match severity.to_uppercase().as_str() {
-                    "HIGH" | "CRITICAL" => 80_000_000.0,
-                    "MEDIUM" => 30_000_000.0,
-                    "LOW" => 5_000_000.0,
+                    "HIGH" | "CRITICAL" => config.risk_factors.fallback_high,
+                    "MEDIUM" => config.risk_factors.fallback_medium,
+                    "LOW" => config.risk_factors.fallback_medium * 0.2,
                     _ => 0.0
                 };
                 sev_multiplier
             }
         } else {
             let val = match severity.to_uppercase().as_str() {
-                "HIGH" | "CRITICAL" => 100_000_000.0,
-                "MEDIUM" => 40_000_000.0,
-                "LOW" => 10_000_000.0,
+                "HIGH" | "CRITICAL" => config.risk_factors.fallback_high * 1.25,
+                "MEDIUM" => config.risk_factors.fallback_medium * 1.33,
+                "LOW" => config.risk_factors.fallback_medium * 0.33,
                 _ => 0.0
             };
             orphan_exposure += val;
@@ -773,7 +774,8 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
     // This satisfies the "User Reset -> 0" requirement.
     let impact_value = total_exposure as i64;
     
-    let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, (pillar_governance * 10 / 100) + (pillar_process * 5 / 100)) }; 
+    let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, ((pillar_governance * config.risk_factors.score_high_weight as i64) / 100) + ((pillar_process * config.risk_factors.score_general_weight as i64) / 100)) as i32 }; 
+    // Lively and reactive risk score calculation.
 
     // [CONSTITUTIONAL UPGRADE] Replace Simulation with REAL daily counts
     let mut trends = Vec::new();
@@ -1349,7 +1351,9 @@ pub fn get_file_preview(filePath: String, limit: Option<usize>, enableMasking: O
             processed_line = crate::file_utils::safe_truncate(&processed_line, 2048);
 
             if processed_line.contains('\t') { preview.push(processed_line.split('\t').map(|s: &str| s.to_string()).collect::<Vec<String>>()); }
-            else if processed_line.contains(',') && (ext == "csv" || ext == "log") { preview.push(processed_line.split(',').map(|s: &str| s.to_string()).collect::<Vec<String>>()); }
+            else if ext == "csv" || ext == "log" || processed_line.contains(',') { 
+                preview.push(crate::parser::parse_csv_line(&processed_line)); 
+            }
             else { preview.push(vec![processed_line]); }
         }
         Ok(preview)

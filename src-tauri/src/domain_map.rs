@@ -7,7 +7,7 @@ lazy_static! {
     pub static ref ACCOUNTING_TERM_MAP: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         
-        // 금액 관련 용어
+        // 금액 관련 용어 (Amounts)
         m.insert("금액", "amount");
         m.insert("가격", "amount");
         m.insert("단가", "amount");
@@ -15,15 +15,23 @@ lazy_static! {
         m.insert("합계", "amount");
         m.insert("결제금액", "amount");
         m.insert("거래금액", "amount");
+        m.insert("차변", "amount"); // Debit
+        m.insert("대변", "amount"); // Credit
+        m.insert("입금", "amount"); // Deposit
+        m.insert("출금", "amount"); // Withdrawal
+        m.insert("잔액", "amount"); // Balance
         m.insert("amount", "amount");
         m.insert("price", "amount");
         m.insert("total", "amount");
         m.insert("value", "amount");
+        m.insert("debit", "amount");
+        m.insert("credit", "amount");
         
         // 날짜 관련 용어
         m.insert("날짜", "date");
         m.insert("일자", "date");
         m.insert("거래일", "date");
+        m.insert("승인일", "date");
         m.insert("date", "date");
         
         // 적요/내용 관련 용어
@@ -31,6 +39,7 @@ lazy_static! {
         m.insert("내용", "description");
         m.insert("거래내역", "description");
         m.insert("품명", "description");
+        m.insert("비고", "description");
         m.insert("description", "description");
         m.insert("memo", "description");
         

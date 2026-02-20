@@ -50,8 +50,13 @@ pub fn check_system_integrity(app_handle: AppHandle) -> Result<Value, String> {
     // In a production environment, this would run audit_constitution.js logic via a build script
     // or internal memory scan. Here we report the static seal of v1.0.
     
-    let is_sealed = true; // Hardcoded for v1.0 sealing
-    let integrity_hash = "AF10-LOCKED-CONST-2026";
+    let mut config_path = std::env::current_dir().map_err(|e| e.to_string())?.join("app_config.json");
+    if !config_path.exists() {
+        config_path = std::env::current_dir().map_err(|e| e.to_string())?.join("src-tauri").join("app_config.json");
+    }
+    
+    let is_sealed = config_path.exists();
+    let integrity_hash = if is_sealed { "AF10-LOCKED-CONST-2026" } else { "AF10-UNSEALED-DEGRADED" };
     
     Ok(json!({ 
         "status": "Secure", 
