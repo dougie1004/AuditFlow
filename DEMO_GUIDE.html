@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuditFlow Demo Execution Guide</title>
+    <style>
+        :root {
+            --bg: #0B1221;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            color: var(--accent);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin: 0;
+            background: linear-gradient(to right, #fff, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .step-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .step-num {
+            font-size: 64px;
+            font-weight: 900;
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            opacity: 0.1;
+            color: var(--accent);
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #fff;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        p {
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        .action-highlight {
+            background: rgba(59, 130, 246, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            font-size: 14px;
+            color: var(--text-dim);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 30px;
+        }
+
+        .glow {
+            position: fixed;
+            top: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(80px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="glow"></div>
+    <div class="container">
+        <header>
+            <div class="badge">VC / Stakeholder Special Edition</div>
+            <h1>AuditFlow Demo Guide</h1>
+            <p>인공지능 기반의 차세대 디지털 감사 인프라, 오딧플로우를 가장 효과적으로 경험하는 방법</p>
+        </header>
+
+        <div class="step-card">
+            <div class="step-num">01</div>
+            <h2>⚡ 원클릭 유니버스 시뮬레이션</h2>
+            <p>대시보드 우측 상단의 <span class="action-highlight">[Simulate]</span> 버튼을 클릭하세요. 시스템이 수천 건의 전표와 수백 건의 리스크 시그널을 즉시
+                생성하여 전체 감사 유니버스를 활성화합니다.</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num 02">02</div>
+            <h2>📊 리스크 히트맵 분석</h2>
+            <p>생성된 데이터는 실시간으로 <span class="action-highlight">Heatmap</span>에 반영됩니다. 가장 붉고 큰 영역은 현재 리스크가 가장 집중된 부서를
+                의미합니다. 마우스를 올려 상세 수치(Risk Score)를 확인해 보세요.</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num 03">03</div>
+            <h2>🧠 AI 증거 상관 매핑 (Relation Graph)</h2>
+            <p>하단 중앙의 <span class="action-highlight">Relation Graph</span>를 주목하세요. 파편화된 이메일, 거래 내역, 시스템 로그를 AI가 어떻게 하나의
+                '부정 시나리오'로 연결하는지 확인할 수 있습니다.</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-num 04">04</div>
+            <h2>⚖️ 재무 익스포저 평가 (AI Judge)</h2>
+            <p>개별 프로젝트로 진입하여 <span class="action-highlight">Financial Exposure</span> 카드를 확인하세요. 단순 실수가 아닌, 기업 가치에 미치는
+                실제 금전적 손실(Leakage, Waste)을 AI 판사가 산출합니다.</p>
+        </div>
+
+        <div class="footer">
+            Built by Antigravity AI for AuditFlow. All Rights Reserved.
+        </div>
+    </div>
+</body>
+
+</html>
