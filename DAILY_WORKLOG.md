@@ -64,5 +64,17 @@
 - **Simulation Workflow**: Formally documented the "One-Click Simulation" scenario to ensure a "WOW" experience during demonstrations.
 - **Constitutional Sealing**: Updated the Constitution to prevent future regressions in the simulation engine.
 
+## 2026-02-23
+### 🚀 Completed: Dashboard UI Resilience & AI Engine Refinement
+
+#### 1. Dashboard UI Resilience
+- **Flux Radar Simplification**: Refactored the `Dashboard.tsx` "Temporal Flux Radar" to display only the top 3 items based on Estimated Impact, eliminating disruptive vertical scrolling and improving at-a-glance readability.
+- **Routing Fix**: Corrected the click handler on Flux cards to navigate directly to the detailed `/flux-analysis` view instead of an empty workspace metric page.
+- **Removed Artificial Latency**: Removed a hardcoded 1.6-second `setTimeout` loading delay in the dashboard initialization sequence, providing near-instant data visualization upon mounting or returning to the dashboard.
+
+#### 2. CFO-Centric AI Engine Calibration (False Positive Reduction)
+- **Account Exclusion Logic**: Updated `audit_engine.rs` structural analysis (CR1/HHI calculation loops) to strictly ignore internal/non-counterparty accounts that generate meaningless "Unknown Player" dominance alerts.
+- **Refined Chart of Accounts**: Excluded Salary/Payroll (50300, 50400, 80200), Taxes & Dues (51700, 81700), Depreciation (51800, 81800), and specific internal Fees (83100) from temporal flux evaluation, resulting in cleaner, highly actionable anomaly detection.
+
 ---
 *Next Steps: Finalize production validation, perform stress tests on the new configuration loader, and enhance regional localized reporting.*

@@ -322,6 +322,15 @@ pub fn analyze_ingested_object(app_handle: AppHandle, new_obj_id: &str, project_
         if !is_analytically_significant(&acc) {
             continue;
         }
+
+        // [CFO Calibration] Skip Payroll, Severance, Taxes, and Depreciation
+        // Concentration (CR1/HHI) analysis on these internal allocations is meaningless
+        // and generates false positive "Emerging Dominance / Unknown Player" alerts.
+        if acc.starts_with("503") || acc.starts_with("504") || acc.starts_with("517") || 
+           acc.starts_with("518") || acc.starts_with("802") || acc.starts_with("803") || 
+           acc.starts_with("817") || acc.starts_with("818") || acc.starts_with("831") {
+            continue;
+        }
         // 1. Calculate Anomaly Score (Average of rule-based signals)
         let (avg_anomaly, _anomaly_count): (f64, i64) = conn.query_row(
             "SELECT COALESCE(AVG(score), 0.0), COUNT(*) FROM risk_signal WHERE object_id = ?1 AND (metadata LIKE ?2 OR description LIKE ?2)",

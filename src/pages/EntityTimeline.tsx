@@ -90,60 +90,64 @@ export default function EntityTimeline() {
                     </div>
                 </div>
 
-                {/* Materiality Dashboard (The Dual-Track View) */}
+                {/* Materiality Dashboard (The Triple-Loss View) */}
                 {verdict && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="bg-gradient-to-br from-blue-600/20 to-transparent backdrop-blur-2xl rounded-3xl border border-blue-500/20 p-8 space-y-4 col-span-1 lg:col-span-2">
                             <div className="flex justify-between items-start">
                                 <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                    <ShieldAlert className="text-blue-500" size={24} /> Dual-Track Materiality Analysis
+                                    <ShieldAlert className="text-blue-500" size={24} /> CFO Triple-Loss Analysis
                                 </h3>
-                                <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                    {verdict.risk_level} Impact
+                                <span className={`${verdict.risk_level === 'CRITICAL' ? 'bg-red-500' : 'bg-blue-500'} text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest`}>
+                                    {verdict.risk_level} Risk
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-4">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <span>Control Impact (Process)</span>
-                                        <span className="text-blue-500">{verdict.control_leakage_ratio.toFixed(1)}%</span>
+                                    <div className="flex flex-col text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <span>Direct Leakage</span>
+                                        <span className="text-red-400 text-lg">{formatCurrency(verdict.leakage_impact)}</span>
                                     </div>
-                                    <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full bg-blue-500" style={{ width: `${verdict.control_leakage_ratio}%` }} />
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 leading-tight">이 부서의 전체 집행 프로세스 중 신뢰할 수 없는 영역의 비율입니다.</p>
+                                    <p className="text-[11px] text-slate-500 leading-tight">직접적인 현금 유출, 횡령 및 오지급 가능성.</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <span>Financial Materiality (Profit)</span>
-                                        <span className="text-emerald-500">{verdict.materiality_impact_ratio.toFixed(1)}%</span>
+                                    <div className="flex flex-col text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <span>Penalty Risk</span>
+                                        <span className="text-orange-400 text-lg">{formatCurrency(verdict.penalty_risk)}</span>
                                     </div>
-                                    <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-500" style={{ width: `${verdict.materiality_impact_ratio}%` }} />
+                                    <p className="text-[11px] text-slate-500 leading-tight">규제 위반에 따른 추징금 및 과태료 위험.</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex flex-col text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <span>Operational Waste</span>
+                                        <span className="text-yellow-400 text-lg">{formatCurrency(verdict.operational_waste)}</span>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 leading-tight">이 리스크가 실제 영업이익에 미치는 재무적 타격의 크기입니다.</p>
+                                    <p className="text-[11px] text-slate-500 leading-tight">비효율로 인한 운영 손실 및 기회 비용.</p>
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-white/5 flex items-center gap-3">
-                                <Info size={16} className="text-slate-500" />
-                                <p className="text-xs font-medium text-slate-400">
-                                    <strong>Audit Principle:</strong> {verdict.formula_used} ({verdict.policy_version})
-                                </p>
+                            <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
+                                <div className="flex items-center gap-3">
+                                    <Info size={16} className="text-slate-500 shrink-0" />
+                                    <p className="text-xs font-medium text-slate-400">
+                                        <strong>Formula Used:</strong> {verdict.formula_used}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                                    <p className="text-xs text-indigo-300 font-medium leading-relaxed">
+                                        "{verdict.cfo_commentary}"
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
                         <div className="bg-white/5 rounded-3xl border border-white/10 p-8 space-y-6">
-                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Exposure Assessment</h4>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-slate-900/50 rounded-2xl border border-white/5">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Financial Exposure</p>
-                                    <p className="text-2xl font-black text-white">{formatCurrency(verdict.calculated_exposure)}</p>
-                                </div>
-                                <div className="p-4 bg-slate-900/50 rounded-2xl border border-white/5">
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Budget Tier</p>
-                                    <p className="text-sm font-black text-blue-400">{verdict.budget_tier}</p>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Total Exposure</h4>
+                            <div className="space-y-4 flex flex-col h-full justify-center pb-8">
+                                <div className="p-6 bg-slate-900/50 rounded-2xl border border-white/5 text-center">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Calculated Total</p>
+                                    <p className="text-3xl font-black text-white">{formatCurrency(verdict.calculated_exposure)}</p>
                                 </div>
                             </div>
                         </div>

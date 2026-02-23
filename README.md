@@ -1,38 +1,38 @@
-# AuditFlow: Automated Compliance & Audit Decision Engine
+# AuditFlow: 프로젝트 자동 컴파일 및 감사 결정 엔진
 
 > **"회계 데이터를 입력값으로 사용하는 독립적인 규정 준수 및 감사 결정 엔진"**
 >
-> *"This is NOT an accounting system. This is an AUDIT system."*
+> *"이는 회계 시스템이 아닙니다. 감사 시스템입니다."*
 
-AuditFlow is a **Rule-First, AI-Augmented Audit Engine** designed to detect compliance violations with legal-grade evidence chains.
+AuditFlow는 법적 수준의 증거 체인을 통해 규정 위반을 탐지하도록 설계된 **규칙 우선(Rule-First), AI 보조(AI-Augmented) 감사 엔진**입니다.
 
-## 🏛️ Core Philosophy (The Iron Rules)
+## 🏛️ 핵심 철학 (철의 규칙)
 
-1.  **Rule is the Judge (Authority)**
-    *   Violation detection is **Deterministic** based on Hard Rules (Rust Engine).
-    *   AI never decides "Guilty/Not Guilty".
-2.  **AI is the Witness (Commentary)**
-    *   AI explains the *context* of established violations.
-    *   AI outputs are strictly limited to "Narrative" and cannot override risk flags.
-3.  **Evidence is Immutable**
-    *   Once a finding is created, its evidence chain is sealed.
+1.  **규칙이 판사다 (권위)**
+    *   위반 탐지는 하드 규칙(Rust 엔진)에 따라 **결정론적**으로 이루어집니다.
+    *   AI는 결코 "유죄/무죄"를 결정하지 않습니다.
+2.  **AI는 목격자다 (해설)**
+    *   AI는 확립된 위반 사항의 *맥락*을 설명합니다.
+    *   AI 출력은 엄격하게 "내러티브"로 제한되며 리스크 플래그를 재정의할 수 없습니다.
+3.  **증거는 불변이다**
+    *   감사 결과(Finding)가 생성되면 그 증거 체인은 봉인됩니다.
 
-## 🏗️ Architecture: Compliance DD Flow
+## 🏗️ 아키텍처: Compliance DD Flow
 
-Data → **[Rule Engine]** (Hard Rules) → **[ComplianceFinding]** → **[AI Witness]** (Context) → **[Immutable Record]**
+데이터 → **[규칙 엔진]** (하드 규칙) → **[규정 준수 결과]** → **[AI 목격자]** (맥락) → **[불변 기록]**
 
-- `src-tauri/src/compliance_dd_flow.rs`: The Supreme Authority Module.
-- `src-tauri/src/audit_engine.rs`: Legacy/Utility functions.
+- `src-tauri/src/compliance_dd_flow.rs`: 최고 권위 모듈.
+- `src-tauri/src/audit_engine.rs`: 레거시/유틸리티 함수.
 
-## 🚀 Key Features
+## 🚀 주요 기능
 
-*   **Deterministic Violation Detection**: Split payments, restricted vendors, time/date anomalies.
-*   **Legal-Grade Evidence Chain**: JSON-structured evidence linked to specific regulations.
-*   **AI Commentary with Safety Seals**: Automated generation of audit narratives with mandatory legal disclaimers.
+*   **결정론적 위반 탐지**: 분할 결제, 제한된 거래처, 시간/날짜 이상 징후.
+*   **법적 수준의 증거 체인**: 특정 규정에 연결된 JSON 구조의 증거.
+*   **보안 봉인이 포함된 AI 해설**: 필수 법적 고지 사항이 포함된 감사 내러티브 자동 생성.
 
-## 🛠️ Stack
+## 🛠️ 기술 스택
 
-*   **Core**: Rust (Tauri)
-*   **DB**: SQLite (Local, Secure)
+*   **핵심**: Rust (Tauri)
+*   **DB**: SQLite (로컬, 보안 보장)
 *   **UI**: React + Tailwind
-*   **AI**: Google Gemini Flash (Strictly controlled scope)
+*   **AI**: Google Gemini Flash (엄격하게 제어된 범위)

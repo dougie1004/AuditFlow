@@ -211,18 +211,15 @@ const Dashboard = () => {
         let isViewMounted = true;
 
         const initDashboard = async () => {
-            if (!isViewMounted) return;
-            setLoading(true);
+            // First time load gets the spinner, subsequent silent refresh
+            if (!summary) setLoading(true);
             setIntegrityStatus('checking');
 
             await fetchData();
 
             if (isViewMounted) {
                 setLoading(false);
-                // [INTEGRITY SIMULATION] Multi-stage assurance check
-                setTimeout(() => {
-                    if (isViewMounted) setIntegrityStatus('passed');
-                }, 1600);
+                setIntegrityStatus('passed');
             }
         };
 
@@ -337,7 +334,7 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         {
-                            label: "Total Audit Evidence",
+                            label: "총 감사 증거 (Total Evidence)",
                             value: summary?.total_findings || 0,
                             sub: "수집된 감사 증거",
                             trend: "up",
@@ -348,7 +345,7 @@ const Dashboard = () => {
                             formula: "시스템이 수집하고 분석하여 감사 조서에 기록한 총 증거 개수"
                         },
                         {
-                            label: "AI 분석 이슈",
+                            label: "AI 분석 이슈 (AI Issues)",
                             value: summary?.critical_risks || 0,
                             sub: "AI 자동 추출 이슈",
                             trend: "up",
@@ -359,7 +356,7 @@ const Dashboard = () => {
                             formula: "증거 간의 상관 관계를 AI가 추론하여 제안한 감사 착안 사항"
                         },
                         {
-                            label: "Confidence Score",
+                            label: "신뢰도 점수 (Confidence)",
                             value: summary?.critical_coverage || "0%",
                             sub: "감사 결론 신뢰도",
                             trend: "stable",
@@ -370,7 +367,7 @@ const Dashboard = () => {
                             formula: "전체 감사 범위 중 시스템이 인지하고 기록한 데이터의 완결성 지표"
                         },
                         {
-                            label: "Pending Reviews",
+                            label: "검토 대기 (Pending)",
                             value: summary?.open_findings || 0,
                             sub: "검토 대기 항목",
                             trend: "down",
@@ -378,7 +375,7 @@ const Dashboard = () => {
                             color: "text-amber-400",
                             areaColor: "#f59e0b",
                             path: "/workspace",
-                            formula: "새로운 입증 자료 발생으로 인해 Auditor의 재검토를 대기 중인 항목"
+                            formula: "새로운 입증 자료 발생으로 인해 감사자의 재검토를 대기 중인 항목"
                         },
                     ].map((m, i) => (
                         <div
@@ -942,33 +939,36 @@ const Dashboard = () => {
                                 </p>
                                 {summary?.flux_signals && summary.flux_signals.length > 0 ? (
                                     <div className="space-y-4">
-                                        {(summary.flux_signals || []).map((sig: any) => (
-                                            <div
-                                                key={sig.id}
-                                                onClick={() => navigate(`/audit-workspace/${activeProject}`, { state: { metric: 'Pending Reviews' } })}
-                                                className="bg-slate-800/40 border border-white/5 p-5 rounded-[32px] hover:border-emerald-500/30 transition-all group/card cursor-pointer active:scale-95"
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded">
-                                                        {sig.account || "Structural Break"}
-                                                    </span>
-                                                    <span className="text-[10px] font-black text-rose-500 uppercase">
-                                                        Risk {(sig.score * 100).toFixed(0)}%
-                                                    </span>
+                                        {(summary.flux_signals || [])
+                                            .sort((a: any, b: any) => (b.amount || 0) - (a.amount || 0))
+                                            .slice(0, 3)
+                                            .map((sig: any) => (
+                                                <div
+                                                    key={sig.id}
+                                                    onClick={() => navigate('/flux-analysis', { state: { projectFilter: activeProject } })}
+                                                    className="bg-slate-800/40 border border-white/5 p-5 rounded-[32px] hover:border-emerald-500/30 transition-all group/card cursor-pointer active:scale-95"
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded">
+                                                            {sig.account || "Structural Break"}
+                                                        </span>
+                                                        <span className="text-[10px] font-black text-rose-500 uppercase">
+                                                            Risk {(sig.score * 100).toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs font-semibold text-slate-300 leading-relaxed mb-3">
+                                                        {sig.description}
+                                                    </p>
+                                                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight italic">Estimated Impact</span>
+                                                        <span className="text-sm font-black text-white italic tracking-tighter">
+                                                            {sig.amount > 0
+                                                                ? `₩${(sig.amount / 100000000).toFixed(1)}억`
+                                                                : (sig.score > 0.8 ? "분석 필요 (High)" : "산정 중...")}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs font-semibold text-slate-300 leading-relaxed mb-3">
-                                                    {sig.description}
-                                                </p>
-                                                <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight italic">Estimated Impact</span>
-                                                    <span className="text-sm font-black text-white italic tracking-tighter">
-                                                        {sig.amount > 0
-                                                            ? `₩${(sig.amount / 100000000).toFixed(1)}억`
-                                                            : (sig.score > 0.8 ? "분석 필요 (High)" : "산정 중...")}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 ) : (
                                     <div className="py-12 flex flex-col items-center justify-center opacity-30">

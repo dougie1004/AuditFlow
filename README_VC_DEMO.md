@@ -1,37 +1,37 @@
-# 🚀 AuditFlow: AI-Powered Digital Audit Infrastructure Demo Guide
+# 🚀 AuditFlow: AI 기반 디지털 감사 인프라 데모 가이드
 
-Welcome to the **AuditFlow** demo. This application demonstrates the future of continuous audit and financial integrity monitoring using Agentic AI.
+**AuditFlow** 데모에 오신 것을 환영합니다. 이 애플리케이션은 Agentic AI를 활용한 상시 감사 및 재무 무결성 모니터링의 미래를 보여줍니다.
 
-## 🛠️ Step-by-Step Demo Scenario
+## 🛠️ 단계별 데모 시나리오
 
-Follow these steps to experience the full power of the platform:
+플랫폼의 강력한 기능을 경험하려면 다음 단계를 따르세요:
 
-### 1. One-Click Universe Simulation
-*   **Action**: Click the **[⚡ Simulate]** button in the top-right header of the Dashboard.
-*   **Result**: The system will instantly generate 20+ "Audit Entities" (Procurement, HR, Finance, etc.) and simulate thousands of transactions and risk signals for the current year.
-*   **Key Takeaway**: Observe how the **Heatmap** populates in real-time. Larger and redder blocks represent departments with higher risk concentrations.
+### 1. 원클릭 유니버스 시뮬레이션
+*   **작업**: 대시보드 우측 상단 헤더에 있는 **[⚡ Simulate]** 버튼을 클릭합니다.
+*   **결과**: 시스템이 즉시 20개 이상의 "감사 엔티티"(구매, 인사, 재무 등)를 생성하고 올해의 수천 건의 거래 및 리스크 시그널을 시뮬레이션합니다.
+*   **핵심 포인트**: **히트맵(Heatmap)**이 실시간으로 채워지는 것을 확인하세요. 크기가 크고 붉은 블록은 리스크 집중도가 높은 부서를 나타냅니다.
 
-### 2. Strategic Risk Intelligence (Heatmap)
-*   **Action**: Hover over the red blocks in the **Audit Finding Heatmap**.
-*   **Insight**: You can see the "Weighted Risk Score" and the specific number of signals detected. 
-*   **Deep Dive**: Click on any block to enter that specific department's **Audit Workspace**.
+### 2. 전략적 리스크 인텔리전스 (히트맵)
+*   **작업**: **Audit Finding Heatmap**에서 붉은 블록 위에 마우스를 올립니다.
+*   **인사이트**: "가중 리스크 점수(Weighted Risk Score)"와 감지된 구체적인 시그널 수를 확인할 수 있습니다.
+*   **상세 분석**: 블록을 클릭하여 해당 부서의 **감사 워크스페이스(Audit Workspace)**로 진입합니다.
 
-### 3. AI Evidence Correlation (Relation Graph)
-*   **Action**: Look at the **Relation Graph** in the bottom center.
-*   **Insight**: This shows how the AI links disjointed data (e.g., an unauthorized email with a round-amount bank transfer).
-*   **Key Takeaway**: This solves the "Fragmented Data" problem in traditional auditing.
+### 3. AI 증거 상관관계 매핑 (관계 그래프)
+*   **작업**: 하단 중앙의 **관계 그래프(Relation Graph)**를 확인합니다.
+*   **인사이트**: AI가 서로 떨어진 데이터(예: 승인되지 않은 이메일과 라운드 금액의 은행 송금)를 어떻게 연결하는지 보여줍니다.
+*   **핵심 포인트**: 이는 기존 감사의 "파편화된 데이터" 문제를 해결합니다.
 
-### 4. The "AI Judge" & Commercial Exposure
-*   **Action**: Go to a "Critical" project and look for the **Financial Exposure Analysis** card.
-*   **Insight**: AuditFlow doesn't just find errors; it calculates **Commercial Risk (Leakage, Waste, Penalty)** in KRW/USD.
-*   **Key Takeaway**: This translates technical audit findings into CFO-level business impact.
-
----
-
-## 🔒 Security & Performance Features
-*   **Zero-Hardcoding Arch**: All financial thresholds and AI models are controlled via `app_config.json`.
-*   **Privacy-First AI**: All sensitive data is vectorized and handled through secure channels.
-*   **Tauri Framework**: Native performance with the security of a desktop sandbox.
+### 4. "AI 판사" 및 상업적 익스포저
+*   **작업**: "Critical" 프로젝트로 이동하여 **재무 익스포저 분석(Financial Exposure Analysis)** 카드를 찾습니다.
+*   **인사이트**: AuditFlow는 단순히 오류를 찾는 데 그치지 않고, 원화/달러 기준의 **상업적 리스크(누출, 낭비, 과태료)**를 계산합니다.
+*   **핵심 포인트**: 이는 기술적인 감사 결과를 CFO 수준의 비즈니스 영향도로 변환합니다.
 
 ---
-**AuditFlow** - *Building the Digital Truth for the AI Era.*
+
+## 🔒 보안 및 성능 기능
+*   **제로 하드코딩 아키텍처**: 모든 재무 임계값과 AI 모델은 `app_config.json`을 통해 제어됩니다.
+*   **프라이버시 우선 AI**: 모든 민감 데이터는 벡터화되어 보안 채널을 통해 처리됩니다.
+*   **Tauri 프레임워크**: 데스크톱 샌드박스의 보안과 함께 네이티브 성능을 제공합니다.
+
+---
+**AuditFlow** - *AI 시대를 위한 디지털 진실 구축.*
