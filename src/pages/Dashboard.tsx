@@ -10,6 +10,35 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
 
+function getRiskStyle(signals: number) {
+    if (signals >= 80) {
+        return {
+            bg: 'bg-red-600',
+            border: 'border-red-400',
+            glow: 'shadow-[0_0_12px_rgba(255,77,79,0.6)]'
+        };
+    }
+    if (signals >= 60) {
+        return {
+            bg: 'bg-red-500',
+            border: 'border-red-300',
+            glow: ''
+        };
+    }
+    if (signals >= 40) {
+        return {
+            bg: 'bg-orange-500',
+            border: 'border-orange-300',
+            glow: ''
+        };
+    }
+    return {
+        bg: 'bg-slate-700',
+        border: 'border-slate-500',
+        glow: ''
+    };
+}
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardSummary, SystemEvent, AuditProject, AuditIssue } from '../types';
 
@@ -190,6 +219,7 @@ const Dashboard = () => {
                     name: String(p.title || "Unknown Department"),
                     size: score < 5 ? 50 : score * 10 + 20,
                     findingsCount: p.findings_count || 0,
+                    signals: p.findings_count || 0,
                     riskScore: score,
                     riskLevel: stateLabel,
                     fill: getRiskColor(score),
@@ -501,7 +531,7 @@ const Dashboard = () => {
                     {/* Zone B: 부서별 리스크 현황 (Heatmap) */}
                     <div className="col-span-12 lg:col-span-8 space-y-8">
                         {/* Zone B: Portfolio Risk Heatmap */}
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-6 relative overflow-hidden">
+                        <div className="bg-slate-900 p-6 rounded-2xl space-y-6 relative overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <div className="space-y-1">
                                     <h3 className="text-xl font-black text-white tracking-tight uppercase">Audit Finding Heatmap</h3>
@@ -509,131 +539,62 @@ const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="h-[400px] w-full rounded-3xl overflow-hidden border border-white/5 bg-gradient-to-br from-slate-900/60 to-slate-800/40">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <Treemap
-                                        data={universe || []}
-                                        dataKey="size"
-                                        aspectRatio={4 / 3}
-                                        stroke="#020617"
-                                        fill="#1e293b"
-                                        isAnimationActive={false}
-                                        animationDuration={0}
-                                        content={((props: any) => {
-                                            const { x, y, width, height, name, fill, findingsCount, riskScore, riskLevel, index } = props;
-                                            if (width < 50 || height < 30) return <></>;
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {(universe || []).map((item, idx) => {
+                                    const risk = getRiskStyle(item.signals);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={`
+                                                rounded-xl p-4
+                                                border
+                                                transition-all duration-300
+                                                cursor-pointer
+                                                group
+                                                relative
+                                                overflow-hidden
+                                                hover:scale-[1.02]
+                                                hover:brightness-110
+                                                ${risk.bg}
+                                                ${risk.border}
+                                                ${risk.glow}
+                                            `}
+                                            onClick={() => navigate('/workspace', { state: { projectFilter: projects.find(p => p.title === item.name)?.id } })}
+                                        >
+                                            {/* card content */}
+                                            <div className="relative z-10 flex flex-col h-full justify-between min-h-[100px]">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-white font-black text-base tracking-tighter leading-tight drop-shadow-md [text-shadow:none]">
+                                                            {item.name}
+                                                        </h4>
+                                                        <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest">
+                                                            {item.riskLevel}
+                                                        </p>
+                                                    </div>
+                                                    <Activity size={24} className="text-white opacity-40 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500" />
+                                                </div>
 
-                                            // [RESILIENCE] Handle missing name
-                                            const safeName = (name || "Unknown").toString();
-                                            // [CRITICAL FIX] SVG IDs cannot contain spaces. Using standard regex to sanitize.
-                                            const safeId = `grad-${safeName.replace(/[^a-zA-Z0-9]/g, '')}-${index}`;
-
-                                            return (
-                                                <g onClick={() => navigate('/workspace', { state: { projectFilter: projects.find(p => p.title === name)?.id } })} style={{ cursor: 'pointer' }}>
-                                                    <defs>
-                                                        <linearGradient id={safeId} x1="0%" y1="0%" x2="100%" y2="100%">
-                                                            <stop offset="0%" stopColor={fill} stopOpacity="0.9" />
-                                                            <stop offset="100%" stopColor={fill} stopOpacity="0.6" />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <rect
-                                                        x={x}
-                                                        y={y}
-                                                        width={width}
-                                                        height={height}
-                                                        fill={`url(#${safeId})`}
-                                                        stroke="#0f172a"
-                                                        strokeWidth={2}
-                                                        rx={12}
-                                                    />
-                                                    {width > 80 && height > 50 && (
-                                                        <>
-                                                            <text
-                                                                x={x + 12}
-                                                                y={y + 24}
-                                                                textAnchor="start"
-                                                                fill="white"
-                                                                fontSize="10"
-                                                                fontWeight="900"
-                                                                className="uppercase tracking-widest opacity-50"
-                                                                style={{ pointerEvents: 'none' }}
-                                                            >
-                                                                {findingsCount > 0 ? `${findingsCount} SIGNALS` : 'BASELINE'}
-                                                            </text>
-                                                            <text
-                                                                x={x + width / 2}
-                                                                y={y + height / 2 + 4}
-                                                                textAnchor="middle"
-                                                                fill="white"
-                                                                fontSize={width < 150 ? "11" : "14"}
-                                                                fontWeight="900"
-                                                                className="uppercase tracking-tighter"
-                                                                style={{
-                                                                    pointerEvents: 'none',
-                                                                    textShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                                                                }}
-                                                            >
-                                                                {(() => {
-                                                                    // [UX] Clean up display name (Remove FY prefix for cleaner view)
-                                                                    let cleanName = safeName.replace(/^FY\d{4}\s+/, '').replace(/^PRJ-\d{4}-/, '');
-                                                                    const maxLength = width < 150 ? 10 : 20;
-                                                                    return cleanName.length > maxLength ? cleanName.substring(0, maxLength) + '..' : cleanName;
-                                                                })()}
-                                                            </text>
-                                                        </>
-                                                    )}
-                                                </g>
-                                            );
-                                        }) as any}
-                                    >
-                                        <RechartsTooltip
-                                            isAnimationActive={false}
-                                            cursor={false}
-                                            content={({ active, payload }) => {
-                                                if (active && payload && payload.length) {
-                                                    const data = payload[0].payload;
-                                                    return (
-                                                        <div className="bg-slate-900 border-2 border-slate-700/50 p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: data.fill }} />
-                                                                <p className="text-xs font-black text-white uppercase tracking-widest">{data.name}</p>
-                                                            </div>
-
-                                                            <div className="space-y-1">
-                                                                <p className="text-[10px] font-bold text-slate-400">STATE: <span style={{ color: data.fill }}>{data.riskLevel}</span></p>
-                                                                <p className="text-[10px] font-bold text-slate-500">
-                                                                    {data.riskLevel === 'Baseline'
-                                                                        ? "No significant anomalies detected."
-                                                                        : `${data.findingsCount} signals require verification.`}
-                                                                </p>
-                                                            </div>
-
-                                                            <div className="mt-3 pt-2 border-t border-white/10 flex flex-col gap-2">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); navigate('/workspace', { state: { projectFilter: projects.find(p => p.title === data.name)?.id } }); }}
-                                                                    className="flex items-center justify-between text-[9px] text-blue-400 font-black uppercase hover:text-white"
-                                                                >
-                                                                    <span>Go to Workspace</span>
-                                                                    <ArrowUpRight size={10} />
-                                                                </button>
-                                                                {data.entityId && (
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); navigate(`/entity/${data.entityId}/timeline`); }}
-                                                                        className="flex items-center justify-between text-[9px] text-emerald-400 font-black uppercase hover:text-white"
-                                                                    >
-                                                                        <span>View History Timeline</span>
-                                                                        <History size={10} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
+                                                <div className="mt-4 flex items-end justify-between">
+                                                    <div>
+                                                        <div className="text-white text-2xl font-black tracking-tighter leading-none [text-shadow:none]">
+                                                            {item.signals}
                                                         </div>
-                                                    );
-                                                }
-                                                return null;
-                                            }}
-                                        />
-                                    </Treemap>
-                                </ResponsiveContainer>
+                                                        <div className="text-white/80 text-xs tracking-wide [text-shadow:none]">
+                                                            SIGNALS
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white/20 backdrop-blur-md rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <ArrowUpRight size={16} className="text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* subtle gradient overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 

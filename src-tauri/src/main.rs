@@ -1,4 +1,4 @@
-﻿#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
 
@@ -7,6 +7,7 @@ mod database;
 mod file_utils;
 mod ai;
 mod commands;
+mod commands_append;
 mod audit_engine;
 mod file_loader;
 mod parser;
@@ -181,7 +182,11 @@ fn main() {
             commands::set_gemini_api_key,
             commands::get_gemini_api_key,
             commands::run_flux_scan,
-            commands::get_multi_year_trial_balance
+            commands::get_multi_year_trial_balance,
+            commands_append::promote_risk_to_review,
+            commands_append::create_clarification_request,
+            commands_append::get_clarifications_by_issue,
+            commands_append::submit_clarification_answer
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use rusqlite::{params, Connection};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::file_loader::load_file_rows;
 

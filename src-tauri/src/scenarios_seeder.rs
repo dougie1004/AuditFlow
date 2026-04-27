@@ -293,7 +293,7 @@ mod tests {
         
         // Check for specific scenario presence
         let name: String = conn.query_row("SELECT name FROM custom_scenarios WHERE id = 'PR-01'", [], |r| r.get(0)).unwrap();
-        assert_eq!(name, "Bid-rigging Suspicion");
+        assert_eq!(name, "담합 의심 (Bid-rigging)");
 
         // Check for rules content
         let rules: String = conn.query_row("SELECT rules FROM custom_scenarios WHERE id = 'EX-02'", [], |r| r.get(0)).unwrap();

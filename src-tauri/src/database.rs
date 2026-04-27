@@ -552,6 +552,23 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_correlation_signal_object ON correlation_signal(object_id)", params![]);
+    
+    // [AuditFlow V3] Clarification Loop (Auditor-Auditee Communication)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS clarification_request (
+            id TEXT PRIMARY KEY,
+            issue_id INTEGER NOT NULL,
+            auditor_id TEXT NOT NULL,
+            auditee_dept TEXT NOT NULL,
+            question TEXT NOT NULL,
+            answer TEXT,
+            status TEXT DEFAULT 'PENDING', -- PENDING, ANSWERED, RESOLVED
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            answered_at TEXT,
+            FOREIGN KEY(issue_id) REFERENCES audit_issues(id)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
 
     Ok(())
 }

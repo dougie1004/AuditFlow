@@ -2,7 +2,6 @@
 use tauri::{AppHandle, Manager};
 use rusqlite::{params, Connection, Result as SqlResult};
 use serde_json::json;
-use regex::Regex;
 use anyhow::Context;
 use crate::error::EngineResult;
 

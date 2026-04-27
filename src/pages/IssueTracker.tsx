@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { safeInvoke } from "../lib/tauri-bridge";
-import { AlertCircle, User, Mic, Send, Bot, CheckCircle2, Zap, Terminal } from "lucide-react";
+import { AlertCircle, User, Mic, Send, Bot, CheckCircle2, Zap, Terminal, MessageSquare } from "lucide-react";
+import { ClarificationModal } from "../components/workspace/ClarificationModal";
 
 interface AuditIssue { id: number; source: string; title: string; description: string; date: string; status: string; risk: string; recommendations: string; }
 
 export default function IssueTracker() {
     const [issues, setIssues] = useState<AuditIssue[]>([]);
+    const [selectedIssue, setSelectedIssue] = useState<AuditIssue | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -30,6 +32,7 @@ export default function IssueTracker() {
     return (
         <div className="p-10 bg-[#0B1221] min-h-screen text-slate-300 font-sans">
             <div className="max-w-[1400px] mx-auto space-y-12">
+                {/* ... (Header) ... */}
                 <div className="animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-2 bg-blue-600 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]">
@@ -43,7 +46,8 @@ export default function IssueTracker() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                     {/* 좌측: 경영진 지시사항 입력 패널 */}
-                    <div className="lg:col-span-7 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl relative overflow-hidden group">
+                    <div className="lg:col-span-6 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl relative overflow-hidden group">
+                        {/* ... (Executive Directive Content) ... */}
                         <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12"><User size={200} /></div>
                         <h3 className="text-xl font-black mb-8 text-white flex items-center gap-4 relative z-10 uppercase italic">
                             <User size={20} className="text-blue-500" /> 경영진 특별 실사 지시 <span className="text-slate-600 font-medium">(Executive Directive)</span>
@@ -73,7 +77,7 @@ export default function IssueTracker() {
                     </div>
 
                     {/* 우측: 실시간 이슈 피드 (Today's AI Briefing) */}
-                    <div className="lg:col-span-5 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl flex flex-col h-full">
+                    <div className="lg:col-span-6 bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-2xl flex flex-col h-full">
                         <div className="flex justify-between items-center mb-10">
                             <h3 className="text-xl font-black text-white flex items-center gap-4 uppercase italic">
                                 <Zap size={20} className="text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]" /> AI Live Briefing (리스크 브리핑)
@@ -85,7 +89,7 @@ export default function IssueTracker() {
                         </div>
                         <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                             {issues.map(issue => (
-                                <div key={issue.id} className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:bg-white/10 transition-all group cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500">
+                                <div key={issue.id} className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:bg-white/10 transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
                                     <div className="flex gap-5">
                                         <div className="shrink-0 mt-1">
                                             {issue.risk === "High" ? <AlertCircle size={22} className="text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse" /> : <CheckCircleSmall status={issue.status} />}
@@ -93,9 +97,17 @@ export default function IssueTracker() {
                                         <div className="space-y-4 w-full">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{issue.date.split(" ")[0]} • {issue.source}</span>
-                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${issue.risk === 'High' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400'}`}>{issue.risk}</span>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={() => setSelectedIssue(issue)}
+                                                        className="px-3 py-1 bg-white/5 hover:bg-blue-600 hover:text-white rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/5 transition-all flex items-center gap-2"
+                                                    >
+                                                        <MessageSquare size={12} /> 소명 요청
+                                                    </button>
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter ${issue.risk === 'High' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400'}`}>{issue.risk}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-base font-black text-white group-hover:text-blue-400 transition-colors tracking-tight">{issue.title}</div>
+                                            <div className="text-base font-black text-white tracking-tight">{issue.title}</div>
                                             <div className="text-xs text-slate-500 font-medium leading-relaxed bg-black/20 p-4 rounded-xl border border-white/5">
                                                 {issue.description}
                                             </div>
@@ -122,6 +134,15 @@ export default function IssueTracker() {
                     </div>
                 </div>
             </div>
+
+            {selectedIssue && (
+                <ClarificationModal 
+                    issueId={selectedIssue.id} 
+                    issueTitle={selectedIssue.title} 
+                    onClose={() => setSelectedIssue(null)} 
+                />
+            )}
+
             <style dangerouslySetInnerHTML={{
                 __html: `
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }

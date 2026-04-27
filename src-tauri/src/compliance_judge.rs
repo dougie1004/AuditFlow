@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
 
 // f64 to String helper for internal logic
 trait FloatExt { fn to_fixed(&self, precision: usize) -> String; }

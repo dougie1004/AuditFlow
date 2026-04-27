@@ -1,0 +1,3 @@
+﻿--- [RULE TEST] Starting analysis with implemented Rust logic ---
+
+[Restricted Vendor Rule Check]

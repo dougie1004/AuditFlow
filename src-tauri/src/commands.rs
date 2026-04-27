@@ -503,11 +503,6 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         |row: &rusqlite::Row| row.get::<_, i64>(0),
     ).unwrap_or(0);
 
-    let pillar_culture = conn.query_row(
-        &format!("SELECT COUNT(*) FROM audit_issues{} AND severity IN ('Critical', 'High') AND (issue_title LIKE '%Culture%' OR issue_title LIKE '%문화%' OR issue_title LIKE '%Ethic%' OR issue_title LIKE '%비리%' OR issue_title LIKE '%Fraud%' OR issue_title LIKE '%부정%' OR issue_title LIKE '%우회%' OR issue_title LIKE '%분할%' OR issue_title LIKE '%쪼개기' OR issue_title LIKE '%인사%' OR issue_title LIKE '%HR%' OR issue_title LIKE '%카드%')", filter_base),
-        [],
-        |row: &rusqlite::Row| row.get::<_, i64>(0),
-    ).unwrap_or(0);
 
     let raw_signals = conn.query_row(
         &format!("SELECT COUNT(*) FROM audit_issues{}", filter_base),
@@ -3464,24 +3459,24 @@ pub fn get_gemini_api_key(app_handle: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn get_entity_timeline(app_handle: AppHandle, entityId: String) -> Result<crate::models::EntityTimelineResponse, String> {
+pub async fn get_entity_timeline(app_handle: AppHandle, entity_id: String) -> Result<crate::models::EntityTimelineResponse, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
     // [RESOLUTION BRIDGE]
-    // If entityId is numeric, it's likely an audit_universe ID.
+    // If entity_id is numeric, it's likely an audit_universe ID.
     // We need to find the canonical name for it and then find the corresponding ENT- ID.
-    let target_id = if entityId.parse::<i64>().is_ok() {
+    let target_id = if entity_id.parse::<i64>().is_ok() {
         let (name, category): (String, String) = conn.query_row(
             "SELECT unit_name, category FROM audit_universe WHERE id = ?1",
-            params![entityId.parse::<i64>().unwrap()],
+            params![entity_id.parse::<i64>().unwrap()],
             |r| Ok((r.get(0)?, r.get(1)?))
-        ).map_err(|_| format!("Audit Universe Entity not found for ID: {}", entityId))?;
+        ).map_err(|_| format!("Audit Universe Entity not found for ID: {}", entity_id))?;
         
         // Resolve or find the ENT- ID using the canonical name
         crate::entity_resolver::resolve_entity(&conn, &name, &category)?
     } else {
-        entityId
+        entity_id
     };
 
     crate::entity_resolver::get_entity_timeline(&conn, &target_id)

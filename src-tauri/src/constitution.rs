@@ -1,6 +1,5 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use serde_json::{json, Value};
-use std::path::Path;
 
 /// [HONEST FAILURE EXCEPTIONS]
 /// The constitution allows for 'No Result' but never 'Wrong Result'.
@@ -70,7 +69,6 @@ pub fn check_system_integrity(app_handle: AppHandle) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
     use std::path::PathBuf;
 

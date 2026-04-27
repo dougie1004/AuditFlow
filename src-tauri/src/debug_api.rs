@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Manager};
 use rusqlite::{params, Connection};
-use serde_json::{json, Value};
+use serde_json::json;
 #[allow(unused_imports)]
 use serde::Serialize; // Ensure derive works
 use rand;

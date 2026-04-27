@@ -1,3 +1,7 @@
+use tauri::AppHandle;
+use rusqlite::{params, Connection};
+use serde_json::{json, Value};
+use tauri::Manager;
 
 #[tauri::command]
 pub fn promote_risk_to_review(app_handle: AppHandle, session_id: String, signal_id: String) -> Result<String, String> {
@@ -52,25 +56,63 @@ pub fn promote_risk_to_review(app_handle: AppHandle, session_id: String, signal_
     Ok(new_review_id)
 }
 
+
 #[tauri::command]
-pub fn update_review_status(app_handle: AppHandle, review_id: String, status: String, note: Option<String>) -> Result<(), String> {
+pub fn create_clarification_request(
+    app_handle: AppHandle, 
+    issue_id: i64, 
+    question: String, 
+    auditee_dept: String
+) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
-    let note_val = note.unwrap_or_default();
-    
-    // Allow updating status and note
-    if !note_val.is_empty() {
-        conn.execute(
-            "UPDATE review_item SET status = ?1, reviewer_note = ?2 WHERE id = ?3",
-            params![status, note_val, review_id]
-        ).map_err(|e| e.to_string())?;
-    } else {
-        conn.execute(
-            "UPDATE review_item SET status = ?1 WHERE id = ?2",
-            params![status, review_id]
-        ).map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO clarification_request (id, issue_id, auditor_id, auditee_dept, question) VALUES (?1, ?2, 'AUDITOR_01', ?3, ?4)",
+        params![id, issue_id, auditee_dept, question]
+    ).map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn get_clarifications_by_issue(app_handle: AppHandle, issue_id: i64) -> Result<Vec<Value>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, question, answer, status, created_at, answered_at, auditee_dept FROM clarification_request WHERE issue_id = ?1 ORDER BY created_at ASC"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![issue_id], |row| {
+        Ok(json!({
+            "id": row.get::<_, String>(0)?,
+            "question": row.get::<_, String>(1)?,
+            "answer": row.get::<_, Option<String>>(2)?,
+            "status": row.get::<_, String>(3)?,
+            "created_at": row.get::<_, String>(4)?,
+            "answered_at": row.get::<_, Option<String>>(5)?,
+            "auditee_dept": row.get::<_, String>(6)?
+        }))
+    }).map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+    for row in rows {
+        results.push(row.map_err(|e| e.to_string())?);
     }
-    
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn submit_clarification_answer(app_handle: AppHandle, request_id: String, answer: String) -> Result<(), String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "UPDATE clarification_request SET answer = ?1, status = 'ANSWERED', answered_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        params![answer, request_id]
+    ).map_err(|e| e.to_string())?;
+
     Ok(())
 }

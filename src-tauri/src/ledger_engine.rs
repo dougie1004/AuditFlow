@@ -1,6 +1,5 @@
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
-use crate::file_loader::load_file_rows;
 // use uuid::Uuid; // Removed as it is now handled in LedgerBuilder
 
 pub async fn run_ledger_only_scan(
