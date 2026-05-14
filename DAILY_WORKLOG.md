@@ -101,3 +101,12 @@
 
 ---
 *Next Steps (Post-Reboot): Complete the integration of the new AFRI (AuditFlow Risk Index) engine into the UI, finalize report export logic, and prepare for Phase 5 beta testing.*
+
+## 2026-04-28: AuditFlow Pilot & Business Strategy
+- **Clarification Loop Integration**: Updated generate_professional_report in backend (commands.rs) to include dynamic clarification request statistics (Total, Answered, Pending).
+- **Reporting UX Upgrade**: Implemented the "Generate Executive Report" button on the Dashboard and added a professional "data synthesis" animation in AuditReport.tsx.
+- **Pilot Installer Build**: Successfully built standalone .msi and .exe pilot installers using 
+pm run tauri build.
+- **Monetization & Go-To-Market Planning**: Analyzed the "2026 Preliminary Startup Package Business Plan" (예비창업패키지 사업계획서) to evaluate the feasibility of local payment integration.
+- **Architecture Strategy**: Formulated a "Local-First Desktop App + Web/Supabase Auth" architecture for the B2B SaaS subscription model, utilizing the existing Vercel landing page (insightrix-auditflow-website.vercel.app).
+- **Next Steps**: Defined the next sprint to choose between adding pricing UI placeholders in the local MVP (Dashboard) or connecting a mock Supabase login flow.

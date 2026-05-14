@@ -14,7 +14,19 @@ pub fn generate_annual_audit_data(app_handle: AppHandle) -> Result<String, Strin
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     
-    run_annual_simulation(&mut conn, SimulationConfig { year: 2025 }).map_err(|e| e.to_string())
+    let mut results = Vec::new();
+    // Generate 3 years of data to fuel the Flux (Time-series) engine
+    // Use a transaction for the entire 3-year simulation to prevent UI hangs and speed up IO
+    conn.execute("BEGIN TRANSACTION", []).map_err(|e| e.to_string())?;
+
+    for year in [2023, 2024, 2025] {
+        let msg = run_annual_simulation(&mut conn, SimulationConfig { year }, &app_handle).map_err(|e| e.to_string())?;
+        results.push(msg);
+    }
+
+    conn.execute("COMMIT", []).map_err(|e| e.to_string())?;
+    
+    Ok(results.join("\n"))
 }
 
 struct UnitProfile {
@@ -30,7 +42,7 @@ struct ScenarioDef {
     risk_level: String,
 }
 
-pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) -> Result<String, String> {
+pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig, app_handle: &AppHandle) -> Result<String, String> {
     println!(">>> [SIMULATOR] Starting Annual Audit Data Simulation for Year {}...", config.year);
 
     // 1. Fetch Audit Universe Units
@@ -65,10 +77,20 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
             "REGULATION",
             "SYSTEM_MANIFEST",
             json!({"name": "Global Compliance Policy v1.0"}).to_string(),
-            "2024-01-01 00:00:00",
+            "2023-01-01 00:00:00",
             "ACTIVE"
         ]
     ).map_err(|e| e.to_string())?;
+
+    // Pre-seed vendors into entity_master to satisfy foreign key for entity_event
+    for i in 1..=10 {
+        let v_id = format!("VND-{:03}", i);
+        let v_name = format!("Vendor_{}", i);
+        conn.execute(
+            "INSERT OR IGNORE INTO entity_master (id, entity_type, canonical_name, normalized_key, tags) VALUES (?1, 'VENDOR', ?2, ?3, '[]')",
+            params![v_id, v_name, v_name.to_lowercase()]
+        ).ok();
+    }
 
     let mut rng = rand::thread_rng();
     let mut total_events = 0;
@@ -87,8 +109,7 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
     // Track recurrence: Unit ID -> Map<ScenarioID, OccurrenceCount>
     let mut unit_risk_state: HashMap<i32, HashMap<String, i32>> = HashMap::new();
 
-    let mut success_count = 0;
-    let mut error_log = Vec::new();
+    let mut total_events = 0;
 
     for unit in &units {
         // [AUTO-RECOVERY] Run unit generation in a closure to catch errors per unit
@@ -149,6 +170,42 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                 };
 
                 for _ in 0..limit {
+                    // [PHASE 4 REALISM] 1. Generate many "Normal" Transactions (The Baseline)
+                    // These do NOT create audit_issues or risk_signals.
+                    let normal_tx_count = rng.gen_range(15..40);
+                    for _ in 0..normal_tx_count {
+                        let n_day = rng.gen_range(1..28);
+                        let n_date = format!("{}-{:02}-{:02} 10:00:00", config.year, month, n_day);
+                        let n_amount = rng.gen_range(5000.0..1500000.0_f64).round();
+                        let n_obj_id = format!("OBJ-NORM-{}", Uuid::new_v4().to_string().split('-').next().unwrap());
+                        let n_acc = if rng.gen_bool(0.4) { "801" } else if rng.gen_bool(0.3) { "501" } else { "802" };
+                        
+                        // [PHASE 4 REALISM] Create Structural Bias in 2025
+                        // In 2025, Vendor 005 becomes "Dominant" (70% share) for Account 501 to trigger Flux Engine
+                        let n_vendor = if config.year == 2025 && n_acc == "501" && rng.gen_bool(0.7) {
+                            "VND-005".to_string()
+                        } else {
+                            format!("VND-{:03}", rng.gen_range(3..10))
+                        };
+                        
+                        conn.execute(
+                            "INSERT INTO audit_object (id, object_type, source, extracted_fields, ingested_at, status, project_id) VALUES (?1, 'LEDGER_ENTRY', 'SIMULATED_SOURCE', ?2, ?3, 'ACTIVE', ?4)",
+                            params![&n_obj_id, json!({"description": "General Expense", "amount": n_amount}).to_string(), &n_date, &project_id]
+                        ).ok();
+
+                        conn.execute(
+                            "INSERT INTO entity_event (id, entity_id, event_type, amount, event_date, description, account_name, account_code, net_amount, source_object_id, source_type) 
+                             VALUES (?1, ?2, 'TRANSACTION', ?3, ?4, '정상 운영 비용 집행', '일반운영비', ?5, ?6, ?7, 'LEDGER')",
+                            params![Uuid::new_v4().to_string(), n_vendor, n_amount, &n_date, n_acc, n_amount, &n_obj_id]
+                        ).ok();
+                    }
+
+                    // [PHASE 4 REALISM] 2. Probabilistic Anomaly Injection (The Signal)
+                    // Only 15% chance per month to have a "simulated incident"
+                    if !rng.gen_bool(0.15) {
+                        continue;
+                    }
+
                     let pick_recurrence = !unit_history.is_empty() && rng.gen_bool(0.3);
                     
                     let scenario = if pick_recurrence {
@@ -168,8 +225,8 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                         ("PENDING", "High", "⚠️ [Recurrence #2] Repeated pattern observed within fiscal year.".to_string())
                     } else {
                         let roll = rng.gen_range(0..100);
-                        if roll < 15 { ("CONFIRMED", "High", "Direct evidence found.".to_string()) }
-                        else if roll < 55 { ("PENDING", "Medium", "Potential anomaly requires review.".to_string()) }
+                        if roll < 10 { ("CONFIRMED", "High", "Direct evidence found.".to_string()) }
+                        else if roll < 40 { ("PENDING", "Medium", "Potential anomaly requires review.".to_string()) }
                         else { ("PENDING", "Low", "Trace evidence noted in ledger.".to_string()) }
                     };
 
@@ -201,6 +258,27 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
                             &project_id
                         ]
                     ).map_err(|e| e.to_string())?;
+
+                    // [FLUX FUEL] Generate Entity Events to trigger Structural Analysis
+                    // We use consistent accounts and vendors to create concentration patterns
+                    let account_code = if scenario.category == "Procurement" { "501" } else { "801" };
+                    let vendor_id = format!("VND-{:03}", rng.gen_range(1..3)); // High concentration on Vendor 1-2
+                    
+                    conn.execute(
+                        "INSERT INTO entity_event (id, entity_id, event_type, amount, event_date, description, account_name, account_code, net_amount, source_object_id, source_type) 
+                         VALUES (?1, ?2, 'TRANSACTION', ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'LEDGER')",
+                        params![
+                            Uuid::new_v4().to_string(),
+                            vendor_id,
+                            amount,
+                            &date_str,
+                            &scenario.name,
+                            if account_code == "501" { "구매원가" } else { "일반관리비" },
+                            account_code,
+                            amount,
+                            &object_id
+                        ]
+                    ).ok();
 
                     // Generate Review Task
                     let task_id = Uuid::new_v4().to_string();
@@ -359,13 +437,65 @@ pub fn run_annual_simulation(conn: &mut Connection, config: SimulationConfig) ->
             Ok(())
         })();
 
-        match generation_result {
-            Ok(_) => success_count += 1,
-            Err(e) => {
-                println!(">>> [SIMULATOR ERROR] Failed to generate for unit '{}': {}", unit.name, e);
-                error_log.push(format!("{}: {}", unit.name, e));
-                // Continue to next unit - Automatic recovery
-            }
+        if let Err(e) = generation_result {
+            println!(">>> [SIMULATOR ERROR] Failed to generate for unit '{}': {}", unit.name, e);
+        }
+    }
+    
+    // [PHASE 4 REALISM] 3. End-of-Year Batch Flux Analysis
+    // Instead of calling the engine per-incident (which causes overhead and crashes),
+    // we run a high-performance batch analysis over the entire year's data.
+    println!(">>> [SIMULATOR] Running Batch Flux Analysis for Year {}...", config.year);
+    
+    let accounts: Vec<String> = vec!["501".to_string(), "801".to_string()];
+    for acc in accounts {
+        // A. CR1 and HHI Calculation (Yearly Aggregate)
+        let cp_data: Vec<f64> = {
+            let mut stmt = conn.prepare("SELECT SUM(ABS(net_amount)) as s FROM entity_event WHERE account_code = ?1 AND substr(event_date, 1, 4) = ?2 GROUP BY entity_id ORDER BY s DESC")
+                .map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![acc, config.year.to_string()], |r| r.get::<_, f64>(0)).map_err(|e| e.to_string())?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
+        if cp_data.is_empty() { continue; }
+
+        let total: f64 = cp_data.iter().sum();
+        let max_val = cp_data[0];
+        let cr1 = if total > 0.0 { max_val / total } else { 0.0 };
+        let hhi = if total > 0.0 { cp_data.iter().map(|&v| (v / total).powi(2)).sum::<f64>() } else { 0.0 };
+
+        // B. CV (Coefficient of Variation) Calculation (Monthly Distribution)
+        let monthly_data: Vec<f64> = {
+            let mut stmt = conn.prepare("SELECT SUM(ABS(net_amount)) FROM entity_event WHERE account_code = ?1 AND substr(event_date, 1, 4) = ?2 GROUP BY substr(event_date, 1, 7)")
+                .map_err(|e| e.to_string())?;
+            let rows = stmt.query_map(params![acc, config.year.to_string()], |r| r.get::<_, f64>(0)).map_err(|e| e.to_string())?;
+            rows.filter_map(|r| r.ok()).collect()
+        };
+
+        let cv = if monthly_data.len() > 1 {
+            let n = monthly_data.len() as f64;
+            let mean = total / n;
+            let variance = monthly_data.iter().map(|&v| (v - mean).powi(2)).sum::<f64>() / n;
+            let std_dev = variance.sqrt();
+            if mean > 0.0 { std_dev / mean } else { 0.0 }
+        } else { 0.0 };
+
+        let structural_score = (cr1 * 0.4 + hhi * 0.4 + cv * 0.2).min(1.0);
+
+        // Update Yearly Profile
+        conn.execute(
+            "INSERT OR REPLACE INTO account_year_profile (account_code, fiscal_year, structural_score, avg_cv, avg_cr1, avg_hhi, transaction_count) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![acc, config.year, structural_score, cv, cr1, hhi, cp_data.len() as i64]
+        ).ok();
+
+        // If risk detected, generate a signal for the dashboard
+        if cr1 > 0.4 {
+            let sig_id = format!("SIG-FLUX-{}-{}", config.year, acc);
+            let desc = format!("[FLUX: 시계열 이상 징후] {} 계정의 특정 거래처 집중도(CR1: {:.1}%)가 작년 대비 급증했습니다. (Emerging Dominance 감지)", if acc == "501" { "구매원가" } else { "일반관리비" }, cr1 * 100.0);
+            conn.execute(
+                "INSERT OR REPLACE INTO risk_signal (id, object_id, project_id, signal_type, description, score, metadata) VALUES (?1, 'GLOBAL_SIM', '', 'FLUX:STRUCTURAL_BREAK', ?2, ?3, ?4)",
+                params![sig_id, desc, structural_score, json!({"cr1": cr1, "cv": cv, "hhi": hhi, "account": acc}).to_string()]
+            ).ok();
         }
     }
     

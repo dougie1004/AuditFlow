@@ -27,7 +27,8 @@ auditflow_source_backup_*.zip
 
 # Sensitive information
 .env
-.env.local
+.env.*
+!.env.example
 app_config.json
 
 # Editor directories and files

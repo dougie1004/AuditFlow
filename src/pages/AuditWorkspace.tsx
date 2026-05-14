@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { safeInvoke } from "../lib/tauri-bridge";
 import {
     Upload, Zap, Loader2,
@@ -29,6 +30,8 @@ export default function AuditWorkspace() {
     const [reviewQueue, setReviewQueue] = useState<ReviewItem[]>([]);
     const [structuralInsights, setStructuralInsights] = useState<any[]>([]);
     const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
+    const [deepDiveResult, setDeepDiveResult] = useState<any | null>(null);
+    const [isDeepDiveLoading, setIsDeepDiveLoading] = useState(false);
 
     const location = useLocation();
 
@@ -139,6 +142,25 @@ export default function AuditWorkspace() {
             console.error(err);
             setIsLoading(false);
         });
+    };
+
+    const handleDeepDive = (item: ReviewItem) => {
+        setIsDeepDiveLoading(true);
+        // We need the numeric ID of the audit_issue.
+        // Assuming original_id or similar is passed. 
+        // For simplicity, we'll try to find it via get_audit_issues if not direct.
+        // In this mock context, we'll use a numeric seed from the string ID if necessary.
+        const numericId = parseInt(item.id.replace('task-', '')) || 1; 
+
+        safeInvoke("get_ai_fraud_deep_dive", { issueId: numericId })
+            .then((res: any) => {
+                setDeepDiveResult(res);
+                setIsDeepDiveLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                setIsDeepDiveLoading(false);
+            });
     };
 
     const fetchStructuralInsights = () => {
@@ -961,6 +983,14 @@ export default function AuditWorkspace() {
                                                                 >
                                                                     <CheckCircle2 size={18} /> Confirm review (불변 처리)
                                                                 </button>
+                                                                <button
+                                                                    onClick={() => handleDeepDive(item)}
+                                                                    disabled={isDeepDiveLoading}
+                                                                    className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-400 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest hover:bg-blue-600/30 transition-all flex items-center justify-center gap-3"
+                                                                >
+                                                                    {isDeepDiveLoading ? <Loader2 className="animate-spin" size={14} /> : <BrainCircuit size={14} />}
+                                                                    AI Fraud Deep Dive (심층 분석)
+                                                                </button>
                                                                 <div className="grid grid-cols-2 gap-3">
                                                                     <button
                                                                         onClick={() => handleUpdateStatus(item.id, 'ESCALATED')}
@@ -1000,6 +1030,128 @@ export default function AuditWorkspace() {
                     )
                 )}
             </div>
+
+            <AnimatePresence>
+                {deepDiveResult && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#020617]/90 backdrop-blur-xl animate-in fade-in duration-300">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="bg-slate-900 border border-white/10 rounded-[48px] shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative"
+                        >
+                            <button 
+                                onClick={() => setDeepDiveResult(null)}
+                                className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <XCircle size={32} />
+                            </button>
+
+                            <div className="p-12 overflow-y-auto custom-scrollbar">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                        <BrainCircuit size={28} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">AI Fraud Deep Dive</h2>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">In-depth Intent & Pattern Analysis</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+                                    <div className="md:col-span-4 space-y-8">
+                                        <div className="bg-black/40 rounded-[32px] p-8 border border-white/5 text-center">
+                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Fraud Probability</p>
+                                            <div className="relative inline-flex items-center justify-center">
+                                                <svg className="w-32 h-32 transform -rotate-90">
+                                                    <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800" />
+                                                    <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                                        strokeDasharray={364.4}
+                                                        strokeDashoffset={364.4 * (1 - deepDiveResult.fraud_probability)}
+                                                        className={deepDiveResult.fraud_probability > 0.8 ? "text-rose-500" : "text-amber-500"} 
+                                                    />
+                                                </svg>
+                                                <span className="absolute text-3xl font-black text-white italic">{(deepDiveResult.fraud_probability * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <p className={`mt-4 text-[10px] font-black uppercase tracking-widest ${deepDiveResult.fraud_probability > 0.8 ? "text-rose-500" : "text-amber-500"}`}>
+                                                {deepDiveResult.fraud_probability > 0.8 ? "Critical Warning" : "High Suspicion"}
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-blue-500/5 rounded-[32px] p-6 border border-blue-500/10">
+                                            <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <Activity size={14} /> Similar Case Correlation
+                                            </h4>
+                                            <div className="text-3xl font-black text-white italic mb-1">{deepDiveResult.similar_cases_count} 건</div>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">관련 데이터 탐지됨</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="md:col-span-8 space-y-8">
+                                        <section>
+                                            <h4 className="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <Terminal size={14} /> Intent Analysis (의도 분석)
+                                            </h4>
+                                            <div className="bg-black/60 rounded-3xl p-8 border border-white/5 shadow-inner">
+                                                <p className="text-slate-200 leading-relaxed font-bold italic text-sm">
+                                                    "{deepDiveResult.intent_analysis}"
+                                                </p>
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <Layers size={14} /> Pattern Signatures
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {deepDiveResult.pattern_correlation.map((p: string, i: number) => (
+                                                    <div key={i} className="flex items-start gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                                        <p className="text-[11px] font-bold text-slate-300">{p}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <h4 className="text-[11px] font-black text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <ClipboardList size={14} /> Recommended Interview Questions
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {deepDiveResult.suggested_interview_questions.map((q: string, i: number) => (
+                                                    <div key={i} className="bg-rose-500/5 border border-rose-500/10 p-5 rounded-2xl">
+                                                        <p className="text-xs text-rose-300 font-black italic">Q: {q}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+
+                                <div className="mt-12 pt-8 border-t border-white/5">
+                                    <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-6">Evidence Cluster (Cross-Transaction Evidence)</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {deepDiveResult.evidence_cluster.map((e: string, i: number) => (
+                                            <div key={i} className="bg-black/40 p-4 rounded-2xl border border-white/5 font-mono text-[9px] text-slate-400">
+                                                {e}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end">
+                                <button 
+                                    onClick={() => setDeepDiveResult(null)}
+                                    className="px-10 py-4 bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all"
+                                >
+                                    Close Analysis
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }

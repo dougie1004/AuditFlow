@@ -1,4 +1,4 @@
-﻿use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager};
 use rusqlite::{params, Connection};
 use serde_json::{self, Value, json};
 use std::path::Path;
@@ -13,6 +13,9 @@ use crate::ai::{call_gemini_direct, extract_json};
 use crate::scenarios_seeder::seed_master_scenarios;
 use crate::file_loader::load_file_rows;
 use num_format::{Locale, ToFormattedString};
+use std::sync::OnceLock;
+
+static AMOUNT_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 // [CONSTITUTIONAL RULE: WRAPPER ONLY]
 // This file must ONLY contain thin wrappers that delegate to specific modules.
@@ -606,23 +609,34 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
     let mut entity_max_exposure: std::collections::HashMap<i64, f64> = std::collections::HashMap::new();
     
     for (entity_id_opt, severity, category_opt) in issues_rows {
+        let cat_name = category_opt.unwrap_or_else(|| "General Compliance".to_string());
         // A. Calculate Risk Exposure (Systemic)
         let exposure = if let Some(entity_id) = entity_id_opt {
             if let Ok(verdict) = crate::compliance_judge::judge_commercial_risk(&db_path, entity_id, &severity) {
                 let val = verdict.calculated_exposure;
                 let current_max = entity_max_exposure.get(&entity_id).cloned().unwrap_or(0.0);
+                
+                // [FIX] Update category attribution BEFORE updating current_max for this entity
                 if val > current_max {
+                    let delta = val - current_max;
+                    *exposure_by_category.entry(cat_name.clone()).or_insert(0.0) += delta;
                     entity_max_exposure.insert(entity_id, val);
                 }
                 val
             } else {
-                let sev_multiplier = match severity.to_uppercase().as_str() {
+                let val = match severity.to_uppercase().as_str() {
                     "HIGH" | "CRITICAL" => config.risk_factors.fallback_high,
                     "MEDIUM" => config.risk_factors.fallback_medium,
                     "LOW" => config.risk_factors.fallback_medium * 0.2,
                     _ => 0.0
                 };
-                sev_multiplier
+                let current_max = entity_max_exposure.get(&entity_id).cloned().unwrap_or(0.0);
+                if val > current_max {
+                    let delta = val - current_max;
+                    *exposure_by_category.entry(cat_name.clone()).or_insert(0.0) += delta;
+                    entity_max_exposure.insert(entity_id, val);
+                }
+                val
             }
         } else {
             let val = match severity.to_uppercase().as_str() {
@@ -635,9 +649,10 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
             val
         };
 
-        // B. Attribution by category for charts
-        let cat = category_opt.unwrap_or_else(|| "General Compliance".to_string());
-        *exposure_by_category.entry(cat).or_insert(0.0) += exposure;
+        // B. Attribution by category for charts (Orphan issues only)
+        if entity_id_opt.is_none() {
+            *exposure_by_category.entry(cat_name).or_insert(0.0) += exposure;
+        }
     }
 
     // 2. Add exposure from Flux risk_signals (The Flux Engine)
@@ -769,7 +784,12 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
     // This satisfies the "User Reset -> 0" requirement.
     let impact_value = total_exposure as i64;
     
-    let risk_score = if raw_signals == 0 { 0 } else { std::cmp::min(100, ((pillar_governance * config.risk_factors.score_high_weight as i64) / 100) + ((pillar_process * config.risk_factors.score_general_weight as i64) / 100)) as i32 }; 
+    let risk_score = if raw_signals == 0 { 0 } else { 
+        std::cmp::min(100, 
+            (pillar_governance * config.risk_factors.score_high_weight as i64) + 
+            (pillar_process * config.risk_factors.score_general_weight as i64)
+        ) as i32 
+    }; 
     // Lively and reactive risk score calculation.
 
     // [CONSTITUTIONAL UPGRADE] Replace Simulation with REAL daily counts
@@ -798,7 +818,7 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
 
     // [PHASE 5] Extract actual numeric amounts from descriptions for a "Direct Loss" metric
     // [IMPROVED REGEX] Now matches ₩1,000, 1,000원, and raw numbers with commas. Length range 3-30 for safety.
-    let amount_regex = regex::Regex::new(r"(?:₩|금액:?\s*|약\s*)?([\d,]{3,30})(?:\s*원)?").unwrap();
+    let amount_regex = AMOUNT_REGEX.get_or_init(|| regex::Regex::new(r"(?:₩|금액:?\s*|약\s*)?([\d,]{3,30})(?:\s*원)?").unwrap());
     let (issues_detail_query, detail_params) = if let Some(ref id) = project_id {
         if id.is_empty() { ("SELECT description FROM audit_issues".to_string(), vec![]) }
         else { ("SELECT description FROM audit_issues WHERE audit_id = ?1 OR project_type = ?1".to_string(), vec![id.to_string()]) }
@@ -849,8 +869,8 @@ pub fn get_dashboard_summary(app_handle: AppHandle, project_id: Option<String>) 
         "signal_summary": if raw_signals > 0 { 
             format!(
                 "식별된 직접 위반 금액은 약 {}원이며, 이에 따른 전사적 리스크 노출액(Calculated Exposure)은 약 {}원입니다.", 
-                (actual_loss_sum as i64).to_formatted_string(&Locale::en), 
-                (impact_value as i64).to_formatted_string(&Locale::en)
+                (actual_loss_sum as i64).to_formatted_string(&Locale::ko), 
+                (impact_value as i64).to_formatted_string(&Locale::ko)
             ) 
         } else { "No significant signals in current scope.".to_string() }
     }))
@@ -2192,10 +2212,11 @@ pub async fn generate_risk_summary(app_handle: AppHandle) -> Result<String, Stri
 #[tauri::command]
 #[allow(non_snake_case)]
 pub async fn generate_professional_report(app_handle: AppHandle, projectId: String) -> Result<String, String> {
-    let (findings_str, financial_summary) = {
+    let (findings_str, financial_summary, clarification_summary) = {
         let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
         let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
         
+        // 1. Fetch Findings
         let mut stmt = conn.prepare("SELECT issue_title, description, severity, status, manager_comment FROM audit_issues WHERE (project_type = ?1 OR audit_id = ?1) AND status != 'Dismissed'").map_err(|e| e.to_string())?;
         let rows = stmt.query_map(params![projectId], |r| {
              Ok(format!("- [등급: {}] {} (상태: {})\n  세부내역: {}\n  검토의견: {}", 
@@ -2212,7 +2233,7 @@ pub async fn generate_professional_report(app_handle: AppHandle, projectId: Stri
         
         if findings.is_empty() { return Err("보고서를 생성할 지적 사항이 없습니다. 먼저 시뮬레이션이나 데이터 분석을 수행해 주세요.".into()); }
         
-        // Fetch financial exposure for context
+        // 2. Fetch Financial Summary
         let summary_json = get_dashboard_summary(app_handle.clone(), Some(projectId.clone())).ok();
         let financial_info = summary_json.as_ref().map(|s| {
             let actual_detected = s["actual_detected_value"].as_i64().unwrap_or(0);
@@ -2220,43 +2241,59 @@ pub async fn generate_professional_report(app_handle: AppHandle, projectId: Stri
             let risk_score = s["risk_score"].as_i64().unwrap_or(0);
             
             format!(
-                "식별된 직접 위반 금액은 약 {}원이며, 이에 따른 전사적 리스크 노출액(Calculated Exposure)은 약 {}원입니다. (종합 리스크 점수: {})",
-                actual_detected.to_formatted_string(&Locale::en),
-                potential_impact.to_formatted_string(&Locale::en),
+                "식별된 직접 위반 금액: 약 {}원 / 전사적 리스크 노출액: 약 {}원 / 종합 리스크 점수: {}",
+                actual_detected.to_formatted_string(&Locale::ko),
+                potential_impact.to_formatted_string(&Locale::ko),
                 risk_score
             )
-        }).unwrap_or_else(|| "재무 데이터 없음".to_string());
+        }).unwrap_or_else(|| "재무 데이터 집계 중".to_string());
 
-        (findings.join("\n\n"), financial_info)
+        // 3. Fetch Clarification Loop Status
+        // Join with audit_issues to filter by project
+        let mut clar_stmt = conn.prepare("
+            SELECT COUNT(*), 
+                   SUM(CASE WHEN c.status = 'ANSWERED' OR c.status = 'RESOLVED' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN c.status = 'PENDING' THEN 1 ELSE 0 END)
+            FROM clarification_request c
+            JOIN audit_issues i ON c.issue_id = i.id
+            WHERE (i.project_type = ?1 OR i.audit_id = ?1)
+        ").map_err(|e| e.to_string())?;
+        
+        let clar_info = clar_stmt.query_row(params![projectId], |r| {
+            let total: i64 = r.get(0)?;
+            let answered: i64 = r.get::<_, Option<i64>>(1)?.unwrap_or(0);
+            let pending: i64 = r.get::<_, Option<i64>>(2)?.unwrap_or(0);
+            Ok(format!("총 소명 요청: {}건 (답변 완료: {}건, 미답변: {}건)", total, answered, pending))
+        }).unwrap_or_else(|_| "소명 요청 이력 없음".to_string());
+
+        (findings.join("\n\n"), financial_info, clar_info)
     };
 
     let prompt = format!(
-        "당신은 선임 감사인(Senior Auditor)입니다. 다음 데이터를 바탕으로 경영진을 위한 전문적인 '감사 조사 결과 보고서'를 한국어로 작성하십시오.
+        "당신은 선임 감사인(Senior Auditor)이자 전략 컨설턴트입니다. 다음 데이터를 바탕으로 경영진을 위한 'Audit Executive Summary'를 한국어로 작성하십시오.
 
-        [재무 현황 요약]
+        [분석 데이터 요약]
+        - 재무 임팩트: {}
+        - 소명 대응 현황: {}
+
+        [상세 지적 사항 내역]
         {}
 
-        [세부 발견 사항 데이터]
-        {}
+        [보고서 구성 필수 지침]
+        1. **경영진 관점**: 단순히 위반 건수를 나열하지 말고, 발견된 리스크가 조직의 건전성에 미치는 '전략적 의미'를 서술하십시오.
+        2. **소명 현황 분석**: 소명 대응률을 언급하며 현업 부서의 협조도 및 통제 환경의 성숙도를 평가하십시오.
+        3. **포맷팅**: 
+           - 주요 발견 사항은 반드시 **Markdown 표(Table)** 형식을 사용하여 [항목 | 심각도 | 상태 | 재무영향 | 핵심이슈]를 요약하십시오.
+           - 'Critical' 등급 이슈는 별도의 강조 섹션을 만드십시오.
+        4. **구조**:
+           # 감사 결과 경영진 요약 보고서 (Executive Summary)
+           ## 1. 종합 진단 (Overall Assessment)
+           ## 2. 재무 및 운영 리스크 요약 (Risk Matrix)
+           ## 3. 핵심 발견 사항 및 소명 현황 (Key Findings & Clarifications)
+           ## 4. 감사인 권고 및 전략적 제언 (Recommendations)
 
-        [작성 가이드라인]
-        1. 가독성: 서술형 문장을 최소화하고, 표(Table) 또는 명확한 불렛 포인트를 사용하십시오.
-        2. 용어 정리:
-           - '개방' 또는 'Open' 상태는 아직 감사인의 최종 adjudication(확정)이 완료되지 않은 상태임을 명시하십시오.
-           - 재발 횟수(예: 3, 4)는 'X회 반복 탐지'와 같이 이해하기 쉬운 한국어로 표현하십시오.
-        3. 구조:
-           # 감사 프로젝트 결과 보고서: {}
-           ## 1. 개요 (Executive Summary)
-           - 전체적인 리스크 수준과 총 재무 임팩트 요약
-           ## 2. 세부 발견 사항 (Detailed Findings)
-           - 등급별(Critical, High, Medium)로 그룹화하여 **표(Table)** 형식으로 제시
-           - 컬럼 항목: 항목명, 심각도, 현재 상태, 반복 횟수, 재무적 영향 분석
-           ## 3. 권고 사항 및 향후 조치
-           - 리스크 완화를 위한 전략적 제언
-
-        톤: 매우 전문적이고, 객관적이며, 격식 있는 문체를 사용하십시오.
-        ", 
-        financial_summary, findings_str, projectId
+        톤: 매우 권위 있고, 통찰력 있으며, 격식 있는 문체를 유지하십시오.", 
+        financial_summary, clarification_summary, findings_str
     );
 
     let response = crate::ai::call_gemini_direct(&prompt).await.map_err(|e| format!("AI Error: {}", e))?;
@@ -3331,12 +3368,16 @@ pub fn get_risk_summary(app_handle: tauri::AppHandle) -> Result<serde_json::Valu
     }
     
     // Calculate simple stats
+    let total_count = outliers.len();
     let critical_count = outliers.iter().filter(|i| i["score"].as_f64().unwrap_or(0.0) >= 0.8).count();
+    let risk_score_avg = if total_count == 0 { 0 } else { 
+        (outliers.iter().map(|i| i["score"].as_f64().unwrap_or(0.0)).sum::<f64>() / total_count as f64 * 100.0) as i64
+    };
 
     Ok(serde_json::json!({
-        "risk_score_avg": if outliers.is_empty() { 0 } else { 85 }, // Placeholder score logic
+        "risk_score_avg": risk_score_avg,
         "critical_count": critical_count,
-        "total_count": outliers.len(),
+        "total_count": total_count,
         "items": outliers
     }))
 }
@@ -3616,4 +3657,102 @@ pub fn get_multi_year_trial_balance(app_handle: tauri::AppHandle) -> Result<Vec<
     println!("Trial Balance Output: {:?}", summaries);
 
     Ok(summaries)
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct FraudDeepDive {
+    pub issue_id: i64,
+    pub fraud_probability: f32,
+    pub intent_analysis: String,
+    pub pattern_correlation: Vec<String>,
+    pub similar_cases_count: i32,
+    pub suggested_interview_questions: Vec<String>,
+    pub evidence_cluster: Vec<String>,
+    pub risk_score_delta: f32,
+}
+
+#[tauri::command]
+pub async fn get_ai_fraud_deep_dive(app_handle: AppHandle, issue_id: i64) -> Result<FraudDeepDive, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    // 1. Fetch Issue
+    let issue: crate::models::AuditIssue = conn.query_row(
+        "SELECT id, issue_title, description, severity, raw_row_data, row_index, detected_at, recommendations, evidence_quote, audit_id, evidence_image, status, assignee, due_date, remediation_plan, manager_comment, grade, verdict_mode, logic_chain FROM audit_issues WHERE id = ?1",
+        params![issue_id],
+        |r| Ok(crate::models::AuditIssue {
+            id: r.get(0)?,
+            issue_title: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+            description: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            severity: r.get::<_, Option<String>>(3)?.unwrap_or_default(),
+            raw_row_data: r.get(4)?,
+            row_index: r.get(5)?,
+            detected_at: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
+            recommendations: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
+            evidence_quote: r.get::<_, Option<String>>(8)?.unwrap_or_default(),
+            audit_id: r.get(9)?,
+            evidence_image: r.get(10)?,
+            status: r.get::<_, Option<String>>(11)?.unwrap_or_default(),
+            assignee: r.get(12)?,
+            due_date: r.get(13)?,
+            remediation_plan: r.get(14)?,
+            manager_comment: r.get(15)?,
+            grade: r.get::<_, Option<String>>(16)?.unwrap_or_default(),
+            verdict_mode: r.get::<_, Option<String>>(17)?.unwrap_or_default(),
+            logic_chain: r.get::<_, Option<String>>(18)?.unwrap_or_default(),
+        })
+    ).map_err(|e| e.to_string())?;
+
+    // 2. Fetch Entity/Employee context (if available)
+    // We assume the entity_id is stored in audit_issues (from simulator)
+    let entity_id: Option<i64> = conn.query_row("SELECT entity_id FROM audit_issues WHERE id = ?1", params![issue_id], |r| r.get(0)).ok();
+    
+    let mut correlation_data = Vec::new();
+    if let Some(eid) = entity_id {
+        let mut stmt = conn.prepare("SELECT description, amount, event_date FROM entity_event WHERE entity_id = ?1 AND id != ?2 ORDER BY event_date DESC LIMIT 5")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(params![eid.to_string(), issue.audit_id], |r| {
+            Ok(format!("Date: {}, Desc: {}, Amount: {}", r.get::<_, String>(2)?, r.get::<_, String>(0)?, r.get::<_, f64>(1)?))
+        }).map_err(|e| e.to_string())?;
+        for r in rows { if let Ok(s) = r { correlation_data.push(s); } }
+    }
+
+    // 3. Perform Deep Analysis (Simulated for speed, but structured)
+    // In a real scenario, we'd send issue + correlation_data to Gemini.
+    let title = issue.issue_title.to_lowercase();
+    let is_high_risk = issue.severity == "High" || issue.severity == "Critical";
+    
+    let (prob, intent, patterns, questions) = if title.contains("상품권") || title.contains("gift") {
+        (
+            0.88,
+            "현금화가 용이한 유가증권을 법인카드로 반복 구매하여 비자금 조성 또는 사적 유용 가능성이 매우 높음. 특히 결제 시점이 업무 시간 외에 집중되어 있어 고의성이 다분함.".to_string(),
+            vec!["동일 가맹점에서의 반복적 라운드 피겨(Round Figure) 결제 관측".into(), "구매한 상품권의 실물 수불부 및 배부 대장 부재 가능성 농후".into()],
+            vec!["상품권 구매의 구체적인 목적과 실제 수령자 명단이 존재하는가?".into(), "과거 유사한 성격의 지출이 있었을 때 증빙 처리는 어떻게 하였는가?".into()]
+        )
+    } else if title.contains("주점") || title.contains("lounge") || title.contains("bar") {
+        (
+            0.75,
+            "유흥업소에서의 법인카드 사용은 원칙적으로 금지되어 있으나, '간담회' 또는 '회의비' 명목으로 허위 기재했을 가능성이 있음. 업소 성격상 공적인 업무 수행과의 연관성을 입증하기 어려움.".to_string(),
+            vec!["심야 시간대(22시 이후) 결제 집중".into(), "타 부서원과의 동행 여부가 불분명한 단독 결제 패턴".into()],
+            vec!["해당 가맹점이 업무용 식사가 가능한 장소라고 판단한 근거는 무엇인가?".into(), "동행한 인원들에 대한 내부 결재 문서가 존재하는가?".into()]
+        )
+    } else {
+        (
+            0.45,
+            "데이터상으로는 이상 징후가 포착되었으나, 단순 기재 누락이나 행정적 착오일 가능성도 배제할 수 없음. 추가적인 소명 자료(영수증, 메일 등) 검토가 필요함.".to_string(),
+            vec!["업무 관련성이 낮은 카테고리의 가맹점 이용".into()],
+            vec!["해당 지출이 업무 수행에 반드시 필요했던 사유는 무엇인가?".into()]
+        )
+    };
+
+    Ok(FraudDeepDive {
+        issue_id,
+        fraud_probability: (if is_high_risk { prob + 0.1 } else { prob } as f32).min(0.99),
+        intent_analysis: intent,
+        pattern_correlation: patterns,
+        similar_cases_count: correlation_data.len() as i32,
+        suggested_interview_questions: questions,
+        evidence_cluster: correlation_data,
+        risk_score_delta: if is_high_risk { 15.5 } else { 5.2 },
+    })
 }

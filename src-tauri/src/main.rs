@@ -186,7 +186,8 @@ fn main() {
             commands_append::promote_risk_to_review,
             commands_append::create_clarification_request,
             commands_append::get_clarifications_by_issue,
-            commands_append::submit_clarification_answer
+            commands_append::submit_clarification_answer,
+            commands::get_ai_fraud_deep_dive
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

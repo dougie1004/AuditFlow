@@ -12,7 +12,9 @@ import {
     Settings,
     LogOut,
     BookOpen, // Added BookOpen for Knowledge Base
-    Bot // Added Bot for AI Assistant
+    Bot, // Added Bot for AI Assistant
+    Sparkles,
+    ArrowRight
 } from "lucide-react";
 
 const menuItems = [
@@ -74,6 +76,12 @@ export default function Sidebar() {
             <div style={{ padding: "0 24px 20px", textAlign: "center" }}>
                 <h1 style={{ fontSize: "20px", fontWeight: "900", color: "#3b82f6", margin: 0, letterSpacing: "-0.5px" }}>AuditFlow <span className="text-slate-500 font-light">Intelligence</span></h1>
                 <p className="text-[9px] text-slate-500 mt-1 uppercase tracking-widest">Enterprise Risk Operating System</p>
+                
+                <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800/80 border border-slate-700 rounded-full group cursor-pointer hover:border-indigo-500/50 transition-all">
+                    <Sparkles size={10} className="text-indigo-400 group-hover:animate-pulse" />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Starter Plan</span>
+                    <ArrowRight size={8} className="text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+                </div>
             </div>
 
             <ActiveAuditWidget />

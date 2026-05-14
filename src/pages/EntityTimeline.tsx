@@ -24,7 +24,7 @@ export default function EntityTimeline() {
 
             // Fetch verdict for the highest severity found or default to HIGH for simulation
             // In a real app, this might be triggered by selecting a specific issue.
-            const v: ExposureVerdict = await safeInvoke("judge_risk_exposure", { entity_id: parseInt(entityId), severity: "HIGH" });
+            const v: ExposureVerdict = await safeInvoke("judge_risk_exposure", { entityId: parseInt(entityId), severity: "HIGH" });
             setVerdict(v);
         } catch (err) {
             console.error("Failed to fetch timeline", err);

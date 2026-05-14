@@ -66,7 +66,7 @@ export const useApp = () => {
 };
 
 export default function App() {
-  const [user, setUser] = useState<{ tier: string } | null>({ tier: 'Enterprise' });
+  const [user, setUser] = useState<{ tier: string } | null>(null);
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
 

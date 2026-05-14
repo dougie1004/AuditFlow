@@ -6,36 +6,37 @@ import { useAudit } from '../context/AuditContext';
 import {
     ShieldCheck, CheckCircle2,
     ShieldAlert, BrainCircuit, Globe, TrendingUp, Terminal, Clock, ArrowUpRight,
-    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard, Trash2, Activity, History
+    Users, ShoppingCart, Box, Coins, BarChart3, Link, Zap, CreditCard, Trash2, Activity, History, FileText
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Treemap, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from 'recharts';
+import PricingTeaser from '../components/PricingTeaser';
 
 function getRiskStyle(signals: number) {
     if (signals >= 80) {
         return {
-            bg: 'bg-red-600',
-            border: 'border-red-400',
-            glow: 'shadow-[0_0_12px_rgba(255,77,79,0.6)]'
+            bg: 'bg-gradient-to-br from-rose-600 via-red-500 to-red-800',
+            border: 'border-rose-400/50',
+            glow: 'shadow-[0_0_30px_rgba(225,29,72,0.4)] ring-1 ring-rose-500/50'
         };
     }
     if (signals >= 60) {
         return {
-            bg: 'bg-red-500',
-            border: 'border-red-300',
-            glow: ''
+            bg: 'bg-gradient-to-br from-orange-500 via-orange-600 to-red-600',
+            border: 'border-orange-400/50',
+            glow: 'shadow-[0_0_20px_rgba(249,115,22,0.3)] ring-1 ring-orange-500/30'
         };
     }
     if (signals >= 40) {
         return {
-            bg: 'bg-orange-500',
-            border: 'border-orange-300',
-            glow: ''
+            bg: 'bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500',
+            border: 'border-amber-400/50',
+            glow: 'shadow-[0_0_15px_rgba(251,191,36,0.2)]'
         };
     }
     return {
-        bg: 'bg-slate-700',
-        border: 'border-slate-500',
-        glow: ''
+        bg: 'bg-gradient-to-br from-slate-800 to-slate-900',
+        border: 'border-slate-700/50',
+        glow: 'shadow-xl'
     };
 }
 
@@ -296,8 +297,12 @@ const Dashboard = () => {
     const exposureValue = summary?.potential_impact_value || (summary?.total_risks ? summary.total_risks * 50000000 : 0);
 
     return (
-        <div className="min-h-screen bg-[#0B1221] text-slate-300 font-sans p-6 overflow-x-hidden">
-            <div className="max-w-[1600px] mx-auto space-y-8">
+        <div className="min-h-screen bg-[#0B1221] text-slate-300 font-sans p-6 overflow-x-hidden relative">
+            {/* Ambient Background Glows */}
+            <div className="fixed top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none z-0" />
+            <div className="fixed bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-rose-600/10 blur-[150px] rounded-full pointer-events-none z-0" />
+            
+            <div className="max-w-[1600px] mx-auto space-y-8 relative z-10">
 
                 {/* ... Header ... */}
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-10">
@@ -352,6 +357,13 @@ const Dashboard = () => {
                         >
                             <Zap size={16} className="group-hover:fill-emerald-500" />
                             Simulate
+                        </button>
+                        <button 
+                            onClick={() => navigate('/audit-report')} 
+                            className="h-12 px-6 bg-slate-800 text-slate-300 font-black text-xs uppercase tracking-widest rounded-[18px] border border-white/10 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-3 active:scale-95"
+                        >
+                            <FileText size={14} className="text-blue-400" />
+                            감사 보고서 발행
                         </button>
                         <button onClick={handleNewAudit} className="h-12 px-8 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-[18px] hover:bg-blue-500 transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-3 whitespace-nowrap">
                             <ShieldCheck size={14} className="text-white" />
@@ -527,11 +539,11 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-8 items-stretch">
+                <div className="grid grid-cols-12 gap-8 items-start">
                     {/* Zone B: 부서별 리스크 현황 (Heatmap) */}
                     <div className="col-span-12 lg:col-span-8 space-y-8">
                         {/* Zone B: Portfolio Risk Heatmap */}
-                        <div className="bg-slate-900 p-6 rounded-2xl space-y-6 relative overflow-hidden">
+                        <div className="bg-slate-900/60 backdrop-blur-2xl border border-white/5 p-6 rounded-[32px] space-y-6 relative overflow-hidden shadow-2xl">
                             <div className="flex justify-between items-center">
                                 <div className="space-y-1">
                                     <h3 className="text-xl font-black text-white tracking-tight uppercase">Audit Finding Heatmap</h3>
@@ -710,10 +722,10 @@ const Dashboard = () => {
 
 
                     {/* Zone C: AI Feed */}
-                    <div className="col-span-12 lg:col-span-4 bg-slate-900 border-white/10 rounded-[40px] flex flex-col h-full shadow-2xl relative overflow-hidden min-h-[500px]">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
+                    <div className="col-span-12 lg:col-span-4 bg-slate-900 border-white/10 rounded-[40px] flex flex-col shadow-2xl relative overflow-hidden sticky top-8 h-[calc(100vh-120px)]">
+                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20 shrink-0">
                             <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                                <Terminal size={16} className="text-rose-500" /> 실시간 가치 평가 가드레일
+                                <Terminal size={16} className="text-rose-500" /> 재무 리스크 임팩트 분석 (Risk Impact)
                             </h3>
                             <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                         </div>
@@ -723,7 +735,7 @@ const Dashboard = () => {
                                     <div className="bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-white/10 rounded-3xl p-8 space-y-4 relative group overflow-hidden cursor-help shadow-2xl">
                                         <div className="flex justify-between items-center z-10 relative">
                                             <p className="text-xs font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                                                <Activity size={14} className="text-rose-500" /> 재무 익스포저 분석
+                                                <Activity size={14} className="text-rose-500" /> 추정 리스크 노출액 (Exposure)
                                             </p>
                                             <div className="px-2 py-1 rounded bg-rose-500/20 border border-rose-500/30 text-[9px] font-black text-rose-300 uppercase tracking-widest animate-pulse">
                                                 Active Risk
@@ -826,10 +838,10 @@ const Dashboard = () => {
                                         {/* Hover Overlay Breakdown (Legacy Hover) */}
                                         <div className="absolute inset-0 bg-slate-900/98 backdrop-blur-xl z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col p-6 custom-scrollbar overflow-y-auto translate-y-4 group-hover:translate-y-0">
                                             <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exposure Composition</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Risk Category Breakdown</p>
                                                 <div className="flex items-center gap-1">
                                                     <div className="w-2 h-2 rounded-full bg-rose-500" />
-                                                    <span className="text-[8px] text-slate-500 font-bold">Projected Risk</span>
+                                                    <span className="text-[8px] text-slate-500 font-bold">Projected Risk Impact</span>
                                                 </div>
                                             </div>
 
@@ -885,7 +897,7 @@ const Dashboard = () => {
 
                                             <div className="mt-auto pt-4 border-t border-white/10 flex justify-between items-center">
                                                 <span className="text-[10px] font-black text-slate-400 uppercase">Total Assessment</span>
-                                                <span className="text-xs font-black text-white italic tracking-tighter">₩{(exposureValue / 100000000).toFixed(1)}B KRW</span>
+                                                <span className="text-xs font-black text-white italic tracking-tighter">₩{(exposureValue / 100000000).toFixed(1)}억 KRW</span>
                                             </div>
                                         </div>
                                     </div>
@@ -896,7 +908,7 @@ const Dashboard = () => {
                             {/* Flux Analysis Section */}
                             <div className="space-y-4">
                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2 border-b border-white/5 pb-2">
-                                    <BrainCircuit size={14} /> Temporal Flux Radar (시계열 이상 징후)
+                                    <BrainCircuit size={14} /> Temporal Flux Radar (시계열 구조 변화)
                                 </p>
                                 {summary?.flux_signals && summary.flux_signals.length > 0 ? (
                                     <div className="space-y-4">
@@ -955,6 +967,9 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Zone: Pricing & Monetization Teaser */}
+                <PricingTeaser />
 
                 {/* Zone D: Audit Execution Status */}
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[40px] p-8 space-y-8">

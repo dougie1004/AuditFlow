@@ -136,16 +136,26 @@ export default function AuditReport() {
                 )}
 
                 {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-32 space-y-6">
+                    <div className="flex flex-col items-center justify-center py-32 space-y-8 animate-in fade-in duration-700">
                         <div className="relative">
-                            <div className="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center animate-pulse">
-                                <BrainCircuit className="w-8 h-8 text-blue-600" />
+                            <div className="w-24 h-24 bg-blue-600/10 rounded-full flex items-center justify-center relative">
+                                <BrainCircuit className="w-10 h-10 text-blue-500 animate-pulse" />
+                                <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full border-t-blue-500 animate-spin" />
                             </div>
-                            <div className="absolute inset-0 border-2 border-blue-500/30 rounded-full animate-ping" />
+                            <div className="absolute -top-4 -right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded shadow-lg animate-bounce">
+                                DATA SECURE
+                            </div>
                         </div>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-lg font-black text-white">Advanced AI Synthesis...</h3>
-                            <p className="text-sm text-slate-500">IIA 표준 및 내부 감사 기준에 맞춰 보고서를 작성 중입니다.</p>
+                        <div className="text-center space-y-3">
+                            <h3 className="text-xl font-black text-white tracking-widest uppercase italic">Advanced AI Executive Synthesis...</h3>
+                            <div className="flex gap-1 justify-center">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }} />
+                            </div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
+                                IIA 표준 및 내부 감사 기준을 기반으로 지적 사항과 소명 내역을 종합 분석 중입니다.
+                            </p>
                         </div>
                     </div>
                 )}

@@ -108,18 +108,20 @@ export default function Login({ onLogin }: LoginProps) {
 
                 {/* Step 1: Authentication */}
                 {step === 1 && (
-                    <div className="max-w-md mx-auto">
-                        <form onSubmit={handleAuth} className="bg-white/5 border border-white/10 rounded-[40px] p-10 space-y-6 backdrop-blur-xl">
+                    <div className="max-w-md mx-auto space-y-6">
+                        <form onSubmit={handleAuth} className="bg-white/5 border border-white/10 rounded-[40px] p-10 space-y-6 backdrop-blur-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[40px] rounded-full -mr-16 -mt-16" />
+                            
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Email Address</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Enterprise Email</label>
                                     <div className="relative">
                                         <input
                                             type="email"
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="admin@company.com"
+                                            placeholder="auditor@company.com"
                                             className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold relative z-0"
                                         />
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 z-10 pointer-events-none" />
@@ -127,7 +129,7 @@ export default function Login({ onLogin }: LoginProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Passcode</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Security Token / Passcode</label>
                                     <div className="relative">
                                         <input
                                             type="password"
@@ -139,19 +141,41 @@ export default function Login({ onLogin }: LoginProps) {
                                         />
                                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 z-10 pointer-events-none" />
                                     </div>
-
                                 </div>
                             </div>
 
                             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-900/50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-blue-400/20">
-                                대시보드 접속 <ArrowRight size={16} className="text-white" />
+                                대시보드 접속 <ArrowRight size={16} />
                             </button>
 
+                            <div className="relative flex items-center py-2">
+                                <div className="flex-grow border-t border-white/5"></div>
+                                <span className="flex-shrink mx-4 text-[9px] font-black text-slate-600 uppercase tracking-widest">Or SSO Login</span>
+                                <div className="flex-grow border-t border-white/5"></div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button type="button" onClick={() => setStep(2)} className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-3 rounded-2xl hover:bg-white/10 transition-all text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center text-[8px] text-white">M</div> Microsoft
+                                </button>
+                                <button type="button" onClick={() => setStep(2)} className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-3 rounded-2xl hover:bg-white/10 transition-all text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center text-[8px] text-slate-900">G</div> Google
+                                </button>
+                            </div>
 
                             <div className="text-center pt-4">
-                                <p className="text-slate-500 text-xs font-medium">관리자 계정 분실 시 <span className="text-blue-400 cursor-pointer hover:underline">여기를 클릭</span>하세요.</p>
+                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Secured by <span className="text-emerald-500">Supabase Auth</span></p>
                             </div>
                         </form>
+
+                        <button 
+                            type="button" 
+                            onClick={() => onLogin("Pro")}
+                            className="w-full py-4 rounded-[20px] border border-white/5 bg-white/[0.02] text-slate-500 hover:text-white hover:bg-white/5 transition-all text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-2 group"
+                        >
+                            <Sparkles size={14} className="group-hover:text-amber-400 transition-colors" />
+                            Quick Demo Mode (Skip Auth)
+                        </button>
                     </div>
                 )}
 
