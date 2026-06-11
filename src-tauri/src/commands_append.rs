@@ -116,3 +116,111 @@ pub fn submit_clarification_answer(app_handle: AppHandle, request_id: String, an
 
     Ok(())
 }
+#[tauri::command]
+pub fn get_parameter_overrides(app_handle: AppHandle) -> Result<Vec<Value>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT scenario_id, parameter_key, parameter_value, updated_at, actor_id, reason FROM scenario_parameter_overrides"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(json!({
+            "scenario_id": row.get::<_, String>(0)?,
+            "parameter_key": row.get::<_, String>(1)?,
+            "parameter_value": row.get::<_, String>(2)?,
+            "updated_at": row.get::<_, String>(3)?,
+            "actor_id": row.get::<_, Option<String>>(4)?,
+            "reason": row.get::<_, Option<String>>(5)?
+        }))
+    }).map_err(|e| e.to_string())?;
+
+    let mut results = Vec::new();
+    for row in rows {
+        results.push(row.map_err(|e| e.to_string())?);
+    }
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn set_parameter_override(
+    app_handle: AppHandle,
+    scenario_id: String,
+    parameter_key: String,
+    parameter_value: String,
+    actor_id: String,
+    reason: String
+) -> Result<(), String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let mut conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    // 1. Get the old value if exists
+    let old_value: Option<String> = tx.query_row(
+        "SELECT parameter_value FROM scenario_parameter_overrides WHERE scenario_id = ?1 AND parameter_key = ?2",
+        params![scenario_id, parameter_key],
+        |row| row.get(0)
+    ).ok();
+
+    // 2. Insert or replace new override
+    tx.execute(
+        "INSERT OR REPLACE INTO scenario_parameter_overrides (scenario_id, parameter_key, parameter_value, actor_id, reason, updated_at) 
+         VALUES (?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP)",
+        params![scenario_id, parameter_key, parameter_value, actor_id, reason]
+    ).map_err(|e| e.to_string())?;
+
+    // 3. Log history
+    tx.execute(
+        "INSERT INTO scenario_parameter_override_history (scenario_id, parameter_key, old_value, new_value, actor_id, reason, changed_at) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)",
+        params![scenario_id, parameter_key, old_value, parameter_value, actor_id, reason]
+    ).map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_parameter_override_history(app_handle: AppHandle, scenario_id: Option<String>) -> Result<Vec<Value>, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    let mut query = "SELECT id, scenario_id, parameter_key, old_value, new_value, changed_at, actor_id, reason FROM scenario_parameter_override_history".to_string();
+    if scenario_id.is_some() {
+        query.push_str(" WHERE scenario_id = ?1");
+    }
+    query.push_str(" ORDER BY changed_at DESC");
+
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+
+    let mapper = |row: &rusqlite::Row| -> rusqlite::Result<Value> {
+        Ok(json!({
+            "id": row.get::<_, i64>(0)?,
+            "scenario_id": row.get::<_, String>(1)?,
+            "parameter_key": row.get::<_, String>(2)?,
+            "old_value": row.get::<_, Option<String>>(3)?,
+            "new_value": row.get::<_, String>(4)?,
+            "changed_at": row.get::<_, String>(5)?,
+            "actor_id": row.get::<_, String>(6)?,
+            "reason": row.get::<_, String>(7)?
+        }))
+    };
+
+    let mut results = Vec::new();
+    if let Some(ref sid) = scenario_id {
+        let rows = stmt.query_map(params![sid], mapper).map_err(|e| e.to_string())?;
+        for row in rows {
+            results.push(row.map_err(|e| e.to_string())?);
+        }
+    } else {
+        let rows = stmt.query_map([], mapper).map_err(|e| e.to_string())?;
+        for row in rows {
+            results.push(row.map_err(|e| e.to_string())?);
+        }
+    }
+
+    Ok(results)
+}
+

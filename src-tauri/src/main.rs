@@ -31,6 +31,8 @@ mod rule_weights;
 mod error;
 
 mod flux_engine;
+pub mod scenario_registry;
+pub mod context_builder;
 
 use database::initialize_database;
 use std::fs;
@@ -187,7 +189,12 @@ fn main() {
             commands_append::create_clarification_request,
             commands_append::get_clarifications_by_issue,
             commands_append::submit_clarification_answer,
-            commands::get_ai_fraud_deep_dive
+            commands_append::get_parameter_overrides,
+            commands_append::set_parameter_override,
+            commands_append::get_parameter_override_history,
+            commands::get_ai_fraud_deep_dive,
+            commands::get_auth_status,
+            commands::register_user
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

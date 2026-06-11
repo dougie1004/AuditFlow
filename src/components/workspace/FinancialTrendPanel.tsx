@@ -18,7 +18,11 @@ interface AccountTrend {
     max_abs_yoy: number;
 }
 
-const FinancialTrendPanel = () => {
+interface FinancialTrendPanelProps {
+    projectId?: string;
+}
+
+const FinancialTrendPanel = ({ projectId }: FinancialTrendPanelProps) => {
     const [trends, setTrends] = useState<AccountTrend[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -29,7 +33,7 @@ const FinancialTrendPanel = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await safeInvoke<AccountTrend[]>("get_multi_year_trial_balance");
+            const res = await safeInvoke<AccountTrend[]>("get_multi_year_trial_balance", { projectId });
             setTrends(res || []);
         } catch (err: any) {
             setError(err.message || String(err));
@@ -38,7 +42,7 @@ const FinancialTrendPanel = () => {
         }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { fetchData(); }, [projectId]);
 
     const filteredTrends = useMemo(() =>
         trends.filter(t => t.account.toLowerCase().includes(searchTerm.toLowerCase())),

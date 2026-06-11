@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 
 import { AuditProvider } from "./context/AuditContext";
+import { useAuthStore } from "./store/useAuthStore";
+import SetupWizard from "./components/SetupWizard";
 
 import auditflowLogo from "./assets/auditflow_logo.png";
 import insightrixLogo from "./assets/insightrix_logo.png";
@@ -33,6 +35,7 @@ import AIAnalysisReport from "./components/AIAnalysisReport";
 import ExpertConsole from "./pages/ExpertConsole";
 import EntityTimeline from "./pages/EntityTimeline";
 import FluxAnalysis from "./pages/FluxAnalysis";
+import ScenarioManager from "./pages/ScenarioManager";
 
 // Debug Pages
 import AuditLifecycle from "./pages/debug/AuditLifecycle";
@@ -66,17 +69,13 @@ export const useApp = () => {
 };
 
 export default function App() {
-  const [user, setUser] = useState<{ tier: string } | null>(null);
+  const { isRegistered, checkRegistration, isLoading: isAuthLoading } = useAuthStore();
   const [activeProject, setActiveProject] = useState<string | null>(null);
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
 
-  // 로컬 스토리지에서 설정 로드 (데스크톱/웹 공통 영속성)
   useEffect(() => {
-    // Phase 4 Testing Mode: Auto-login
-    if (!user) {
-      setUser({ tier: 'Enterprise' });
-    }
-
+    checkRegistration();
+    
     try {
       const saved = localStorage.getItem('auditflow_config');
       if (saved) {
@@ -94,7 +93,7 @@ export default function App() {
     localStorage.setItem('auditflow_config', JSON.stringify(newConfig));
   };
 
-  // 전역 에러 리스너 (tauri-bridge에서 발생시킨 에러 캐치)
+  // 전역 에러 리스너
   useEffect(() => {
     const handleError = (e: any) => {
       alert(`[SYSTEM ALERT] ${e.detail}`);
@@ -103,24 +102,33 @@ export default function App() {
     return () => window.removeEventListener('app-error', handleError as any);
   }, []);
 
-  // 세션 유지 (브라우저 메모리상)
-  const login = (tier: string) => {
-    setUser({ tier });
-    updateConfig({ userTier: tier as any });
-  };
-  const logout = () => {
-    console.log("Logout disabled in Phase 4 mode.");
-    // setUser(null); 
-    // setActiveProject(null); 
-  };
+  if (isAuthLoading) {
+    return (
+        <div className="fixed inset-0 bg-[#020617] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Initializing Core...</span>
+            </div>
+        </div>
+    );
+  }
+
+  if (!isRegistered) {
+    return (
+      <AppContext.Provider value={{ user: null, activeProject, setActiveProject, logout: () => {}, config, updateConfig }}>
+        <AuditProvider>
+          <SetupWizard />
+        </AuditProvider>
+      </AppContext.Provider>
+    );
+  }
 
   return (
-    <AppContext.Provider value={{ user, activeProject, setActiveProject, logout, config, updateConfig }}>
+    <AppContext.Provider value={{ user: { tier: config.userTier }, activeProject, setActiveProject, logout: () => {}, config, updateConfig }}>
       <AuditProvider>
         <Router>
           <Routes>
-            <Route path="/login" element={user ? <Navigate to="/" /> : <Login onLogin={login} />} />
-            <Route path="/*" element={user ? <Layout /> : <Navigate to="/login" />} />
+            <Route path="/*" element={<Layout />} />
           </Routes>
         </Router>
       </AuditProvider>
@@ -245,6 +253,7 @@ function Layout() {
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Management</p>
           <NavItem to="/portfolio" icon={<FileText size={18} />} label="감사 프로젝트 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
           <NavItem to="/report" icon={<FileText size={18} />} label="감사 결론 및 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/scenarios" icon={<Activity size={18} />} label="감사 시나리오 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
           <div className="mt-8 pt-4 border-t border-slate-800">
             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">System Admin</p>
@@ -316,6 +325,7 @@ function Layout() {
             <Route path="/history" element={<AuditHistory />} />
             <Route path="/entity/:entityId/timeline" element={<EntityTimeline />} />
             <Route path="/flux-analysis" element={<FluxAnalysis />} />
+            <Route path="/scenarios" element={<ScenarioManager />} />
 
             {/* Debug Routes (Hidden) */}
             <Route path="/debug/audit-lifecycle" element={<AuditLifecycle />} />

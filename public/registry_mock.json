@@ -1,0 +1,95 @@
+[
+  {
+    "id": "PR-02",
+    "name": "임의 분할 결제 (Split PO)",
+    "domain": "Procurement",
+    "version": "1.0.0",
+    "enabled": true,
+    "parameters": [
+      {
+        "key": "lookback_window_days",
+        "data_type": "Int",
+        "default_value": "7",
+        "description": "대조할 전표의 시계열 범위 (일 단위)"
+      },
+      {
+        "key": "threshold_ratio",
+        "data_type": "Float",
+        "default_value": "0.90",
+        "description": "전결 임계 한도 대비 비정상 접근 비율 (예: 0.90 => 90%~100% 범위)"
+      }
+    ]
+  },
+  {
+    "id": "PR-03",
+    "name": "시장가 격차 (Market Price Gap)",
+    "domain": "Procurement",
+    "version": "1.0.0",
+    "enabled": true,
+    "parameters": [
+      {
+        "key": "market_price_deviation_ratio",
+        "data_type": "Float",
+        "default_value": "0.30",
+        "description": "표준가 대비 비정상 초과 구매액 비율 (0.30 => 30% 초과 시 경고)"
+      }
+    ]
+  },
+  {
+    "id": "EX-01",
+    "name": "Spilling Receipt (카드 쪼개기)",
+    "domain": "Expense/Travel",
+    "version": "1.0.0",
+    "enabled": true,
+    "parameters": [
+      {
+        "key": "split_time_window_minutes",
+        "data_type": "Int",
+        "default_value": "15",
+        "description": "쪼개기 결제 매칭을 위한 시간차 임계 간격 (분)"
+      },
+      {
+        "key": "split_count_threshold",
+        "data_type": "Int",
+        "default_value": "3",
+        "description": "쪼개기 판정 최소 결제 횟수"
+      }
+    ]
+  },
+  {
+    "id": "EX-02",
+    "name": "Weekend/Night Usage (심야/주말 결제)",
+    "domain": "Expense/Travel",
+    "version": "1.0.0",
+    "enabled": true,
+    "parameters": [
+      {
+        "key": "night_start_time",
+        "data_type": "String",
+        "default_value": "22:00",
+        "description": "심야 감사 분류 시작 시간"
+      },
+      {
+        "key": "weekend_monitoring",
+        "data_type": "Boolean",
+        "default_value": "true",
+        "description": "주말 거래 감사 모니터링 활성화 토글"
+      }
+    ]
+  },
+  {
+    "id": "FF-01",
+    "name": "Rapid Money Cycling (핑퐁 자금 거래)",
+    "domain": "Financial Integrity",
+    "version": "1.0.0",
+    "enabled": true,
+    "parameters": [
+      {
+        "key": "ping_pong_time_window_hours",
+        "data_type": "Int",
+        "default_value": "24",
+        "description": "특수관계인 자금 유출입 매칭 타임 윈도우 (시간)"
+      }
+    ]
+  }
+]

@@ -118,8 +118,8 @@ fn default_config() -> AppConfig {
             corporate_limit: 5000000.0,
         },
         ai: AiConfig {
-            model_pro: "gemini-2.0-flash".to_string(),
-            model_fast: "gemini-2.0-flash".to_string(),
+            model_pro: "gemini-2.5-pro".to_string(),
+            model_fast: "gemini-2.5-flash".to_string(),
             base_url: "https://generativelanguage.googleapis.com".to_string(),
         },
         risk_factors: RiskFactorsConfig {

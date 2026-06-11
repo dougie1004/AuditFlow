@@ -1,0 +1,116 @@
+{
+  "auditflow_version": "v4.0.0",
+  "dataset_version": "1.0.0",
+  "generated_at": "2026-06-06T16:09:22.833852600+00:00",
+  "issues": [
+    {
+      "issue_title": "제한 업종 직접 감지",
+      "project_type": "Expense",
+      "severity": "Critical"
+    },
+    {
+      "issue_title": "제한 업종 직접 감지",
+      "project_type": "Expense",
+      "severity": "Critical"
+    },
+    {
+      "issue_title": "[LDG-01] 고액 상위 1% 전표",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-02] 라운드 금액 반복 패턴",
+      "project_type": "Inventory",
+      "severity": "Medium"
+    },
+    {
+      "issue_title": "[LDG-05] 계정 사용 액티비티 변동 (Account Volatility)",
+      "project_type": "Inventory",
+      "severity": "Medium"
+    },
+    {
+      "issue_title": "[LDG-06] 특정 부서 집중 거래 (Departmental Outlier)",
+      "project_type": "Inventory",
+      "severity": "Medium"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Inventory",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-01] 고액 상위 1% 전표",
+      "project_type": "Ledger",
+      "severity": "High"
+    },
+    {
+      "issue_title": "[LDG-07] 적요 키워드 위험 탐지",
+      "project_type": "Ledger",
+      "severity": "High"
+    }
+  ],
+  "relations": [
+    {
+      "relation_type": "SPLIT_PAYMENT",
+      "strength": 0.85
+    },
+    {
+      "relation_type": "SPLIT_PAYMENT",
+      "strength": 0.85
+    }
+  ],
+  "summary": {
+    "total_issues": 19,
+    "total_relations": 2
+  }
+}

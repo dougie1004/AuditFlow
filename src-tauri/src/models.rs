@@ -328,3 +328,30 @@ pub struct AccountTrendSummary {
     pub yoy: BTreeMap<i32, f64>,
     pub max_abs_yoy: f64,
 }
+
+
+// --- AuditFlow Scenario Parameter Registry Models (Sprint 1 PoC) ---
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScenarioDefinition {
+    pub id: String,
+    pub name: String,
+    pub domain: String,
+    pub version: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ParameterDefinition {
+    pub key: String,
+    pub data_type: String,
+    pub default_value: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OverrideValue {
+    pub project_id: String,
+    pub scenario_id: String,
+    pub key: String,
+    pub value: String,
+}

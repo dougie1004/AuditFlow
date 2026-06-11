@@ -440,11 +440,6 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
     let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN credit REAL DEFAULT 0.0", params![]);
     let _ = conn.execute("ALTER TABLE entity_event ADD COLUMN net_amount REAL DEFAULT 0.0", params![]);
 
-    // [PHASE 1 Performance] Indexing for High Volume Events
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_entity_id ON entity_event(entity_id)", params![]);
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_event_date ON entity_event(event_date)", params![]);
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_source_type ON entity_event(source_type)", params![]);
-
     // [PHASE 2] Structural Risk Signals
     conn.execute(
         "CREATE TABLE IF NOT EXISTS risk_signal (
@@ -495,11 +490,8 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
 
-    // Migration: ensure columns exist
     let _ = conn.execute("ALTER TABLE account_year_profile ADD COLUMN avg_anomaly_score REAL DEFAULT 0.0", params![]);
     let _ = conn.execute("ALTER TABLE account_year_profile ADD COLUMN structural_score REAL DEFAULT 0.0", params![]);
-
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_account_year_lookup ON account_year_profile (account_code, fiscal_year)", params![]);
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS event_relations (
@@ -516,9 +508,6 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
 
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_source ON event_relations(source_event_id)", params![]);
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_target ON event_relations(target_event_id)", params![]);
-
     // [PHASE 5] Contextual Risk Signals (Non-Financial)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS context_signal (
@@ -533,8 +522,6 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         )",
         params![]
     ).map_err(|e| e.to_string())?;
-
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_context_signal_project ON context_signal(project_id)", params![]);
 
     // [PHASE 6] Risk Correlation (Hybrid Intelligence)
     conn.execute(
@@ -551,8 +538,6 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         params![]
     ).map_err(|e| e.to_string())?;
 
-    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_correlation_signal_object ON correlation_signal(object_id)", params![]);
-    
     // [AuditFlow V3] Clarification Loop (Auditor-Auditee Communication)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS clarification_request (
@@ -569,6 +554,62 @@ pub fn initialize_database(app_handle: &AppHandle) -> Result<(), String> {
         )",
         params![]
     ).map_err(|e| e.to_string())?;
+
+    // [AuditFlow V4] Scenario Parameter Overrides (Audit Trail Support)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS scenario_parameter_overrides (
+            scenario_id TEXT NOT NULL,
+            parameter_key TEXT NOT NULL,
+            parameter_value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            actor_id TEXT,
+            reason TEXT,
+            PRIMARY KEY (scenario_id, parameter_key)
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS scenario_parameter_override_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scenario_id TEXT NOT NULL,
+            parameter_key TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT NOT NULL,
+            changed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            actor_id TEXT NOT NULL,
+            reason TEXT NOT NULL
+        )",
+        params![]
+    ).map_err(|e| e.to_string())?;
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 🚀 PERFORMANCE INDEXING (PHASE 4 OPTIMIZATION)
+    // ──────────────────────────────────────────────────────────────────────────
+    
+    // 1. Entity Events (High Volume)
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_account_lookup ON entity_event(account_code, event_date)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_source_type ON entity_event(source_type)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_event_account_name ON entity_event(account_name)", params![]);
+    
+    // 2. Issue Tracking & Projects
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_issues_project_status ON audit_issues(audit_id, status)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_projects_entity ON audit_projects(entity_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_object_project_type ON audit_object(project_id, object_type)", params![]);
+    
+    // 3. Relations & Sessions
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_relation_candidate_to_obj ON relation_candidate(to_object_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_review_tasks_session_status ON review_tasks(session_id, status)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_cases_project ON audit_cases(project_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_source ON event_relations(source_event_id)", params![]);
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_event_relations_target ON event_relations(target_event_id)", params![]);
+    
+    // 4. Multi-Year Lookup
+    let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_account_year_lookup ON account_year_profile (account_code, fiscal_year)", params![]);
+
+    // 5. System Optimization
+    let _ = conn.execute("ANALYZE", params![]);
+    println!(">>> [INIT] Database Indexing & Optimization complete.");
 
     Ok(())
 }

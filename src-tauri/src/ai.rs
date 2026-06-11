@@ -1,13 +1,15 @@
-﻿use serde_json::{Value, json};
+use serde_json::{Value, json};
 use reqwest::Client;
 pub use crate::file_utils::extract_json;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, Mutex};
 
 static GLOBAL_CLIENT: OnceLock<Client> = OnceLock::new();
-static CUSTOM_API_KEY: OnceLock<String> = OnceLock::new();
+static CUSTOM_API_KEY: Mutex<Option<String>> = Mutex::new(None);
 
 pub fn set_api_key(key: String) {
-    let _ = CUSTOM_API_KEY.set(key);
+    if let Ok(mut guard) = CUSTOM_API_KEY.lock() {
+        *guard = Some(key);
+    }
 }
 
 fn get_client() -> &'static Client {
@@ -38,21 +40,29 @@ pub struct AiConfig {
 
 impl AiConfig {
     pub fn from_env() -> Result<Self, String> {
-        let api_key = std::env::var("GOOGLE_API_KEY")
-            .or_else(|_| std::env::var("GEMINI_API_KEY"))
-            .or_else(|_| CUSTOM_API_KEY.get().cloned().ok_or(std::env::VarError::NotPresent))
-            .map_err(|_| "Missing GEMINI_API_KEY Environment Variable".to_string())?;
+        let api_key = CUSTOM_API_KEY.lock().ok()
+            .and_then(|guard| guard.clone())
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| std::env::var("GOOGLE_API_KEY").ok().filter(|s| !s.trim().is_empty()))
+            .or_else(|| std::env::var("GEMINI_API_KEY").ok().filter(|s| !s.trim().is_empty()))
+            .ok_or_else(|| "Missing GEMINI_API_KEY Environment Variable".to_string())?;
         
         let app_cfg = crate::config::get_config();
         
         let base_url = std::env::var("GEMINI_BASE_URL")
-            .unwrap_or_else(|_| app_cfg.ai.base_url.clone());
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| app_cfg.ai.base_url.clone());
         
         let model_pro = std::env::var("GEMINI_MODEL_PRO")
-            .unwrap_or_else(|_| app_cfg.ai.model_pro.clone());
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| app_cfg.ai.model_pro.clone());
         
         let model_fast = std::env::var("GEMINI_MODEL_FAST")
-            .unwrap_or_else(|_| app_cfg.ai.model_fast.clone());
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| app_cfg.ai.model_fast.clone());
 
         Ok(Self {
             api_key,
@@ -67,9 +77,13 @@ impl AiConfig {
 fn sanitize_model_or_default(input: &str) -> String {
     let m = input.trim();
 
-    // [GUARDRAIL] Force upgrade legacy 1.5 models to 2.0
-    if m.contains("1.5") {
-        return "gemini-2.0-flash".to_string();
+    // [GUARDRAIL] Force upgrade legacy/retired models (1.5, 2.0) to stable 2.5
+    if m.contains("1.5") || m.contains("2.0") {
+        if m.contains("pro") {
+            return "gemini-2.5-pro".to_string();
+        } else {
+            return "gemini-2.5-flash".to_string();
+        }
     }
 
     // 1) Handle variant standardizations
@@ -77,8 +91,8 @@ fn sanitize_model_or_default(input: &str) -> String {
 
     // 2) Allowlist check
     match corrected.as_str() {
-        "gemini-2.0-flash" | "gemini-1.5-flash" | "gemini-1.5-pro" => corrected,
-        _ => "gemini-2.0-flash".to_string()
+        "gemini-2.5-pro" | "gemini-2.5-flash" => corrected,
+        _ => "gemini-2.5-flash".to_string()
     }
 }
 
@@ -120,7 +134,13 @@ pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value,
         ]
     });
     
-    let res = client.post(url).json(&body).send().await.map_err(|e| format!("Network Connection Error: {}", e))?;
+    let res = client.post(url)
+        .header("Referer", "http://localhost:5174/")
+        .header("Origin", "http://localhost:5174/")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Network Connection Error: {}", e))?;
     
     if !res.status().is_success() {
         let status = res.status();
@@ -209,7 +229,13 @@ pub async fn call_gemini_chat(message: String, system_prompt: &str) -> Result<St
         ]
     });
     
-    let res = client.post(url).json(&body).send().await.map_err(|e| format!("Network Error: {}", e))?;
+    let res = client.post(url)
+        .header("Referer", "http://localhost:5174/")
+        .header("Origin", "http://localhost:5174/")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Network Error: {}", e))?;
     
     if !res.status().is_success() {
         let status = res.status();
@@ -244,7 +270,13 @@ pub async fn call_gemini_flash(prompt: &str) -> Result<String, String> {
         ]
     });
     
-    let res = client.post(url).json(&body).send().await.map_err(|e| format!("Network Error: {}", e))?;
+    let res = client.post(url)
+        .header("Referer", "http://localhost:5174/")
+        .header("Origin", "http://localhost:5174/")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Network Error: {}", e))?;
     
     if !res.status().is_success() {
         let status = res.status();

@@ -1,0 +1,248 @@
+[
+  {
+    "scenario_id": "PR-01",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Bid-rigging collusion detection"
+  },
+  {
+    "scenario_id": "PR-01",
+    "framework": "COSO",
+    "control_area": "Procurement",
+    "reason": "Internal controls against fraudulent bidding"
+  },
+  {
+    "scenario_id": "PR-02",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Split PO to bypass procurement threshold limits"
+  },
+  {
+    "scenario_id": "PR-02",
+    "framework": "COSO",
+    "control_area": "Procurement",
+    "reason": "Internal controls against delegated authorization bypass"
+  },
+  {
+    "scenario_id": "PR-03",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Market price gap analysis for bribery/kickbacks"
+  },
+  {
+    "scenario_id": "PR-03",
+    "framework": "COSO",
+    "control_area": "Procurement",
+    "reason": "Fair value transaction verification"
+  },
+  {
+    "scenario_id": "PR-04",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Conflict of interest and related party transaction detection"
+  },
+  {
+    "scenario_id": "PR-04",
+    "framework": "COSO",
+    "control_area": "Procurement",
+    "reason": "Independent vendor evaluation integrity check"
+  },
+  {
+    "scenario_id": "PR-05",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Bribery and collusion risk in sole-source vendor overreliance"
+  },
+  {
+    "scenario_id": "PR-07",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Kickback detection in transaction volume spikes with specific vendors"
+  },
+  {
+    "scenario_id": "PR-07",
+    "framework": "COSO",
+    "control_area": "Procurement",
+    "reason": "Unusual volume change monitoring"
+  },
+  {
+    "scenario_id": "PR-08",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "Bribery risk detection in abnormal contract price variation"
+  },
+  {
+    "scenario_id": "PR-10",
+    "framework": "ISO37001",
+    "control_area": "Procurement",
+    "reason": "High-risk unperformed advance payments indicating shell vendors"
+  },
+  {
+    "scenario_id": "EX-01",
+    "framework": "ISO37001",
+    "control_area": "Expense",
+    "reason": "Splitting receipts to bypass corporate card daily limits"
+  },
+  {
+    "scenario_id": "EX-01",
+    "framework": "COSO",
+    "control_area": "Expense",
+    "reason": "Receipt division pattern monitoring"
+  },
+  {
+    "scenario_id": "EX-02",
+    "framework": "ISO37001",
+    "control_area": "Expense",
+    "reason": "Anti-bribery check for non-business hour entertainment card usage"
+  },
+  {
+    "scenario_id": "EX-02",
+    "framework": "COSO",
+    "control_area": "Expense",
+    "reason": "Non-working hours card transaction audit"
+  },
+  {
+    "scenario_id": "EX-03",
+    "framework": "ISO37001",
+    "control_area": "Expense",
+    "reason": "Remote card usage without approved business trip logs"
+  },
+  {
+    "scenario_id": "EX-04",
+    "framework": "ISO37001",
+    "control_area": "Expense",
+    "reason": "Forbidden/entertainment venue corporate card purchases"
+  },
+  {
+    "scenario_id": "EX-05",
+    "framework": "ISO37001",
+    "control_area": "Expense",
+    "reason": "Double billing of travel fares indicating expense padding"
+  },
+  {
+    "scenario_id": "CC-01",
+    "framework": "ISO37001",
+    "control_area": "Corporate Card",
+    "reason": "Compliance check for restricted Merchant Category Code (MCC) usage"
+  },
+  {
+    "scenario_id": "CC-01",
+    "framework": "COSO",
+    "control_area": "Corporate Card",
+    "reason": "Authorized spending category enforcement"
+  },
+  {
+    "scenario_id": "CC-03",
+    "framework": "ISO37001",
+    "control_area": "Corporate Card",
+    "reason": "Cash withdrawal audit indicating unvouched cash handouts"
+  },
+  {
+    "scenario_id": "CC-09",
+    "framework": "ISO37001",
+    "control_area": "Corporate Card",
+    "reason": "Laundering check for card-to-gift-card cash conversions"
+  },
+  {
+    "scenario_id": "FF-01",
+    "framework": "COSO",
+    "control_area": "Financial Integrity",
+    "reason": "Lapping and circular funds flows indicating asset diversion"
+  },
+  {
+    "scenario_id": "FF-01",
+    "framework": "NTS",
+    "control_area": "Financial Integrity",
+    "reason": "Circular transactions indicating tax evasion schemes"
+  },
+  {
+    "scenario_id": "FF-03",
+    "framework": "COSO",
+    "control_area": "Financial Integrity",
+    "reason": "Internal control for account name mismatch on supplier payments"
+  },
+  {
+    "scenario_id": "FF-03",
+    "framework": "NTS",
+    "control_area": "Financial Integrity",
+    "reason": "Routing payments to private individual bank accounts instead of corporate entities"
+  },
+  {
+    "scenario_id": "FF-04",
+    "framework": "COSO",
+    "control_area": "Financial Integrity",
+    "reason": "Structuring bank deposits below thresholds to avoid reporting controls"
+  },
+  {
+    "scenario_id": "FF-04",
+    "framework": "NTS",
+    "control_area": "Financial Integrity",
+    "reason": "Structuring transactions to evade tax authority cash transaction reporting"
+  },
+  {
+    "scenario_id": "LDG-01",
+    "framework": "COSO",
+    "control_area": "Ledger",
+    "reason": "High-value outlier transaction auditing for materiality analysis"
+  },
+  {
+    "scenario_id": "LDG-02",
+    "framework": "COSO",
+    "control_area": "Ledger",
+    "reason": "Abnormal round number journal entries indicating non-standard manual adjustments"
+  },
+  {
+    "scenario_id": "LDG-04",
+    "framework": "COSO",
+    "control_area": "Ledger",
+    "reason": "Journal entries recorded outside business hours indicating unauthorized access"
+  },
+  {
+    "scenario_id": "LDG-05",
+    "framework": "COSO",
+    "control_area": "Ledger",
+    "reason": "Ledger account volatility analysis indicating potential earnings manipulation"
+  },
+  {
+    "scenario_id": "LDG-08",
+    "framework": "COSO",
+    "control_area": "Ledger",
+    "reason": "Journal entries just below LOA limits indicating threshold manipulation"
+  },
+  {
+    "scenario_id": "SA-01",
+    "framework": "COSO",
+    "control_area": "Sales",
+    "reason": "Quarter-end sales volume spikes check for revenue integrity"
+  },
+  {
+    "scenario_id": "SA-01",
+    "framework": "NTS",
+    "control_area": "Sales",
+    "reason": "Premature tax invoice issuance to artificially inflate current period revenue"
+  },
+  {
+    "scenario_id": "SA-02",
+    "framework": "COSO",
+    "control_area": "Sales",
+    "reason": "Post-quarter-end sales return patterns indicating channel stuffing"
+  },
+  {
+    "scenario_id": "SA-02",
+    "framework": "NTS",
+    "control_area": "Sales",
+    "reason": "Fictitious revenue booking followed by returns to evade or defer tax liability"
+  },
+  {
+    "scenario_id": "SA-06",
+    "framework": "COSO",
+    "control_area": "Sales",
+    "reason": "Circular trading checks with related parties to inflate revenue metrics"
+  },
+  {
+    "scenario_id": "SA-06",
+    "framework": "NTS",
+    "control_area": "Sales",
+    "reason": "Fictitious transactions using tax invoice routing loops"
+  }
+]

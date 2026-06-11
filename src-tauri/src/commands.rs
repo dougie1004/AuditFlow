@@ -22,7 +22,41 @@ static AMOUNT_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 // DO NOT implement business logic here.
 // If you see logic here, REFACTOR it into a dedicated module immediately.
 
+#[tauri::command]
+pub fn get_auth_status(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+    
+    let user_name: Option<String> = conn.query_row(
+        "SELECT value FROM settings WHERE key = 'user_name'",
+        [],
+        |r| r.get(0)
+    ).ok();
 
+    if let Some(name) = user_name {
+        let email: String = conn.query_row("SELECT value FROM settings WHERE key = 'user_email'", [], |r| r.get(0)).unwrap_or_default();
+        let tier: String = conn.query_row("SELECT value FROM settings WHERE key = 'user_tier'", [], |r| r.get(0)).unwrap_or_else(|_| "Trial".to_string());
+        
+        Ok(json!({ "is_registered": true, "user": { "name": name, "email": email, "tier": tier } }))
+    } else {
+        Ok(json!({ "is_registered": false }))
+    }
+}
+
+#[tauri::command]
+#[allow(non_snake_case)]
+pub fn register_user(app_handle: tauri::AppHandle, name: String, email: String, company: String, tier: String) -> Result<String, String> {
+    let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
+    let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
+
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('user_name', ?1)", params![name]).map_err(|e| e.to_string())?;
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('user_email', ?1)", params![email]).map_err(|e| e.to_string())?;
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('user_company', ?1)", params![company]).map_err(|e| e.to_string())?;
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('user_tier', ?1)", params![tier]).map_err(|e| e.to_string())?;
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('setup_completed_at', ?1)", params![chrono::Local::now().to_rfc3339()]).map_err(|e| e.to_string())?;
+
+    Ok("Registration Successful".into())
+}
 
 
 #[tauri::command]
@@ -53,7 +87,14 @@ pub fn upload_audit_file(app_handle: AppHandle, projectType: String, filePath: S
 #[tauri::command]
 #[allow(non_snake_case)]
 pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enableMasking: Option<bool>, _externalContext: Option<String>, targetFileIds: Option<Vec<i64>>) -> Result<Value, String> {
-    let _masking = enableMasking.unwrap_or(false);
+    // [COMPLIANCE] Force masking in RELEASE builds for B2B security
+    let is_debug = cfg!(debug_assertions);
+    let _masking = if is_debug {
+        enableMasking.unwrap_or(false)
+    } else {
+        true // Always forced in Distribution/Release version
+    };
+    
     use tauri::Emitter;
 
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
@@ -1089,7 +1130,7 @@ pub fn get_audit_universe(app_handle: AppHandle, project_id: Option<String>) -> 
         if !pid.is_empty() {
              // [ORGANIC CONNECTION] Dynamic Linking instead of Hardcoded Domain Map
              // Allow flexible matching: Project Title "Marketing Audit" <-> Unit "Marketing Team"
-             let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![pid], |r| r.get(0)).unwrap_or_default();
+             let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![pid], |r| r.get(0)).unwrap_or_else(|_| "".to_string());
              
              // Sanitize title for SQL LIKE (basic)
              let safe_title = title.replace("'", "''"); 
@@ -1251,7 +1292,7 @@ pub fn delete_audit_file(app_handle: AppHandle, id: i64) -> Result<String, Strin
 pub fn delete_audit_project(app_handle: AppHandle, projectId: String) -> Result<String, String> {
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
-    let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![&projectId], |r| r.get(0)).unwrap_or_default();
+    let title: String = conn.query_row("SELECT title FROM audit_projects WHERE id = ?1", params![&projectId], |r| r.get(0)).unwrap_or_else(|_| "".to_string());
     
     let _ = conn.execute("DELETE FROM audit_issues WHERE project_type = ?1 OR audit_id = ?1", params![&projectId]);
     let _ = conn.execute("DELETE FROM audit_projects WHERE id = ?1", params![&projectId]);
@@ -2276,23 +2317,28 @@ pub async fn generate_professional_report(app_handle: AppHandle, projectId: Stri
         - 재무 임팩트: {}
         - 소명 대응 현황: {}
 
-        [상세 지적 사항 내역]
+        [상세 발견 사항 요역]
         {}
 
-        [보고서 구성 필수 지침]
-        1. **경영진 관점**: 단순히 위반 건수를 나열하지 말고, 발견된 리스크가 조직의 건전성에 미치는 '전략적 의미'를 서술하십시오.
-        2. **소명 현황 분석**: 소명 대응률을 언급하며 현업 부서의 협조도 및 통제 환경의 성숙도를 평가하십시오.
-        3. **포맷팅**: 
-           - 주요 발견 사항은 반드시 **Markdown 표(Table)** 형식을 사용하여 [항목 | 심각도 | 상태 | 재무영향 | 핵심이슈]를 요약하십시오.
+        [보고서 구성 필수 지시 - 법무 실드(Liability Shield) 극대화]
+        1. **경영진 관점**: 단순한 위반 건수를 나열하지 말고, 발견된 리스크가 조직의 건전성에 미치는 '전략적 영향'을 기술하십시오.
+        2. **소명 현황 분석**: 소명 완료율을 언급하며 현업 부서의 협조도 및 통제 환경을 성숙도를 평가하십시오.
+        3. **법무 리스크 차단 (Liability Shield - 필수 수호)**:
+           - 본 보고서가 시스템 준수를 '인증'하거나 '통과(Pass)'했다는 확정적 표현을 절대 사용하지 마십시오.
+           - 대신, 반드시 **'[COSO / ISO 37001 등 관련 컴플라이언스] 통제 영역에 대해 데이터 기반 테스트 및 이상치 모니터링을 정상적으로 수행 완료하였음'**과 같이 사실 관계 위주의 표현으로 정교화하여 작성하십시오.
+           - 보고서 최하단에 [법적 고지 (Disclaimer)] 섹션을 추가하여 본 감사 시뮬레이션 결과가 기업의 완벽한 규제 준수를 보증하는 것은 아니며, 통제성 테스트의 수행 결과만을 나타냄을 명시하십시오.
+        4. **포맷팅**: 
+           - 주요 발견 사항은 반드시 **Markdown Table** 형식을 사용하여 [순번 | 발생일 | 상태 | 재무영향 | 핵심이슈]로 요약하십시오.
            - 'Critical' 등급 이슈는 별도의 강조 섹션을 만드십시오.
-        4. **구조**:
+        5. **구조**:
            # 감사 결과 경영진 요약 보고서 (Executive Summary)
            ## 1. 종합 진단 (Overall Assessment)
            ## 2. 재무 및 운영 리스크 요약 (Risk Matrix)
            ## 3. 핵심 발견 사항 및 소명 현황 (Key Findings & Clarifications)
            ## 4. 감사인 권고 및 전략적 제언 (Recommendations)
+           ## 5. 법적 고지 (Disclaimer)
 
-        톤: 매우 권위 있고, 통찰력 있으며, 격식 있는 문체를 유지하십시오.", 
+        본 고지는 매우 권위 있고, 통찰력 있으되 격식 있는 감사 문체로 작성하십시오.", 
         financial_summary, clarification_summary, findings_str
     );
 
@@ -3560,24 +3606,46 @@ pub fn get_structural_top_accounts(app_handle: AppHandle) -> Result<Vec<crate::a
 }
 
 #[tauri::command]
-pub fn get_multi_year_trial_balance(app_handle: tauri::AppHandle) -> Result<Vec<crate::models::AccountTrendSummary>, String> {
+#[allow(non_snake_case)]
+pub fn get_multi_year_trial_balance(app_handle: tauri::AppHandle, projectId: Option<String>) -> Result<Vec<crate::models::AccountTrendSummary>, String> {
     let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let db_path = app_dir.join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
 
+    // Extract department name to aggregate across years for that department
+    let query_param = if let Some(ref pid) = projectId {
+        if pid.is_empty() {
+            None
+        } else {
+            let parts: Vec<&str> = pid.split('-').collect();
+            if parts.len() >= 3 && parts[0] == "PRJ" && parts[1].chars().all(|c| c.is_ascii_digit()) {
+                Some(format!("%{}", parts[2..].join("-")))
+            } else {
+                Some(format!("%{}", pid))
+            }
+        }
+    } else {
+        None
+    };
+
+    println!("[DEBUG] get_multi_year_trial_balance: projectId = {:?}, query_param = {:?}", projectId, query_param);
+
     let sql = "
         SELECT 
-            json_extract(metadata, '$.account') as account,
-            strftime('%Y', event_date) as year,
-            SUM(amount) as total
-        FROM entity_event
-        WHERE source_type = 'LEDGER' AND account IS NOT NULL
+            COALESCE(e.account_name, json_extract(e.metadata, '$.account')) as account,
+            strftime('%Y', e.event_date) as year,
+            SUM(e.amount) as total
+        FROM entity_event e
+        LEFT JOIN audit_object o ON e.source_object_id = o.id
+        WHERE e.source_type = 'LEDGER' 
+          AND (e.account_name IS NOT NULL OR json_extract(e.metadata, '$.account') IS NOT NULL)
+          AND (?1 IS NULL OR o.project_id LIKE ?1)
         GROUP BY account, year
         ORDER BY account, year;
     ";
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
-    let rows = stmt.query_map([], |row| {
+    let rows = stmt.query_map(params![query_param], |row| {
         let account: String = row.get(0)?;
         let year_str: Option<String> = row.get(1)?;
         let total: f64 = row.get::<_, Option<f64>>(2)?.unwrap_or(0.0);
@@ -3682,9 +3750,9 @@ pub async fn get_ai_fraud_deep_dive(app_handle: AppHandle, issue_id: i64) -> Res
         params![issue_id],
         |r| Ok(crate::models::AuditIssue {
             id: r.get(0)?,
-            issue_title: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+            issue_title: r.get::<_, Option<String>>(1)?.unwrap_or_else(|| "".to_string()),
             description: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
-            severity: r.get::<_, Option<String>>(3)?.unwrap_or_default(),
+            severity: r.get::<_, Option<String>>(3)?.unwrap_or_else(|| "".to_string()),
             raw_row_data: r.get(4)?,
             row_index: r.get(5)?,
             detected_at: r.get::<_, Option<String>>(6)?.unwrap_or_default(),

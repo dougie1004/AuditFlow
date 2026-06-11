@@ -313,6 +313,30 @@ export default function AuditWorkspace() {
                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-blue-500 transition-colors" size={16} />
                         </div>
 
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl group relative cursor-help">
+                                <ShieldCheck size={16} className="text-emerald-500 animate-pulse" />
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none">Privacy Shield</span>
+                                    <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-tighter">B2B Compliance ON</span>
+                                </div>
+                                <div className="absolute top-full right-0 mt-3 hidden group-hover:block z-50">
+                                    <div className="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-2xl w-64">
+                                        <p className="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-2">Data Privacy Policy</p>
+                                        <p className="text-[10px] text-slate-300 leading-relaxed">
+                                            개인정보보호법 및 내부 통제 규정에 따라 성명, 연락처, 계좌번호 등 민감 정보가 실시간 비식별(Masking) 처리되고 있습니다. 분석 데이터는 익명화되어 보안 서버에 저장됩니다.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={refreshAllData}
+                                className={`p-4 bg-slate-900 border border-white/5 rounded-3xl text-slate-400 hover:text-white hover:border-white/20 transition-all ${isLoading ? 'animate-spin' : ''}`}
+                            >
+                                <Zap size={20} />
+                            </button>
+                        </div>
+
                         <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
                             <button
                                 onClick={() => setWorkspaceState({ role: 'Auditor' })}
@@ -452,7 +476,7 @@ export default function AuditWorkspace() {
 
                                 <div className="space-y-8">
                                     {/* Financial Trend Analysis Section */}
-                                    <FinancialTrendPanel />
+                                    <FinancialTrendPanel projectId={activeProject || undefined} />
 
                                     {/* 1. Structural Analytics (Deterministic) */}
                                     <div className="bg-amber-500/5 border border-amber-500/10 rounded-[48px] p-8">

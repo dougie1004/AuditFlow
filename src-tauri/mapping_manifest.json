@@ -1,0 +1,206 @@
+[
+  {
+    "scenario": "PR-01",
+    "framework": "ISO37001",
+    "control": "Procurement Control",
+    "reason": "Bid-rigging indicating collusive bidding violating anti-corruption policies"
+  },
+  {
+    "scenario": "PR-02",
+    "framework": "ISO37001",
+    "control": "Procurement Control",
+    "reason": "Split Purchase Order bypassing standard approval authorization limits"
+  },
+  {
+    "scenario": "PR-03",
+    "framework": "ISO37001",
+    "control": "Procurement Control",
+    "reason": "Inflated pricing above market average may indicate kickbacks or supplier collusion"
+  },
+  {
+    "scenario": "PR-05",
+    "framework": "ISO37001",
+    "control": "Procurement Control",
+    "reason": "Exclusive reliance on a single vendor increases vulnerability to bribery and fraud"
+  },
+  {
+    "scenario": "PR-08",
+    "framework": "ISO37001",
+    "control": "Procurement Control",
+    "reason": "Abusing post-contract price/quantity modifications to siphon funds"
+  },
+  {
+    "scenario": "EX-01",
+    "framework": "ISO37001",
+    "control": "Expense Policy",
+    "reason": "Multiple sequential transactions to bypass daily/per-event card limits"
+  },
+  {
+    "scenario": "EX-02",
+    "framework": "ISO37001",
+    "control": "Expense Policy",
+    "reason": "Off-hour card transactions are highly correlated with non-business entertainment or bribery"
+  },
+  {
+    "scenario": "CC-01",
+    "framework": "ISO37001",
+    "control": "Corporate Card Control",
+    "reason": "Using corporate cards at restricted/unauthorized merchant category codes"
+  },
+  {
+    "scenario": "CC-09",
+    "framework": "ISO37001",
+    "control": "Corporate Card Control",
+    "reason": "Converting corporate funds into cash-equivalent gift cards for unauthorized benefits"
+  },
+  {
+    "scenario": "AB-01",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "Facilitation payment or suspicious fee indicating potential bribe"
+  },
+  {
+    "scenario": "AB-02",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "High-risk entertainment or hospitality expenses violating anti-bribery threshold"
+  },
+  {
+    "scenario": "AB-03",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "Donations or sponsorships to politically exposed persons or related entities"
+  },
+  {
+    "scenario": "AB-04",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "Unusual consulting or advisory fee without corresponding deliverables"
+  },
+  {
+    "scenario": "AB-05",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "Rebate or commission paid directly to personal bank accounts"
+  },
+  {
+    "scenario": "AB-06",
+    "framework": "ISO37001",
+    "control": "Anti-Bribery Policy",
+    "reason": "Subcontracting to related parties without competitive bidding"
+  },
+  {
+    "scenario": "PR-01",
+    "framework": "COSO",
+    "control": "Procurement Control",
+    "reason": "Collusive vendor bidding undermines the procurement control environment"
+  },
+  {
+    "scenario": "PR-02",
+    "framework": "COSO",
+    "control": "Procurement Control",
+    "reason": "Splitting purchase orders overrides established authorization thresholds"
+  },
+  {
+    "scenario": "PR-03",
+    "framework": "COSO",
+    "control": "Procurement Control",
+    "reason": "Transactions significantly deviating from fair value indicate financial reporting inaccuracy"
+  },
+  {
+    "scenario": "PR-07",
+    "framework": "COSO",
+    "control": "Procurement Control",
+    "reason": "Exponentially increasing transaction volume with a vendor suggests potential kickbacks"
+  },
+  {
+    "scenario": "EX-01",
+    "framework": "COSO",
+    "control": "Expense Policy",
+    "reason": "Splitting expenses to bypass review thresholds undermines internal controls"
+  },
+  {
+    "scenario": "EX-02",
+    "framework": "COSO",
+    "control": "Expense Policy",
+    "reason": "Off-hour transactions suggest weak operational control over expense authorization"
+  },
+  {
+    "scenario": "CC-01",
+    "framework": "COSO",
+    "control": "Corporate Card Control",
+    "reason": "Unauthorized merchant usage represents bypass of corporate policy"
+  },
+  {
+    "scenario": "CC-02",
+    "framework": "COSO",
+    "control": "Corporate Card Control",
+    "reason": "Personal grocery spending represents misappropriation of corporate assets"
+  },
+  {
+    "scenario": "CC-06",
+    "framework": "COSO",
+    "control": "Corporate Card Control",
+    "reason": "Regular payments without proper invoices/receipts violate documentation standards"
+  },
+  {
+    "scenario": "FF-01",
+    "framework": "COSO",
+    "control": "Financial Integrity",
+    "reason": "Rapid circular transfers without business substance indicate window dressing or round-tripping"
+  },
+  {
+    "scenario": "FF-02",
+    "framework": "COSO",
+    "control": "Financial Integrity",
+    "reason": "Delayed journal entry recording indicates potential lapping schemes or cutoff errors"
+  },
+  {
+    "scenario": "FF-04",
+    "framework": "COSO",
+    "control": "Financial Integrity",
+    "reason": "Structuring deposits to stay below regulatory reporting limits bypasses compliance monitoring"
+  },
+  {
+    "scenario": "LDG-01",
+    "framework": "COSO",
+    "control": "Ledger Integrity",
+    "reason": "Extremely high or low transaction amounts represent potential material misstatement or control override"
+  },
+  {
+    "scenario": "LDG-02",
+    "framework": "COSO",
+    "control": "Ledger Integrity",
+    "reason": "Unusual concentration of round-number journal entries indicates potential fictional transactions"
+  },
+  {
+    "scenario": "LDG-04",
+    "framework": "COSO",
+    "control": "Ledger Integrity",
+    "reason": "Ledger entries posted on weekends or holidays suggest abnormal manual overrides"
+  },
+  {
+    "scenario": "LDG-05",
+    "framework": "COSO",
+    "control": "Ledger Integrity",
+    "reason": "Sudden volatility in accounts indicates budget shifting or unauthorized adjustments"
+  },
+  {
+    "scenario": "LDG-08",
+    "framework": "COSO",
+    "control": "Ledger Integrity",
+    "reason": "Transactions clustering just below standard limits of authority indicate deliberate approval evasion"
+  },
+  {
+    "scenario": "IN-01",
+    "framework": "COSO",
+    "control": "Asset Safeguarding",
+    "reason": "Unexplained spike in inventory shrinkage indicates theft or material write-down fraud"
+  },
+  {
+    "scenario": "IN-05",
+    "framework": "COSO",
+    "control": "Asset Safeguarding",
+    "reason": "Frequent scrapping of assets with substantial remaining value suggests asset diversion"
+  }
+]

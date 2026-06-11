@@ -64,7 +64,7 @@ pub fn get_multi_year_financial_summary_impl(db_path: &std::path::Path) -> Resul
     // 1. Group all ledger entries by account and fiscal year
     let mut stmt = conn.prepare("
         SELECT 
-            COALESCE(json_extract(metadata, '$.account'), 'Uncategorized') as acc,
+            COALESCE(account_name, 'Uncategorized') as acc,
             strftime('%Y', event_date) as yr,
             SUM(amount) as total
         FROM entity_event
@@ -133,7 +133,7 @@ pub fn get_monthly_account_summary_impl(db_path: &std::path::Path, account_name:
     // Note: We use json_extract to get the account from metadata if not present in a direct column
     let mut query = "
         SELECT 
-            COALESCE(json_extract(metadata, '$.account'), 'Uncategorized') as acc,
+            COALESCE(account_name, 'Uncategorized') as acc,
             strftime('%Y-%m', event_date) as mon,
             SUM(amount) as total_amt,
             COUNT(*) as cnt
@@ -142,7 +142,7 @@ pub fn get_monthly_account_summary_impl(db_path: &std::path::Path, account_name:
     ".to_string();
 
     if let Some(ref a) = account_name {
-        query.push_str(&format!(" AND json_extract(metadata, '$.account') = '{}'", a.replace("'", "''")));
+        query.push_str(&format!(" AND account_name = '{}'", a.replace("'", "''")));
     }
     if let Some(y) = year {
         query.push_str(&format!(" AND strftime('%Y', event_date) = '{}'", y));
@@ -154,7 +154,7 @@ pub fn get_monthly_account_summary_impl(db_path: &std::path::Path, account_name:
 
     // [DYNAMIC BALANCE] If a year is specified, calculate the opening balance for all accounts before that year
     if let Some(y) = year {
-        let op_query = "SELECT COALESCE(json_extract(metadata, '$.account'), 'Uncategorized') as acc, SUM(amount) FROM entity_event WHERE strftime('%Y', event_date) < ?1 GROUP BY acc";
+        let op_query = "SELECT COALESCE(account_name, 'Uncategorized') as acc, SUM(amount) FROM entity_event WHERE strftime('%Y', event_date) < ?1 GROUP BY acc";
         let mut op_stmt = conn.prepare(op_query).map_err(|e| e.to_string())?;
         let op_rows = op_stmt.query_map([y.to_string()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, f64>(1)?))).map_err(|e| e.to_string())?;
         for r in op_rows { if let Ok((acc, amt)) = r { account_balances.insert(acc, amt); } }
@@ -217,7 +217,7 @@ pub fn get_account_flow_graph_impl(db_path: &std::path::Path, account_name: Stri
             entity_id,
             SUM(amount) as total_val
         FROM entity_event
-        WHERE json_extract(metadata, '$.account') = ?1
+        WHERE account_name = ?1
         GROUP BY entity_id
         ORDER BY total_val DESC
     ";
@@ -266,13 +266,13 @@ pub fn get_structural_top_accounts_impl(db_path: &std::path::Path) -> Result<Vec
 
     // 1. Data Loading (Single Scan)
     let start_load = std::time::Instant::now();
-    let mut stmt = conn.prepare("SELECT entity_id, amount, event_date, metadata FROM entity_event").map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT entity_id, amount, event_date, account_name FROM entity_event").map_err(|e| e.to_string())?;
     let event_rows = stmt.query_map([], |r| {
         Ok((
             r.get::<_, String>(0)?, // entity_id
             r.get::<_, f64>(1)?,    // amount
             r.get::<_, String>(2)?, // event_date
-            r.get::<_, Option<String>>(3)?, // metadata
+            r.get::<_, Option<String>>(3)?, // account_name
         ))
     }).map_err(|e| e.to_string())?;
 
@@ -288,13 +288,8 @@ pub fn get_structural_top_accounts_impl(db_path: &std::path::Path) -> Result<Vec
     let mut account_events: std::collections::HashMap<String, Vec<(String, f64, String)>> = std::collections::HashMap::new();
     let mut month_distribution: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     
-    for (entity_id, amount, date, metadata) in events {
-        let account = if let Some(meta_str) = metadata {
-            let meta: serde_json::Value = serde_json::from_str(&meta_str).unwrap_or(serde_json::json!({}));
-            meta["account"].as_str().unwrap_or("Unknown").to_string()
-        } else {
-            "Unknown".to_string()
-        };
+    for (entity_id, amount, date, account_name) in events {
+        let account = account_name.unwrap_or_else(|| "Unknown".to_string());
         let month = if date.len() >= 7 { &date[0..7] } else { "Unknown" };
         *month_distribution.entry(month.to_string()).or_default() += 1;
         account_events.entry(account).or_default().push((entity_id, amount, month.to_string()));
@@ -766,14 +761,14 @@ pub fn get_strategic_deviations_impl(db_path: &std::path::Path) -> Result<Vec<St
 
     for insight in insights {
         let total_volume: f64 = conn.query_row(
-            "SELECT COALESCE(SUM(ABS(net_amount)), 0.0) FROM entity_event WHERE json_extract(metadata, '$.account') = ?1",
+            "SELECT COALESCE(SUM(ABS(net_amount)), 0.0) FROM entity_event WHERE account_name = ?1",
             &[&insight.account as &dyn ToSql],
             |r| r.get(0)
         ).unwrap_or(0.0);
 
         // Fetch Human Name
         let acc_human_name: String = conn.query_row(
-            "SELECT account_name FROM entity_event WHERE json_extract(metadata, '$.account') = ?1 LIMIT 1",
+            "SELECT account_name FROM entity_event WHERE account_name = ?1 LIMIT 1",
             &[&insight.account as &dyn ToSql],
             |r| r.get(0)
         ).unwrap_or(insight.account.clone());
@@ -784,17 +779,17 @@ pub fn get_strategic_deviations_impl(db_path: &std::path::Path) -> Result<Vec<St
         // [Layer 2] Step 2: pattern-based inference from actual DB data
         let pattern: AccountPattern = {
             let debit_sum: f64 = conn.query_row(
-                "SELECT COALESCE(SUM(debit), 0.0) FROM entity_event WHERE json_extract(metadata, '$.account') = ?1",
+                "SELECT COALESCE(SUM(debit), 0.0) FROM entity_event WHERE account_name = ?1",
                 &[&insight.account as &dyn ToSql],
                 |r| r.get(0)
             ).unwrap_or(0.0);
             let credit_sum: f64 = conn.query_row(
-                "SELECT COALESCE(SUM(credit), 0.0) FROM entity_event WHERE json_extract(metadata, '$.account') = ?1",
+                "SELECT COALESCE(SUM(credit), 0.0) FROM entity_event WHERE account_name = ?1",
                 &[&insight.account as &dyn ToSql],
                 |r| r.get(0)
             ).unwrap_or(0.0);
             let active_months: i64 = conn.query_row(
-                "SELECT COUNT(DISTINCT substr(event_date,1,7)) FROM entity_event WHERE json_extract(metadata, '$.account') = ?1 AND ABS(net_amount) > 0",
+                "SELECT COUNT(DISTINCT substr(event_date,1,7)) FROM entity_event WHERE account_name = ?1 AND ABS(net_amount) > 0",
                 &[&insight.account as &dyn ToSql],
                 |r| r.get(0)
             ).unwrap_or(0);

@@ -1,8 +1,20 @@
-export function detectSplit(txns) {
+interface Transaction {
+  vendor: string;
+  amount: number;
+}
+
+interface AuditResult {
+  rule: string;
+  severity: string;
+  vendor: string;
+  evidence: string;
+}
+
+export function detectSplit(txns: Transaction[]): AuditResult[] {
   const threshold = 100000;
 
-  const grouped = {};
-  const results = [];
+  const grouped: Record<string, Transaction[]> = {};
+  const results: AuditResult[] = [];
 
   txns.forEach(t => {
     if (!grouped[t.vendor]) grouped[t.vendor] = [];
