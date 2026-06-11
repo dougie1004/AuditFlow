@@ -21,7 +21,11 @@ src-tauri/[Tt]arget*/
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
+audit_data_v4.db
 *.csv
+!scenario_data_requirement_matrix.csv
 *.xlsx
 auditflow_source_backup_*.zip
 
@@ -51,7 +55,6 @@ test_data/
 tamper_test/
 
 # Helper Scripts & Logs (Not part of core codebase)
-*.py
 debug_*.cjs
 fix_*.cjs
 reconstruct_*.cjs
@@ -63,3 +66,21 @@ tsc_*.txt
 vite_build_*.txt
 cargo_*.txt
 constitution_report.txt
+
+# Local AuditFlow Temp Files & Google Drive Artifacts
+__pycache__/
+live_dashboard/
+build.log
+build_status.txt
+div_trace.txt
+final_check.txt
+last_check.txt
+test_output.txt
+test_output_full.txt
+test_results.txt
+balance_report.txt
+balance_report_v2.txt
+progress_dashboard.html
+regression_hashing_proof.html
+walkthrough.html
+scenario_regression_report_v1.json
