@@ -1,0 +1,54 @@
+{
+  "scenario_id": "LDG-03",
+  "expected_count": 6,
+  "findings": [
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P1'에 대해 동일 금액(₩1,525,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01 10:00:00, 적요: 사무용품 대량 구매)",
+      "entity_id": 1
+    },
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P1'에 대해 동일 금액(₩1,525,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-03 14:00:00, 적요: 사무용품 대량 구매 분할)",
+      "entity_id": 1
+    },
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P2'에 대해 동일 금액(₩2,350,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-10 09:00:00, 적요: 비품 교체)",
+      "entity_id": 2
+    },
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P2'에 대해 동일 금액(₩2,350,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-11 11:00:00, 적요: 비품 교체 2)",
+      "entity_id": 2
+    },
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P3'에 대해 동일 금액(₩850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-15 10:00:00, 적요: 전산 소모품 구매)",
+      "entity_id": 3
+    },
+    {
+      "type": "ISSUE",
+      "project_type": "LedgerSprint8a",
+      "title": "[LDG-03] 단기 중복 전표 발생",
+      "severity": "Medium",
+      "description": "거래처 'VEN_DUP_P3'에 대해 동일 금액(₩850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-15 14:00:00, 적요: 전산 소모품 구매 2)",
+      "entity_id": 3
+    }
+  ]
+}

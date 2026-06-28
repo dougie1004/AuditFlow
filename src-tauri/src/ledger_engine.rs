@@ -22,7 +22,9 @@ pub async fn run_ledger_only_scan(
             amount REAL,
             dept TEXT,
             entity_id TEXT,
-            month TEXT
+            month TEXT,
+            project_id TEXT,
+            project_code TEXT
         )",
         []
     ).map_err(|e| e.to_string())?;
@@ -60,13 +62,15 @@ pub async fn run_ledger_only_scan(
                 ).ok();
 
                 // [Scan Engine] Insert into temp table for set-based analysis (Legacy Logic Support)
-                // We need to unpack metadata to get account/dept
+                // We need to unpack metadata to get account/dept/project_id/project_code
                 let meta_json: serde_json::Value = serde_json::from_str(&event.metadata.unwrap_or_else(|| "{}".to_string())).unwrap_or(serde_json::json!({}));
                 let account = meta_json["account"].as_str().unwrap_or_default();
                 let dept = meta_json["dept"].as_str().unwrap_or_default();
+                let project_id_val = meta_json["project_id"].as_str().unwrap_or_default();
+                let project_code_val = meta_json["project_code"].as_str().unwrap_or_default();
 
                 tx.execute(
-                    "INSERT INTO ldg_temp_scan (id, date_str, account, vendor, description, amount, dept, entity_id, month) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    "INSERT INTO ldg_temp_scan (id, date_str, account, vendor, description, amount, dept, entity_id, month, project_id, project_code) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                     params![
                         event.id,
                         event.event_date,
@@ -76,7 +80,9 @@ pub async fn run_ledger_only_scan(
                         event.amount.unwrap_or(0.0),
                         dept,
                         entity_id, // Resolved ID
-                        month
+                        month,
+                        project_id_val,
+                        project_code_val
                     ]
                 ).ok();
             }
@@ -212,6 +218,179 @@ pub async fn run_ledger_only_scan(
                      conn.execute("UPDATE entity_event SET is_flagged = 1, risk_delta = risk_delta + 25.0, rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-07' WHERE id = ?1", [ev_id]).ok();
                      total_findings += 1;
                 }
+            }
+        }
+    }
+
+    // [LDG-03] Short-interval Double Payments (same vendor, same amount, within 3 days, >= 2 occurrences)
+    {
+        // 1. Identify all duplicate transactions that are not exceptions (Rent, Subscription, Lease, Insurance, Maintenance)
+        // Note: julianday calculations in SQLite allow floating point subtraction to get difference in fractional days.
+        let mut stmt = conn.prepare("
+            WITH non_exceptions AS (
+                SELECT id, date_str, account, vendor, description, amount, entity_id
+                FROM ldg_temp_scan
+                WHERE NOT (
+                    description LIKE '%임차료%' OR description LIKE '%구독료%' OR description LIKE '%리스료%' OR description LIKE '%보험료%' OR description LIKE '%유지보수%'
+                    OR account LIKE '%임차료%' OR account LIKE '%구독료%' OR account LIKE '%리스료%' OR account LIKE '%보험료%' OR account LIKE '%유지보수%'
+                )
+            )
+            SELECT t1.id, t1.date_str, t1.account, t1.vendor, t1.description, t1.amount, t1.entity_id
+            FROM non_exceptions t1
+            WHERE EXISTS (
+                SELECT 1 
+                FROM non_exceptions t2
+                WHERE ((t1.entity_id = t2.entity_id AND t1.entity_id != 'UNKNOWN') OR t1.vendor = t2.vendor)
+                  AND t1.amount = t2.amount
+                  AND t1.id != t2.id
+                  AND ABS(julianday(t1.date_str) - julianday(t2.date_str)) <= 3.0
+            )
+            ORDER BY t1.vendor, t1.amount, t1.date_str
+        ").map_err(|e| e.to_string())?;
+
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,       // id
+                r.get::<_, String>(1)?,       // date_str
+                r.get::<_, String>(2)?,       // account
+                r.get::<_, String>(3)?,       // vendor
+                r.get::<_, String>(4)?,       // description
+                r.get::<_, f64>(5)?,          // amount
+                r.get::<_, Option<String>>(6)?, // entity_id (resolved vendor id)
+            ))
+        }).map_err(|e| e.to_string())?;
+
+        for r in rows {
+            if let Ok((ev_id, date_str, _account, vendor, desc, amt, ent_id_str)) = r {
+                let ent_id = ent_id_str.and_then(|s| s.parse::<i64>().ok());
+                
+                save_issue(
+                    &conn,
+                    project_type.to_string(),
+                    "LDG-03".to_string(),
+                    "단기 중복 전표 발생".to_string(),
+                    format!(
+                        "거래처 '{}'에 대해 동일 금액(₩{}원)의 전표가 3일 이내에 중복 발생했습니다. (일자: {}, 적요: {})",
+                        vendor,
+                        format_num(amt),
+                        date_str,
+                        desc
+                    ),
+                    "Medium".to_string(),
+                    "이중 지급 여부를 확인하기 위해 세금계산서와 대금 지급 내역을 대조하세요.".to_string(),
+                    ent_id,
+                ).ok();
+
+                conn.execute(
+                    "UPDATE entity_event 
+                     SET is_flagged = 1, 
+                         risk_delta = risk_delta + 20.0, 
+                         rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-03' 
+                     WHERE id = ?1",
+                    [ev_id],
+                ).ok();
+                
+                total_findings += 1;
+            }
+        }
+    }
+
+    // [LDG-08] Threshold Pattern (승인 한도 경계선 거래 후보, same vendor, same account, same threshold limit, within 7 days, >= 2 occurrences)
+    {
+        // Define Threshold Configuration inside the function
+        struct ThresholdConfig {
+            limit: f64,
+            lower_bound: f64,
+        }
+        let thresholds = vec![
+            ThresholdConfig { limit: 3_000_000.0, lower_bound: 2_900_000.0 },
+            ThresholdConfig { limit: 5_000_000.0, lower_bound: 4_800_000.0 },
+            ThresholdConfig { limit: 10_000_000.0, lower_bound: 9_500_000.0 },
+        ];
+
+        let mut case_branches = Vec::new();
+        for tc in &thresholds {
+            case_branches.push(format!(
+                "WHEN amount >= {} AND amount < {} THEN {}",
+                tc.lower_bound, tc.limit, tc.limit
+            ));
+        }
+        let case_sql = format!(
+            "CASE {} ELSE NULL END",
+            case_branches.join(" ")
+        );
+
+        let query_sql = format!(
+            "WITH boundary_tx AS (
+                 SELECT id, date_str, account, vendor, description, amount, entity_id, project_id, project_code,
+                        {} AS threshold_limit
+                 FROM ldg_temp_scan
+             )
+             SELECT t1.id, t1.date_str, t1.account, t1.vendor, t1.description, t1.amount, t1.entity_id, t1.threshold_limit
+             FROM boundary_tx t1
+             WHERE t1.threshold_limit IS NOT NULL
+               AND EXISTS (
+                   SELECT 1
+                   FROM boundary_tx t2
+                   WHERE t1.id != t2.id
+                     AND ((t1.entity_id = t2.entity_id AND t1.entity_id != 'UNKNOWN') OR t1.vendor = t2.vendor)
+                     AND t1.account = t2.account
+                     AND t1.threshold_limit = t2.threshold_limit
+                     AND COALESCE(t1.project_id, '') = COALESCE(t2.project_id, '')
+                     AND COALESCE(t1.project_code, '') = COALESCE(t2.project_code, '')
+                     AND ABS(julianday(t1.date_str) - julianday(t2.date_str)) <= 7.0
+               )
+             ORDER BY t1.vendor, t1.threshold_limit, t1.date_str",
+            case_sql
+        );
+
+        let mut stmt = conn.prepare(&query_sql).map_err(|e| e.to_string())?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,       // id
+                r.get::<_, String>(1)?,       // date_str
+                r.get::<_, String>(2)?,       // account (code)
+                r.get::<_, String>(3)?,       // vendor
+                r.get::<_, String>(4)?,       // description
+                r.get::<_, f64>(5)?,          // amount
+                r.get::<_, Option<String>>(6)?, // entity_id (resolved vendor id)
+                r.get::<_, f64>(7)?,          // threshold_limit
+            ))
+        }).map_err(|e| e.to_string())?;
+
+        for r in rows {
+            if let Ok((ev_id, date_str, account_code, vendor, desc, amt, ent_id_str, limit_amt)) = r {
+                let ent_id = ent_id_str.and_then(|s| s.parse::<i64>().ok());
+                
+                save_issue(
+                    &conn,
+                    project_type.to_string(),
+                    "LDG-08".to_string(),
+                    "승인 한도 경계선 거래 후보".to_string(),
+                    format!(
+                        "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: '{}', 금액: ₩{}원, 한도: ₩{}원, 일자: {}, 계정: {}, 적요: {})",
+                        vendor,
+                        format_num(amt),
+                        format_num(limit_amt),
+                        date_str,
+                        account_code,
+                        desc
+                    ),
+                    "High".to_string(),
+                    "승인 권한 매트릭스(LoA)를 확인하고 고의적 우회 여부를 검토하세요.".to_string(),
+                    ent_id,
+                ).ok();
+
+                conn.execute(
+                    "UPDATE entity_event 
+                     SET is_flagged = 1, 
+                         risk_delta = risk_delta + 25.0, 
+                         rule_flags = COALESCE(rule_flags || ',', '') || 'LDG-08' 
+                     WHERE id = ?1",
+                    [ev_id],
+                ).ok();
+                
+                total_findings += 1;
             }
         }
     }

@@ -1,0 +1,559 @@
+{
+  "auditflow_version": "v5.0.0",
+  "baseline_version": "3.0.0",
+  "dataset_version": "2.0.0",
+  "generated_at": "2026-06-28T08:41:38.912619700+00:00",
+  "scenario_results": {
+    "EX-04": {
+      "findings": [
+        {
+          "description": "행 2: 가맹점 내 제한 키워드 포함 (동일 점수 검증)",
+          "entity_id": null,
+          "project_type": "Expense",
+          "severity": "Critical",
+          "title": "제한 업종 직접 감지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "행 3: 가맹점 내 제한 키워드 포함 (동일 점수 검증)",
+          "entity_id": null,
+          "project_type": "Expense",
+          "severity": "Critical",
+          "title": "제한 업종 직접 감지",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-01": {
+      "findings": [
+        {
+          "description": "금액: ₩96,500,000원, 계정: 재고감모손실, 거래처: VEN_INV, 적요: 생산부 연간 재고 실사 차이 감모 정산, 일자: 2026-12-31",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-01] 고액 상위 1% 전표",
+          "type": "ISSUE"
+        },
+        {
+          "description": "금액: ₩99,900,000원, 계정: 소모품비, 거래처: VEN_OFFICE, 적요: 전결한도우회 의심 경계 전표, 일자: 2026-06-06",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-01] 고액 상위 1% 전표",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-02": {
+      "findings": [
+        {
+          "description": "금액 ₩1,500,000원 이(가) 11회 반복 발생했습니다. 인위적 금액 설정 가능성이 있습니다.",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "Medium",
+          "title": "[LDG-02] 라운드 금액 반복 패턴",
+          "type": "ISSUE"
+        },
+        {
+          "description": "금액 ₩8,000,000원 이(가) 3회 반복 발생했습니다. 인위적 금액 설정 가능성이 있습니다.",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "Medium",
+          "title": "[LDG-02] 라운드 금액 반복 패턴",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-03": {
+      "findings": [
+        {
+          "description": "거래처 'VEN_DUP_P1'에 대해 동일 금액(₩1,525,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01, 적요: 사무용품 대량 구매)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_DUP_P1'에 대해 동일 금액(₩1,525,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-03, 적요: 사무용품 대량 구매 분할)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_DUP_P2'에 대해 동일 금액(₩2,350,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-10, 적요: 비품 교체)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_DUP_P2'에 대해 동일 금액(₩2,350,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-11, 적요: 비품 교체 2)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_DUP_P3'에 대해 동일 금액(₩850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-15, 적요: 전산 소모품 구매 2)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_DUP_P3'에 대해 동일 금액(₩850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-15, 적요: 전산 소모품 구매)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N2'에 대해 동일 금액(₩3,050,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01, 적요: 한도 초과 지출 A)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N2'에 대해 동일 금액(₩3,050,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-02, 적요: 한도 초과 지출 B)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N3'에 대해 동일 금액(₩2,850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01, 적요: 소액 지출 A)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N3'에 대해 동일 금액(₩2,850,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-02, 적요: 소액 지출 B)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N4'에 대해 동일 금액(₩2,990,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01, 적요: 소모품비)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N4'에 대해 동일 금액(₩2,990,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-02, 적요: 해외 출장 여비)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N6'에 대해 동일 금액(₩3,300,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-01, 적요: 부가세 포함 지출 A)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_LIM_N6'에 대해 동일 금액(₩3,300,000원)의 전표가 3일 이내에 중복 발생했습니다. (일자: 2026-06-02, 적요: 부가세 포함 지출 B)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "Medium",
+          "title": "[LDG-03] 단기 중복 전표 발생",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-05": {
+      "findings": [
+        {
+          "description": "계정 '외주가공비'의 2026-12월 집행액(₩80,000,000원)이 평균(₩14,041,666원) 대비 300% 이상 급증했습니다.",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "Medium",
+          "title": "[LDG-05] 계정 사용 액티비티 변동 (Account Volatility)",
+          "type": "ISSUE"
+        },
+        {
+          "description": "계정 '재고감모손실'의 2026-12월 집행액(₩96,500,000원)이 평균(₩9,416,666원) 대비 300% 이상 급증했습니다.",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "Medium",
+          "title": "[LDG-05] 계정 사용 액티비티 변동 (Account Volatility)",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-06": {
+      "findings": [
+        {
+          "description": "거래처 'VEN_INV'에 대한 지출의 90% 이상(₩113,000,000원)이 부서 ''에서 발생했습니다.",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "Medium",
+          "title": "[LDG-06] 특정 부서 집중 거래 (Departmental Outlier)",
+          "type": "ISSUE"
+        },
+        {
+          "description": "거래처 'VEN_OUTSOURCE'에 대한 지출의 90% 이상(₩168,500,000원)이 부서 ''에서 발생했습니다.",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "Medium",
+          "title": "[LDG-06] 특정 부서 집중 거래 (Departmental Outlier)",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-07": {
+      "findings": [
+        {
+          "description": "위찰 키워드 '자문료'이(가) 포함된 전표가 발견되었습니다. (₩5,000,000원, 적요: 자문료 정산 및 유흥)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 10월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 11월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 1월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 2월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 3월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 4월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 5월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 6월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 7월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 8월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩1,500,000원, 적요: 9월 정상 재고 감모 손실 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩5,000,000원, 적요: 자문료 정산 및 유흥)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩7,900,000원, 적요: 3월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩7,950,000원, 적요: 8월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,000,000원, 적요: 1월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,000,000원, 적요: 6월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,000,000원, 적요: 9월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,050,000원, 적요: 11월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,050,000원, 적요: 5월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,100,000원, 적요: 10월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,100,000원, 적요: 2월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,150,000원, 적요: 7월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩8,200,000원, 적요: 4월 외주 가공비 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩80,000,000원, 적요: 12월 기말 외주 가공비 폭증 정산)",
+          "entity_id": null,
+          "project_type": "Ledger",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        },
+        {
+          "description": "위찰 키워드 '정산'이(가) 포함된 전표가 발견되었습니다. (₩96,500,000원, 적요: 생산부 연간 재고 실사 차이 감모 정산)",
+          "entity_id": null,
+          "project_type": "Inventory",
+          "severity": "High",
+          "title": "[LDG-07] 적요 키워드 위험 탐지",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "LDG-08": {
+      "findings": [
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P1', 금액: ₩2,990,000원, 한도: ₩3,000,000원, 일자: 2026-06-01, 계정: 기타비용, 적요: 업무 지원비)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        },
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P1', 금액: ₩2,995,000원, 한도: ₩3,000,000원, 일자: 2026-06-03, 계정: 기타비용, 적요: 업무 지원비 2)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        },
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P2', 금액: ₩4,950,000원, 한도: ₩5,000,000원, 일자: 2026-06-10, 계정: 기타비용, 적요: 마케팅 용역)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        },
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P2', 금액: ₩4,980,000원, 한도: ₩5,000,000원, 일자: 2026-06-12, 계정: 기타비용, 적요: 마케팅 용역 2)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        },
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P3', 금액: ₩9,850,000원, 한도: ₩10,000,000원, 일자: 2026-06-15, 계정: 기타비용, 적요: 소프트웨어 라이선스)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        },
+        {
+          "description": "전결 한도 직전 금액대 거래가 동일 거래처/동일 계정에서 반복 발생했습니다. (거래처: 'VEN_LIM_P3', 금액: ₩9,900,000원, 한도: ₩10,000,000원, 일자: 2026-06-16, 계정: 기타비용, 적요: 소프트웨어 라이선스 추가)",
+          "entity_id": null,
+          "project_type": "LedgerSprint8a",
+          "severity": "High",
+          "title": "[LDG-08] 승인 한도 경계선 거래 후보",
+          "type": "ISSUE"
+        }
+      ]
+    },
+    "PR-02": {
+      "findings": [
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "0e8a6c896cf091ea7a2bbb25ba86991f",
+          "strength": 0.85,
+          "target_event_id": "c0292ac42b833664f2fdf378c550c96b",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "3c155a909a43165c78df8b6f3dd79584",
+          "strength": 0.85,
+          "target_event_id": "c9f0d8a2d65e59e0d95dc3e5d79e7d2d",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "3c155a909a43165c78df8b6f3dd79584",
+          "strength": 0.85,
+          "target_event_id": "c9f0d8a2d65e59e0d95dc3e5d79e7d2d",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "99bf5355b7224ac4a8c6fe7336bc3307",
+          "strength": 0.85,
+          "target_event_id": "aa2b5bf8bf23ab2c4d69c16220ed0bff",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "99bf5355b7224ac4a8c6fe7336bc3307",
+          "strength": 0.85,
+          "target_event_id": "b1ba4d44ca48aba350931bf3373520b4",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "99bf5355b7224ac4a8c6fe7336bc3307",
+          "strength": 0.85,
+          "target_event_id": "dccffceb6eb1de5fb6e7ba7a360d9cb7",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "aa2b5bf8bf23ab2c4d69c16220ed0bff",
+          "strength": 0.85,
+          "target_event_id": "b1ba4d44ca48aba350931bf3373520b4",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "aa2b5bf8bf23ab2c4d69c16220ed0bff",
+          "strength": 0.85,
+          "target_event_id": "dccffceb6eb1de5fb6e7ba7a360d9cb7",
+          "type": "RELATION"
+        },
+        {
+          "relation_type": "SPLIT_PAYMENT",
+          "source_event_id": "b1ba4d44ca48aba350931bf3373520b4",
+          "strength": 0.85,
+          "target_event_id": "dccffceb6eb1de5fb6e7ba7a360d9cb7",
+          "type": "RELATION"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_issues": 58,
+    "total_relations": 9
+  }
+}

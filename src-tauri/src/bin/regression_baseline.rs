@@ -71,7 +71,7 @@ use ingestion::EventBuilder;
 
 const AUDITFLOW_VERSION: &str = "v5.0.0";
 const DATASET_VERSION: &str = "2.0.0";
-const BASELINE_VERSION: &str = "2.0.0";
+const BASELINE_VERSION: &str = "3.0.0";
 
 fn compute_stable_hash(
     date: &str,
@@ -301,6 +301,14 @@ async fn main() {
         &db_path
     ).await.unwrap();
 
+    // 3b. Run Sprint 8a Ledger (golden_ledger_sprint8a.csv)
+    let ledg_s8_path = "tests/golden_dataset/golden_ledger_sprint8a.csv";
+    ledger_engine::run_ledger_only_scan(
+        vec![(ledg_s8_path.to_string(), "golden_ledger_sprint8a.csv".to_string())],
+        "LedgerSprint8a",
+        &db_path
+    ).await.unwrap();
+
     // 4. Run Finance (golden_finance.csv)
     let fin_path = "tests/golden_dataset/golden_finance.csv";
     let fin_builder = ingestion::ledger_builder::LedgerBuilder { file_path: fin_path.to_string() };
@@ -365,10 +373,20 @@ async fn main() {
     // Group issues by scenario ID
     for r in issue_rows {
         let (proj, title, sev, desc, entity_id) = r.unwrap();
+        
+        // Skip non-LDG-03 and non-LDG-08 findings for LedgerSprint8a
+        if proj == "LedgerSprint8a" && !title.contains("[LDG-03]") && !title.contains("[LDG-08]") {
+            continue;
+        }
+
         let scenario_id = if title.contains("[LDG-01]") {
             "LDG-01"
         } else if title.contains("[LDG-02]") {
             "LDG-02"
+        } else if title.contains("[LDG-03]") {
+            "LDG-03"
+        } else if title.contains("[LDG-08]") {
+            "LDG-08"
         } else if title.contains("[LDG-05]") {
             "LDG-05"
         } else if title.contains("[LDG-06]") {
@@ -460,14 +478,14 @@ async fn main() {
     });
 
     // Write the baseline if it does not exist, or compare if it does
-    let baseline_file = "tests/regression_baseline_v2.json";
+    let baseline_file = "tests/regression_baseline_v3.json";
     if !std::path::Path::new(baseline_file).exists() {
-        println!(">>> [REGRESSION] Baseline JSON v2 does not exist. Creating new baseline at {}...", baseline_file);
+        println!(">>> [REGRESSION] Baseline JSON v3 does not exist. Creating new baseline at {}...", baseline_file);
         let json_str = serde_json::to_string_pretty(&current_baseline).unwrap();
         std::fs::write(baseline_file, json_str).unwrap();
-        println!(">>> [REGRESSION] Baseline v2 created successfully!");
+        println!(">>> [REGRESSION] Baseline v3 created successfully!");
     } else {
-        println!(">>> [REGRESSION] Baseline JSON v2 found. Comparing results...");
+        println!(">>> [REGRESSION] Baseline JSON v3 found. Comparing results...");
         let expected_str = std::fs::read_to_string(baseline_file).unwrap();
         let expected_json: serde_json::Value = serde_json::from_str(&expected_str).unwrap();
         
