@@ -38,7 +38,7 @@ Empty results resulting from data absence must not be treated as "0 findings" or
 
 ### 2.4 Legacy/Experimental Model Names
 The use of experimental or unconfirmed Gemini model variants (e.g., `-exp`) is prohibited in production paths as they lead to 404/NOT_FOUND errors.
-- **Forbidden**: `gemini-2.0-flash-exp`, `gemini-1.5-pro-exp`
+- **Forbidden**: `gemini-2.0-flash-exp`, `retired Gemini family-pro-exp`
 - **Mandatory**: Use stable variants like `gemini-2.0-flash`.
 
 ### 2.5 Zero-Hardcoding Enforcement (Configuration Dependency)

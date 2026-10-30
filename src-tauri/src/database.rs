@@ -677,7 +677,7 @@ impl AuditUniverseSeeder {
                     entity["budget_size"].as_str().unwrap_or("N/A"),
                     entity["operating_profit"].as_str().unwrap_or("N/A"),
                     entity["headcount"].as_i64().unwrap_or(0),
-                    entity["last_audit_rating"].as_str().unwrap_or("Not Rated"),
+                    entity["last_audit_rating"].as_str().unwrap_or("Not Rated"), // ALLOW_MOCK: explicit unrated state, not a fabricated audit rating.
                     entity["key_systems"].as_str().unwrap_or("None"),
                     entity["ai_analysis_data"].as_str().or_else(|| entity["ai_analysis_data"].as_object().map(|_obj| "{}")).unwrap_or("{}")
                 ]

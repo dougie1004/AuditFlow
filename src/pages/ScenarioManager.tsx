@@ -465,8 +465,8 @@ export default function ScenarioManager() {
                 </div>
 
                 {/* View Mode Switching */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 p-3 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm">
-                    <div className="flex gap-2 p-1 bg-white/5 rounded-2xl">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6 mb-10 p-3 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm">
+                    <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl overflow-x-auto">
                         {[
                             { id: "risk", label: "리스크 등급별", icon: <AlertCircle size={14} className="text-red-500" /> },
                             { id: "all", label: "전체 목록", icon: <History size={14} /> },
@@ -480,7 +480,7 @@ export default function ScenarioManager() {
                                     setViewMode(mode.id as any);
                                     setActiveFilter(null); // Reset filter on mode switch
                                 }}
-                                className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${viewMode === mode.id ? 'bg-blue-600 text-white shadow-sm border border-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${viewMode === mode.id ? 'bg-blue-600 text-white shadow-sm border border-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 {mode.icon}
                                 {mode.label}
@@ -488,7 +488,7 @@ export default function ScenarioManager() {
                         ))}
                         <button
                             onClick={() => { setViewMode("all"); setSearchTerm("시스템 마스터"); }}
-                            className="bg-white/10 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 hover:bg-white/20 shadow-lg shadow-black/20"
+                            className="bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 hover:bg-white/20 shadow-lg shadow-black/20 whitespace-nowrap shrink-0"
                         >
                             <Database size={14} />
                             시스템 마스터 <span className="text-blue-400">{scenarios.filter(s => s.origin_audit_type === '시스템 마스터').length}건</span>

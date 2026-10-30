@@ -522,11 +522,12 @@ pub fn analyze_batch_pii(rows: &[String], threshold: f32) -> Vec<bool> {
 
 
 pub async fn geocode_address(address: &str, api_key: &str) -> Option<(f64, f64, String)> {
-    println!(">>> [GEOCODE] Requesting: {}", address);
     let client = Client::new();
     let full_address = format!("{}, South Korea", address);
-    let res_result = client.get("https://maps.googleapis.com/maps/api/geocode/json")
-        .query(&[("address", &full_address), ("key", &api_key.to_string())])
+    let endpoint = format!("https://geocode.googleapis.com/v4/geocode/address/{}", urlencoding::encode(&full_address));
+    let res_result = client.get(endpoint)
+        .header("X-Goog-Api-Key", api_key)
+        .header("X-Goog-FieldMask", "results.location,results.formattedAddress")
         .send()
         .await;
 
@@ -536,10 +537,10 @@ pub async fn geocode_address(address: &str, api_key: &str) -> Option<(f64, f64, 
                 let body: Value = res.json().await.ok()?;
                 if let Some(results) = body.get("results").and_then(|r| r.as_array()) {
                     if let Some(first) = results.first() {
-                        if let Some(loc) = first.get("geometry")?.get("location") {
-                            let lat = loc.get("lat")?.as_f64()?;
-                            let lng = loc.get("lng")?.as_f64()?;
-                            let formatted_address = first.get("formatted_address")?.as_str()?.to_string();
+                        if let Some(loc) = first.get("location") {
+                            let lat = loc.get("latitude")?.as_f64()?;
+                            let lng = loc.get("longitude")?.as_f64()?;
+                            let formatted_address = first.get("formattedAddress")?.as_str()?.to_string();
                             return Some((lat, lng, formatted_address));
                         }
                     }
@@ -548,10 +549,10 @@ pub async fn geocode_address(address: &str, api_key: &str) -> Option<(f64, f64, 
                 println!(">>> [GEOCODE] API Error: {}", res.status());
             }
         },
-        Err(e) => println!(">>> [GEOCODE] Network Error: {}", e),
+        Err(_) => println!(">>> [GEOCODE] Network request failed"),
     }
 
-    println!(">>> [GEOCODE] Failed to locate: {}", address);
+    println!(">>> [GEOCODE] No location result");
     None
 }
 

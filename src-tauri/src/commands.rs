@@ -34,7 +34,7 @@ pub fn get_auth_status(app_handle: tauri::AppHandle) -> Result<serde_json::Value
     ).ok();
 
     if let Some(name) = user_name {
-        let email: String = conn.query_row("SELECT value FROM settings WHERE key = 'user_email'", [], |r| r.get(0)).unwrap_or_default();
+        let email: String = conn.query_row("SELECT value FROM settings WHERE key = 'user_email'", [], |r| r.get(0)).map_err(|_| "Registered user email is missing or unreadable".to_string())?;
         let tier: String = conn.query_row("SELECT value FROM settings WHERE key = 'user_tier'", [], |r| r.get(0)).unwrap_or_else(|_| "Trial".to_string());
         
         Ok(json!({ "is_registered": true, "user": { "name": name, "email": email, "tier": tier } }))
@@ -101,7 +101,7 @@ pub async fn run_audit_analysis(app_handle: AppHandle, projectType: String, enab
     println!(">>> [Engine] Using Database at: {:?}", db_path);
     
     // [INCREMENTAL CHECK] Determine if we are analyzing ALL files or specific ones
-    let specific_targets = targetFileIds.clone().unwrap_or_default();
+    let specific_targets = targetFileIds.clone().unwrap_or_default(); // ALLOW_MOCK: optional filter; None explicitly means all files, not a fabricated verdict.
     let is_incremental = !specific_targets.is_empty();
     
     app_handle.emit("analysis-progress", json!({ "progress": 5, "message": if is_incremental { "선택된 데이터에 대한 증분 분석 준비 중..." } else { "전체 데이터 재설정 및 분석 준비 중..." }, "step": 0 })).ok();
@@ -933,7 +933,7 @@ pub fn get_audit_issues(app_handle: AppHandle, projectType: String) -> Result<Ve
         Ok(AuditIssue { 
             id: r.get(0)?, issue_title: r.get(1)?, description: r.get(2)?, severity: r.get(3)?, 
             raw_row_data: r.get(4).ok(), row_index: r.get(5)?, detected_at: r.get(6)?,
-            recommendations: r.get(7).unwrap_or_default(), evidence_quote: r.get(8).unwrap_or_default(),
+            recommendations: r.get::<_, Option<String>>(7)?.unwrap_or_default(), evidence_quote: r.get::<_, Option<String>>(8)?.unwrap_or_default(), // ALLOW_MOCK: optional display text; SQL errors propagate and no finding is invented.
             audit_id: r.get(9).ok(), evidence_image: r.get(10).ok(),
             status: r.get(11).unwrap_or_else(|_| "Open".to_string()),
             assignee: r.get(12).ok(), due_date: r.get(13).ok(),
@@ -1011,7 +1011,7 @@ pub fn get_audit_history(app_handle: AppHandle, status_filter: Option<String>) -
         Ok(AuditIssue { 
             id: r.get(0)?, issue_title: r.get(1)?, description: r.get(2)?, severity: r.get(3)?, 
             raw_row_data: r.get(4).ok(), row_index: r.get(5)?, detected_at: r.get(6)?,
-            recommendations: r.get(7).unwrap_or_default(), evidence_quote: r.get(8).unwrap_or_default(),
+            recommendations: r.get::<_, Option<String>>(7)?.unwrap_or_default(), evidence_quote: r.get::<_, Option<String>>(8)?.unwrap_or_default(), // ALLOW_MOCK: optional display text; SQL errors propagate and no finding is invented.
             audit_id: r.get(9).ok(), evidence_image: r.get(10).ok(),
             status: r.get(11).unwrap_or_else(|_| "Open".to_string()),
             assignee: r.get(12).ok(), due_date: r.get(13).ok(),
@@ -1073,7 +1073,7 @@ pub fn get_audit_plans(app_handle: AppHandle, year: i32) -> Result<Vec<AuditPlan
     let db_path = app_handle.path().app_data_dir().unwrap().join("audit_data_v4.db");
     let conn = Connection::open(db_path).map_err(|e| e.to_string())?;
     let mut stmt = conn.prepare("SELECT id, year, audit_domain, risk_score, strategic_importance, resource_days, status, description FROM audit_plans WHERE year = ?1 ORDER BY risk_score DESC").map_err(|e| e.to_string())?;
-    let rows = stmt.query_map(params![year], |r| Ok(AuditPlan { id: r.get(0)?, year: r.get(1)?, audit_domain: r.get(2)?, risk_score: r.get(3)?, strategic_importance: r.get(4)?, resource_days: r.get(5)?, status: r.get(6)?, description: r.get(7).unwrap_or_default() })).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(params![year], |r| Ok(AuditPlan { id: r.get(0)?, year: r.get(1)?, audit_domain: r.get(2)?, risk_score: r.get(3)?, strategic_importance: r.get(4)?, resource_days: r.get(5)?, status: r.get(6)?, description: r.get::<_, Option<String>>(7)?.unwrap_or_default() /* ALLOW_MOCK: optional plan description; SQL errors propagate, no verdict default. */ })).map_err(|e| e.to_string())?;
     let mut list = Vec::new(); for r in rows { if let Ok(p) = r { list.push(p); } }
     Ok(list)
 }
@@ -1857,7 +1857,7 @@ pub async fn generate_audit_priorities(app_handle: AppHandle) -> Result<String, 
 
 #[tauri::command]
 pub fn get_google_maps_key() -> String {
-    crate::ai::get_api_key()
+    String::new() // Never expose the AI provider credential to a browser Maps script.
 }
 
 #[tauri::command]
@@ -1974,7 +1974,7 @@ pub async fn execute_project_analysis(app_handle: AppHandle, project_id: Option<
 
     for (_i, f) in findings_raw.iter().enumerate() {
         let cat = f.get("category").and_then(|v| v.as_str()).unwrap_or("기타").to_string();
-        let sev = f.get("severity").and_then(|v| v.as_str()).unwrap_or("Medium").to_string();
+        let sev = crate::constitution::guard_field(f.get("severity").and_then(|v| v.as_str()), "severity")?.to_string();
         let desc = f.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let evid = f.get("evidence").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let reco = f.get("recommendation").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -3456,7 +3456,7 @@ pub fn promote_risk_v2(app_handle: tauri::AppHandle, sessionId: String, signalId
         ))
     ).map_err(|e| e.to_string())?;
 
-    let related_tx_str = related_tx_ids.unwrap_or_default();
+    let related_tx_str = related_tx_ids.unwrap_or_default(); // ALLOW_MOCK: optional relation metadata; existing signalId is used below.
     let object_id = if related_tx_str.starts_with('[') {
          related_tx_str.split('"').nth(1).unwrap_or(&signalId).to_string()
     } else if !related_tx_str.is_empty() {
@@ -3536,7 +3536,7 @@ pub fn get_gemini_api_key(app_handle: AppHandle) -> Result<String, String> {
     match key {
         Some(k) => {
             if k.len() > 10 {
-                Ok(format!("{}...{}", &k[0..4], &k[k.len()-4..]))
+                Ok("CONFIGURED".into())
             } else {
                 Ok("SET_BUT_INVALID".into())
             }
@@ -3757,7 +3757,7 @@ pub async fn get_ai_fraud_deep_dive(app_handle: AppHandle, issue_id: i64) -> Res
             row_index: r.get(5)?,
             detected_at: r.get::<_, Option<String>>(6)?.unwrap_or_default(),
             recommendations: r.get::<_, Option<String>>(7)?.unwrap_or_default(),
-            evidence_quote: r.get::<_, Option<String>>(8)?.unwrap_or_default(),
+            evidence_quote: r.get::<_, Option<String>>(8)?.unwrap_or_default(), // ALLOW_MOCK: absent optional text never asserts evidence exists.
             audit_id: r.get(9)?,
             evidence_image: r.get(10)?,
             status: r.get::<_, Option<String>>(11)?.unwrap_or_default(),

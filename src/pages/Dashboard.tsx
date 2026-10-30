@@ -305,7 +305,7 @@ const Dashboard = () => {
             <div className="max-w-[1600px] mx-auto space-y-8 relative z-10">
 
                 {/* ... Header ... */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-10">
+                <header className="flex flex-col 2xl:flex-row justify-between items-start gap-6 border-b border-white/5 pb-10">
                     {/* ... (Header content skipped for brevity, keeping existing) ... */}
                     <div className="space-y-1">
                         <div className="flex items-center gap-4">
@@ -329,7 +329,7 @@ const Dashboard = () => {
                         <p className="text-xs text-slate-500 font-bold tracking-[0.3em] uppercase opacity-70">AuditFlow 감사 실무 및 모니터링 시스템</p>
                     </div>
 
-                    <div className="flex items-center gap-4 w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-3 w-full 2xl:w-auto">
                         <div className="h-12 px-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[18px] flex items-center gap-3 group hover:border-blue-500/50 transition-all cursor-pointer overflow-hidden">
                             <Globe className="w-4 h-4 text-blue-400 group-hover:animate-spin-slow" />
                             <select

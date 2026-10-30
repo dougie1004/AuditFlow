@@ -21,7 +21,7 @@ pub fn promote_risk_to_review(app_handle: AppHandle, session_id: String, signal_
 
     // 2. Determine Linked Object ID
     // If related_tx_ids is JSON array, pick first. Else use full string. Fallback to signal_id.
-    let related_tx_str = related_tx_ids.unwrap_or_default();
+    let related_tx_str = related_tx_ids.unwrap_or_default(); // ALLOW_MOCK: optional relation metadata; existing signal_id is used below.
     let object_id = if related_tx_str.starts_with('[') {
          // Simple heuristic parse: find first quoted string inside
          related_tx_str.split('"').nth(1).unwrap_or(&signal_id).to_string()

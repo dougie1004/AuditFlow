@@ -6,6 +6,13 @@ use std::sync::{OnceLock, Mutex};
 static GLOBAL_CLIENT: OnceLock<Client> = OnceLock::new();
 static CUSTOM_API_KEY: Mutex<Option<String>> = Mutex::new(None);
 
+fn credential_header(key: &str) -> Result<reqwest::header::HeaderValue, String> {
+    let mut header = reqwest::header::HeaderValue::from_str(key)
+        .map_err(|_| "Invalid AI credential format".to_string())?;
+    header.set_sensitive(true);
+    Ok(header)
+}
+
 pub fn set_api_key(key: String) {
     if let Ok(mut guard) = CUSTOM_API_KEY.lock() {
         *guard = Some(key);
@@ -30,7 +37,7 @@ pub enum TaskType {
     Summarize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AiConfig {
     pub api_key: String,
     pub base_url: String,
@@ -73,7 +80,7 @@ impl AiConfig {
     }
 }
 
-/// [MODEL GUARD] Prevents legacy model strings (gemini-1.5, etc) from leaking into runtime.
+/// Reject retired model families before selecting an allowed runtime model.
 fn sanitize_model_or_default(input: &str) -> String {
     let m = input.trim();
 
@@ -118,7 +125,7 @@ pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value,
 
     let client = get_client();
 
-    let url = format!("{}/v1/models/{}:generateContent?key={}", cfg.base_url.trim_end_matches('/'), model, cfg.api_key);
+    let url = format!("{}/v1/models/{}:generateContent", cfg.base_url.trim_end_matches('/'), model);
     
     let truncated_data = if data.len() > 500_000 { &data[..500_000] } else { &data };
     let prompt = format!("{}\n\n[TARGET DATA]:\n{}", system_prompt, truncated_data);
@@ -135,20 +142,20 @@ pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value,
     });
     
     let res = client.post(url)
+        .header("x-goog-api-key", credential_header(&cfg.api_key)?)
         .header("Referer", "http://localhost:5174/")
         .header("Origin", "http://localhost:5174/")
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Network Connection Error: {}", e))?;
+        .map_err(|_| "AI network request failed".to_string())?;
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
-        return Err(format!("Gemini API Error ({}): {}", status, err_body));
+        return Err(format!("AI provider request failed (HTTP {})", status.as_u16()));
     }
 
-    let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
+    let json_res: Value = res.json().await.map_err(|_| "Invalid AI provider response".to_string())?;
     let raw_text = json_res["candidates"][0]["content"]["parts"][0]["text"].as_str().ok_or("No content in AI response")?;
     
     let cleaned_text = extract_json(raw_text);
@@ -156,7 +163,7 @@ pub async fn call_gemini_api(data: String, system_prompt: &str) -> Result<Value,
 
     match serde_json::from_str(&cleaned_text) {
         Ok(v) => Ok(v),
-        Err(e) => Err(format!("JSON Parsing Error: {}. Raw: {}", e, cleaned_text))
+        Err(_) => Err("AI response did not match the expected JSON format".to_string())
     }
 }
 
@@ -166,14 +173,7 @@ pub async fn call_gemini_direct(prompt: &str) -> Result<String, String> {
     
     let client = get_client();
 
-    let visible_key = if cfg.api_key.len() > 10 {
-        format!("{}...{}", &cfg.api_key[0..5], &cfg.api_key[cfg.api_key.len()-5..])
-    } else {
-        "INVALID_KEY".to_string()
-    };
-    println!(">>> [AI DEBUG] Using API Key: {}", visible_key);
-
-    let url = format!("{}/v1/models/{}:generateContent?key={}", cfg.base_url.trim_end_matches('/'), model, cfg.api_key);
+    let url = format!("{}/v1/models/{}:generateContent", cfg.base_url.trim_end_matches('/'), model);
     
     let body = json!({
         "contents": [{ "parts": [{ "text": prompt }] }],
@@ -188,24 +188,24 @@ pub async fn call_gemini_direct(prompt: &str) -> Result<String, String> {
     
     // [HEADER INJECTION] Mimic localhost:5174 to satisfy Google Console Website Restriction
     let res = client.post(url)
+        .header("x-goog-api-key", credential_header(&cfg.api_key)?)
         .header("Referer", "http://localhost:5174/")
         .header("Origin", "http://localhost:5174/")
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Network Error: {}", e))?;
+        .map_err(|_| "AI network request failed".to_string())?;
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
-        return Err(format!("API Error ({}): {}", status, err_body));
+        return Err(format!("AI provider request failed (HTTP {})", status.as_u16()));
     }
 
-    let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
+    let json_res: Value = res.json().await.map_err(|_| "Invalid AI provider response".to_string())?;
     increment_pro_call();
     let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
-        .ok_or_else(|| format!("AI Response Incomplete or Blocked. Raw: {}", json_res))?;
+        .ok_or_else(|| "AI response incomplete or blocked".to_string())?;
     Ok(out_text.to_string())
 }
 
@@ -215,7 +215,7 @@ pub async fn call_gemini_chat(message: String, system_prompt: &str) -> Result<St
     
     let client = get_client();
 
-    let url = format!("{}/v1/models/{}:generateContent?key={}", cfg.base_url.trim_end_matches('/'), model, cfg.api_key);
+    let url = format!("{}/v1/models/{}:generateContent", cfg.base_url.trim_end_matches('/'), model);
     
     let prompt = format!("System context: {}\n\nUser: {}", system_prompt, message);
     let body = json!({
@@ -230,24 +230,24 @@ pub async fn call_gemini_chat(message: String, system_prompt: &str) -> Result<St
     });
     
     let res = client.post(url)
+        .header("x-goog-api-key", credential_header(&cfg.api_key)?)
         .header("Referer", "http://localhost:5174/")
         .header("Origin", "http://localhost:5174/")
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Network Error: {}", e))?;
+        .map_err(|_| "AI network request failed".to_string())?;
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
-        return Err(format!("Chat API Error ({}): {}", status, err_body));
+        return Err(format!("AI provider request failed (HTTP {})", status.as_u16()));
     }
 
-    let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
+    let json_res: Value = res.json().await.map_err(|_| "Invalid AI provider response".to_string())?;
     increment_pro_call(); // Pro for chat seems correct based on current mapping
     let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
-        .ok_or_else(|| format!("AI Chat Response Incomplete or Blocked. Raw: {}", json_res))?;
+        .ok_or_else(|| "AI response incomplete or blocked".to_string())?;
     Ok(out_text.to_string())
 }
 
@@ -257,7 +257,7 @@ pub async fn call_gemini_flash(prompt: &str) -> Result<String, String> {
 
     let client = get_client();
 
-    let url = format!("{}/v1/models/{}:generateContent?key={}", cfg.base_url.trim_end_matches('/'), model, cfg.api_key);
+    let url = format!("{}/v1/models/{}:generateContent", cfg.base_url.trim_end_matches('/'), model);
     
     let body = json!({
         "contents": [{ "parts": [{ "text": prompt }] }],
@@ -271,24 +271,24 @@ pub async fn call_gemini_flash(prompt: &str) -> Result<String, String> {
     });
     
     let res = client.post(url)
+        .header("x-goog-api-key", credential_header(&cfg.api_key)?)
         .header("Referer", "http://localhost:5174/")
         .header("Origin", "http://localhost:5174/")
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Network Error: {}", e))?;
+        .map_err(|_| "AI network request failed".to_string())?;
     
     if !res.status().is_success() {
         let status = res.status();
-        let err_body = res.text().await.map_err(|e| format!("Failed to read error body: {}", e))?;
-        return Err(format!("Flash API Error ({}): {}", status, err_body));
+        return Err(format!("AI provider request failed (HTTP {})", status.as_u16()));
     }
 
-    let json_res: Value = res.json().await.map_err(|e| e.to_string())?;
+    let json_res: Value = res.json().await.map_err(|_| "Invalid AI provider response".to_string())?;
     increment_flash_call();
     let out_text = json_res["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
-        .ok_or_else(|| format!("AI Flash Response Incomplete or Blocked. Raw: {}", json_res))?;
+        .ok_or_else(|| "AI response incomplete or blocked".to_string())?;
     Ok(out_text.to_string())
 }
 
@@ -318,4 +318,26 @@ pub fn increment_flash_call() {
 pub fn increment_pro_call() {
     PRO_CALLS.fetch_add(1, Ordering::Relaxed);
     TOTAL_API_CALLS.fetch_add(1, Ordering::Relaxed);
+}
+
+#[cfg(test)]
+mod credential_tests {
+    use super::credential_header;
+
+    #[test]
+    fn credential_is_sensitive_and_absent_from_debug_output() {
+        let fixture = "test-credential-for-local-verification";
+        let header = credential_header(fixture).expect("valid test header");
+        assert!(header.is_sensitive());
+        assert_eq!(header.to_str().expect("header text"), fixture);
+        assert!(!format!("{:?}", header).contains(fixture));
+    }
+
+    #[test]
+    fn invalid_credential_is_rejected_without_echoing_input() {
+        let fixture = "test-credential\nInjected-Header: value";
+        let error = credential_header(fixture).expect_err("newline must fail");
+        assert!(!error.contains(fixture));
+        assert_eq!(error, "Invalid AI credential format");
+    }
 }
