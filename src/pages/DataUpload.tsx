@@ -493,8 +493,8 @@ export default function DataUpload() {
                                             <div className="space-y-6">
                                                 <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">감사 데이터 업로드 (Collect)</h2>
                                                 <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
-                                                    분석 대상이 되는 컴퓨터의 증거 자료(파일)를 선택해 주세요. <br />
-                                                    시스템이 내용을 분석하고 "Audit Memory"에 동기화합니다.
+                                                    감사에 사용할 파일을 선택해 주세요. <br />
+                                                    내용을 확인한 뒤 프로젝트 자료로 저장할 수 있습니다.
                                                 </p>
                                             </div>
                                             <div className="max-w-md mx-auto py-8">
@@ -503,7 +503,7 @@ export default function DataUpload() {
                                                     <div className="p-4 bg-white/5 rounded-2xl text-emerald-500"><Database /></div>
                                                     <div className="p-4 bg-white/5 rounded-2xl text-blue-500"><Mail /></div>
                                                 </div>
-                                                <p className="mt-8 text-xs font-black text-slate-600 uppercase tracking-[0.3em]">Trigger OS File Picker</p>
+                                                <p className="mt-8 text-xs font-black text-slate-600 uppercase tracking-[0.3em]">파일 선택</p>
                                             </div>
                                         </>
                                     )}
@@ -634,7 +634,7 @@ export default function DataUpload() {
                                                 </div>
                                                 <h3 className="text-xl font-bold text-white tracking-tight">Ingestion Complete</h3>
                                                 <div className="space-y-1">
-                                                    <p className="text-slate-300 text-sm font-medium">자료가 Audit Memory Layer에 안전하게 저장되었습니다.</p>
+                                                    <p className="text-slate-300 text-sm font-medium">프로젝트 자료를 저장했습니다.</p>
                                                     <p className="text-slate-500 text-xs italic">"데이터 간의 유기적 연결 준비 완료"</p>
                                                 </div>
                                             </div>
