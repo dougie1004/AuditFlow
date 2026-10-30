@@ -65,12 +65,9 @@ export default function CorpCardAudit() {
         const init = async () => {
             try {
                 // 실제 데이터 로딩 (Mock 예시)
-                const [txs, key] = await Promise.all([
-                    safeInvoke("get_card_transactions") as Promise<CardTransaction[]>,
-                    safeInvoke("get_google_maps_key") as Promise<string>
-                ]);
+                const txs = await safeInvoke("get_card_transactions") as CardTransaction[];
                 setTransactions(txs);
-                loadGoogleMaps(key);
+                loadGoogleMaps();
             } catch (err) {
                 console.error(err);
             }
@@ -78,16 +75,9 @@ export default function CorpCardAudit() {
         init();
     }, []);
 
-    const loadGoogleMaps = (key: string) => {
-        if (window.google && window.google.maps) { initMap(); return; }
-        if (document.querySelector('script[src*="maps.googleapis.com"]')) { initMap(); return; }
-
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
-        script.async = true;
-        script.defer = true;
-        window.initMap = initMap;
-        document.head.appendChild(script);
+    const loadGoogleMaps = () => {
+        // The old bridge exposed the Gemini credential. Use only an already configured map.
+        if (window.google && window.google.maps) initMap();
     };
 
     const initMap = () => {

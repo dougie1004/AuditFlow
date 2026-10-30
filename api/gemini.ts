@@ -4,13 +4,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 type TaskType = "analysis" | "report" | "heatmap" | "chat" | "summarize" | "audit-findings" | "document-analysis" | "sql-generation" | "inventory-analysis" | "self-learning-explanation" | "checklist-generation" | "general-chat";
 
 /**
- * [MODEL GUARD] Prevents legacy model strings (gemini-1.5, etc) from leaking into runtime.
+ * Reject retired model families before selecting an allowed runtime model.
  */
 function sanitizeModelOrDefault(input: string | undefined, defaultModel: string): string {
   const m = (input ?? "").trim();
 
-  if (m.startsWith("gemini-1.5")) {
-    console.warn(`[MODEL_GUARD] Blocked legacy model '${m}', forcing '${defaultModel}'`);
+  if (/^gemini-1\.5(?:-|$)/.test(m)) {
+    console.warn("[MODEL_GUARD] Rejected retired model configuration");
     return defaultModel;
   }
 
@@ -22,7 +22,7 @@ function sanitizeModelOrDefault(input: string | undefined, defaultModel: string)
   }
 
   if (corrected.length > 0) {
-    console.warn(`[MODEL_GUARD] Unknown model '${m}', forcing '${defaultModel}'`);
+    console.warn("[MODEL_GUARD] Rejected unknown model configuration");
   }
   return defaultModel;
 }
@@ -75,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const model = chooseModel(task, modelPro, modelFast);
 
     // v1beta is required for gemini-3 currently
-    const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const url = `${baseUrl}/v1beta/models/${model}:generateContent`;
 
     // Construction of valid Gemini API payload
     const payload: any = {
@@ -101,14 +101,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify(payload),
     });
 
     if (!r.ok) {
-      const errorText = await r.text();
-      console.error(`Gemini API Error (${r.status}):`, errorText);
-      res.status(r.status).json({ error: "Gemini API error", detail: errorText, model, task: currentRequestType });
+      console.error(`AI provider request failed (HTTP ${r.status})`);
+      res.status(r.status).json({ error: "AI provider request failed", model, task: currentRequestType });
       return;
     }
 
@@ -120,14 +119,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const jsonResponse = JSON.parse(outText);
         return res.status(200).json({ response: jsonResponse, requestType: currentRequestType, model });
       } catch (parseError) {
-        return res.status(500).json({ error: 'Failed to parse JSON response', rawText: outText, requestType: currentRequestType });
+        return res.status(500).json({ error: 'Failed to parse JSON response', requestType: currentRequestType });
       }
     }
 
     res.status(200).json({ ok: true, model, task: currentRequestType, response: outText });
 
   } catch (e: any) {
-    console.error("Server Error:", e);
-    res.status(500).json({ error: "Server error", detail: String(e?.message ?? e), requestType: currentRequestType });
+    console.error("AI server request failed");
+    res.status(500).json({ error: "Server error", requestType: currentRequestType });
   }
 }

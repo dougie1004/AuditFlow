@@ -484,7 +484,7 @@ pub fn get_risk_report_data(app_handle: AppHandle) -> Result<RiskReportData, Str
         Ok(ComplianceFindingDisplay {
             title: row.get(0)?,
             severity: row.get(1)?,
-            evidence: row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+            evidence: row.get::<_, Option<String>>(2)?.unwrap_or_default(), // ALLOW_MOCK: optional display text; absence never verifies evidence.
             regulation: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
             detected_at: row.get(4)?,
         })

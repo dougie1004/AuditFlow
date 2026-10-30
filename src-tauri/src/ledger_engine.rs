@@ -66,8 +66,8 @@ pub async fn run_ledger_only_scan(
                 let meta_json: serde_json::Value = serde_json::from_str(&event.metadata.unwrap_or_else(|| "{}".to_string())).unwrap_or(serde_json::json!({}));
                 let account = meta_json["account"].as_str().unwrap_or_default();
                 let dept = meta_json["dept"].as_str().unwrap_or_default();
-                let project_id_val = meta_json["project_id"].as_str().unwrap_or_default();
-                let project_code_val = meta_json["project_code"].as_str().unwrap_or_default();
+                let project_id_val = meta_json["project_id"].as_str().unwrap_or_default(); // ALLOW_MOCK: optional source metadata, not a fabricated audit result.
+                let project_code_val = meta_json["project_code"].as_str().unwrap_or_default(); // ALLOW_MOCK: optional metadata; no inferred project code.
 
                 tx.execute(
                     "INSERT INTO ldg_temp_scan (id, date_str, account, vendor, description, amount, dept, entity_id, month, project_id, project_code) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
