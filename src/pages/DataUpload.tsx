@@ -424,7 +424,7 @@ export default function DataUpload() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start mb-12 gap-8">
                 <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">감사 데이터 업로드 (Data Upload)</h1>
+                        <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">감사 자료 등록</h1>
                     </div>
 
                     <div className="relative group">
@@ -439,7 +439,7 @@ export default function DataUpload() {
                             }}
                             className="appearance-none bg-slate-900 border border-white/10 text-white font-black text-xs py-4 px-8 pr-16 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 w-[400px] shadow-2xl transition-all cursor-pointer hover:border-blue-500/30"
                         >
-                            <option value="" disabled>--- SELECT PROJECT SCOPE ---</option>
+                            <option value="" disabled>감사 프로젝트를 선택해 주세요</option>
                             {projects.map(p => (
                                 <option key={p.id} value={p.id}>{p.id} : {p.title}</option>
                             ))}
@@ -454,7 +454,7 @@ export default function DataUpload() {
                             key={s}
                             className={`px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${step === s ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]' : 'text-slate-600'}`}
                         >
-                            PHASE 0{s}
+                            {s}단계
                         </div>
                     ))}
                 </div>
@@ -491,7 +491,7 @@ export default function DataUpload() {
                                                 <Upload size={52} />
                                             </div>
                                             <div className="space-y-6">
-                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">감사 데이터 업로드 (Collect)</h2>
+                                                <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase">파일을 선택해 주세요</h2>
                                                 <p className="text-slate-500 text-lg font-medium max-w-xl mx-auto leading-relaxed">
                                                     감사에 사용할 파일을 선택해 주세요. <br />
                                                     내용을 확인한 뒤 프로젝트 자료로 저장할 수 있습니다.
@@ -517,10 +517,10 @@ export default function DataUpload() {
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-2">
                                         <h2 className="text-4xl font-black text-white tracking-tighter italic flex items-center gap-4">
-                                            감사 데이터 업로드 (DATA UPLOAD)
+                                            선택한 자료 확인
                                             <div className="h-1 flex-1 bg-gradient-to-r from-blue-500 to-transparent opacity-20 ml-4 rounded-full" />
                                         </h2>
-                                        <p className="text-slate-500 font-medium">Real-time content extraction and verification pipeline.</p>
+                                        <p className="text-slate-500 font-medium">파일 내용을 확인하고 필요한 민감정보를 숨길 수 있습니다.</p>
                                     </div>
 
                                     <div className="flex gap-4">
@@ -528,20 +528,20 @@ export default function DataUpload() {
                                             onClick={handlePickFiles}
                                             className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-white/10 transition-all flex items-center gap-2"
                                         >
-                                            <Plus size={16} /> Add More
+                                            <Plus size={16} /> 파일 추가
                                         </button>
                                         <button
                                             onClick={handleMasking}
                                             className="bg-amber-500 hover:bg-amber-600 text-black px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)] disabled:opacity-50"
                                             disabled={isMasking || isMasked}
                                         >
-                                            {isMasking ? "Neural Processing..." : isMasked ? "Masked & Secured" : "Activate PII Masking"}
+                                            {isMasking ? "민감정보를 숨기는 중..." : isMasked ? "민감정보 숨김 완료" : "민감정보 숨기기"}
                                         </button>
                                         <button
                                             onClick={() => setStep(3)}
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl flex items-center gap-2 group"
                                         >
-                                            Continue Phase 03 <MoveRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                                            저장 단계로 이동 <MoveRight size={16} className="group-hover:translate-x-2 transition-transform" />
                                         </button>
                                     </div>
                                 </div>
@@ -582,7 +582,7 @@ export default function DataUpload() {
                                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                                         {uploadedFiles[selectedFileIdx]?.multiSheets
                                                             ? `Parsed ${uploadedFiles[selectedFileIdx]?.multiSheets?.length} Sheets: ${uploadedFiles[selectedFileIdx]?.multiSheets?.map(s => `'${s.name}'`).join(', ')}`
-                                                            : uploadedFiles[selectedFileIdx]?.path}
+                                                            : "CSV 파일 미리보기"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -632,10 +632,10 @@ export default function DataUpload() {
                                                         <ShieldCheck className="text-emerald-500" size={24} />
                                                     </div>
                                                 </div>
-                                                <h3 className="text-xl font-bold text-white tracking-tight">Ingestion Complete</h3>
+                                                <h3 className="text-xl font-bold text-white tracking-tight">자료 저장 완료</h3>
                                                 <div className="space-y-1">
                                                     <p className="text-slate-300 text-sm font-medium">프로젝트 자료를 저장했습니다.</p>
-                                                    <p className="text-slate-500 text-xs italic">"데이터 간의 유기적 연결 준비 완료"</p>
+                                                    <p className="text-slate-500 text-xs">저장한 자료는 감사 업무에서 확인할 수 있습니다.</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-3 justify-center">
