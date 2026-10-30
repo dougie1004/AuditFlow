@@ -125,7 +125,7 @@ export default function ProjectDetail() {
                                 {project.start_date} ~ {project.end_date}
                             </span>
                             <span className="flex items-center gap-1.5 text-slate-500 text-sm font-bold">
-                                <MapPin size={14} /> Seoul HQ / Global Ops
+                                <MapPin size={14} /> 감사 대상 사업부
                             </span>
                         </div>
                     </div>
@@ -134,7 +134,7 @@ export default function ProjectDetail() {
                             onClick={() => navigate(`/workspace`)}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-200 flex items-center gap-3 active:scale-95"
                         >
-                            <ShieldCheck size={18} /> 감사 실행 워크스페이스로 이동
+                            <ShieldCheck size={18} /> 감사 업무 시작
                         </button>
                     </div>
                 </div>
@@ -146,14 +146,14 @@ export default function ProjectDetail() {
                         <div className="bg-white/5 backdrop-blur-2xl rounded-[32px] border border-white/10 p-8 shadow-sm space-y-6">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                    <Target className="text-blue-600" size={24} /> 실사 범위 (Scope) 정의
+                                    <Target className="text-blue-600" size={24} /> 감사 범위
                                 </h3>
                                 {!isEditing ? (
-                                    <button onClick={() => setIsEditing(true)} className="text-blue-600 font-bold text-xs uppercase tracking-widest hover:bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">Edit Scope</button>
+                                    <button onClick={() => setIsEditing(true)} className="text-blue-600 font-bold text-xs uppercase tracking-widest hover:bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">범위 수정</button>
                                 ) : (
                                     <div className="flex gap-2">
-                                        <button onClick={() => setIsEditing(false)} className="text-slate-400 font-bold text-xs uppercase tracking-widest hover:bg-white/5 px-3 py-1 rounded-lg">Cancel</button>
-                                        <button onClick={handleSave} className="text-emerald-600 font-bold text-xs uppercase tracking-widest hover:bg-emerald-500/10 px-3 py-1 rounded-lg">Save Changes</button>
+                                        <button onClick={() => setIsEditing(false)} className="text-slate-400 font-bold text-xs uppercase tracking-widest hover:bg-white/5 px-3 py-1 rounded-lg">취소</button>
+                                        <button onClick={handleSave} className="text-emerald-600 font-bold text-xs uppercase tracking-widest hover:bg-emerald-500/10 px-3 py-1 rounded-lg">저장</button>
                                     </div>
                                 )}
                             </div>

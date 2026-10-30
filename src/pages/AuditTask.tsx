@@ -170,10 +170,10 @@ export default function AuditTask() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
                     <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest">
-                        AuditFlow Strategic Control
+                        감사 프로젝트
                     </div>
-                    <h1 className="text-4xl font-black text-white tracking-tight">감사 프로젝트 관리 <span className="text-slate-400 font-medium">(Project Portfolio)</span></h1>
-                    <p className="text-slate-500 font-medium">수행 중이거나 완료된 모든 컴플라이언스 감사 프로젝트를 관리합니다.</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight">감사 프로젝트 관리</h1>
+                    <p className="text-slate-500 font-medium">진행 중인 감사와 완료된 감사 프로젝트를 살펴봅니다.</p>
                 </div>
 
                 {!isCreating && (
@@ -405,31 +405,31 @@ export default function AuditTask() {
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-500/10 text-indigo-400">
-                                                Enterprise Wide
+                                                전체 프로젝트
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="space-y-1">
-                                        <h3 className="text-lg font-black text-white line-clamp-1 leading-tight">전사 통합 감사 (All Projects)</h3>
+                                        <h3 className="text-lg font-black text-white line-clamp-1 leading-tight">전체 감사 현황</h3>
                                         <p className="text-sm font-bold text-slate-400 flex items-center gap-1 group-hover:text-indigo-400 transition-colors">
-                                            <Target size={14} /> Scope: Global
+                                            <Target size={14} /> 범위: 전체 프로젝트
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Audits</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">진행 중인 감사</p>
                                             <p className="text-xs font-bold text-indigo-400 truncate">{projects.length} Projects</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Findings</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">발견 사항</p>
                                             <p className="text-xs font-bold text-white truncate">{projects.reduce((acc, p) => acc + (p.findings_count || 0), 0)} Issues</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Scope</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">감사 범위</p>
                                         <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
                                             Aggregated view of all active audit projects, risks, and compliance status across the organization.
                                         </p>
@@ -440,7 +440,7 @@ export default function AuditTask() {
                                             <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">ALL</div>
                                         </div>
                                         <div className="flex items-center gap-1 text-slate-300 group-hover:text-indigo-400 transition-all font-black text-[10px] uppercase tracking-widest">
-                                            Open Dashboard <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                            대시보드 보기 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </div>
                                 </div>
@@ -476,7 +476,7 @@ export default function AuditTask() {
                                                     </button>
                                                 </div>
                                                 <p className="text-[10px] text-slate-400 font-bold mt-1 font-mono uppercase tracking-tighter">
-                                                    Created: {p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
+                                                    등록일: {p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
                                                 </p>
                                             </div>
                                         </div>
@@ -490,17 +490,17 @@ export default function AuditTask() {
 
                                         <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">진행 상태</p>
                                                 <p className="text-xs font-bold text-blue-400 truncate">{p.status}</p>
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Findings</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">발견 사항</p>
                                                 <p className="text-xs font-bold text-white truncate">{p.findings_count || 0}</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Scope</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">감사 범위</p>
                                             <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
                                                 {p.audit_scope || 'No scope defined for this audit project.'}
                                             </p>
@@ -512,7 +512,7 @@ export default function AuditTask() {
                                                 <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-400 italic">G</div>
                                             </div>
                                             <div className="flex items-center gap-1 text-slate-300 group-hover:text-blue-500 transition-all font-black text-[10px] uppercase tracking-widest">
-                                                Open Portfolio <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                                프로젝트 보기 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                             </div>
                                         </div>
                                     </div>
@@ -584,7 +584,7 @@ export default function AuditTask() {
                                                     <TrendingUp className="text-blue-400" size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Total Findings</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">발견 사항</p>
                                                     <p className="text-3xl font-black">{reportData.total_findings} <span className="text-sm font-medium text-slate-400">cases</span></p>
                                                 </div>
                                             </div>

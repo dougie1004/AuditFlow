@@ -136,7 +136,7 @@ export default function ScenarioManager() {
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Advanced Mode state declarations
+    // 상세 설정 state declarations
     const [isAdvancedMode, setIsAdvancedMode] = useState(false);
     const [mockConfigs, setMockConfigs] = useState<MockScenarioConfig[]>([]);
     const [selectedScenarioForCalib, setSelectedScenarioForCalib] = useState<Scenario | null>(null);
@@ -436,17 +436,17 @@ export default function ScenarioManager() {
                             <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
                                 <ShieldCheck className="text-white" />
                             </div>
-                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">DD Knowledge Base</span>
+                            <span className="text-xs font-black text-blue-500 uppercase tracking-widest">감사 시나리오</span>
                         </div>
-                        <h1 className="text-4xl font-black text-white tracking-tighter">통합 진단 시나리오 관리</h1>
+                        <h1 className="text-4xl font-black text-white tracking-tighter">시나리오 관리</h1>
                         <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-2xl">
-                            AI가 탐지한 새로운 리스크와 실사 전문가의 노하우가 결합된 지능형 준법 실사 지식 베이스입니다.
+                            업무 영역과 위험 수준에 따라 감사 시나리오를 찾아보고 관리합니다.
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
-                        {/* Advanced Mode Toggle Switch */}
+                        {/* 상세 설정 Toggle Switch */}
                         <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 px-5 py-3.5 rounded-2xl backdrop-blur-sm">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">Advanced Mode</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">상세 설정</label>
                             <button
                                 onClick={() => setIsAdvancedMode(!isAdvancedMode)}
                                 className={`w-12 h-6.5 rounded-full p-1 transition-all duration-300 relative ${isAdvancedMode ? 'bg-blue-600' : 'bg-slate-800'}`}
@@ -470,7 +470,7 @@ export default function ScenarioManager() {
                         {[
                             { id: "risk", label: "리스크 등급별", icon: <AlertCircle size={14} className="text-red-500" /> },
                             { id: "all", label: "전체 목록", icon: <History size={14} /> },
-                            { id: "new", label: "신규 Discovery", icon: <Zap size={14} className="text-blue-500 fill-blue-500" /> },
+                            { id: "new", label: "새 시나리오", icon: <Zap size={14} className="text-blue-500 fill-blue-500" /> },
                             { id: "category", label: "업무 영역별", icon: <Building2 size={14} /> },
                             { id: "project", label: "진단 프로젝트별", icon: <Calendar size={14} /> }
                         ].map(mode => (
@@ -491,7 +491,7 @@ export default function ScenarioManager() {
                             className="bg-white/10 text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 hover:bg-white/20 shadow-lg shadow-black/20 whitespace-nowrap shrink-0"
                         >
                             <Database size={14} />
-                            시스템 마스터 <span className="text-blue-400">{scenarios.filter(s => s.origin_audit_type === '시스템 마스터').length}건</span>
+                            기본 시나리오 <span className="text-blue-400">{scenarios.filter(s => s.origin_audit_type === '시스템 마스터').length}건</span>
                         </button>
                     </div>
                     <div className="flex items-center gap-4 pr-4 flex-1 justify-end">

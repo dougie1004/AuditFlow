@@ -107,7 +107,7 @@ export default function App() {
         <div className="fixed inset-0 bg-[#020617] flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Initializing Core...</span>
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">화면을 불러오는 중입니다...</span>
             </div>
         </div>
     );
@@ -201,7 +201,7 @@ function Layout() {
 
         {/* [Scope Selector] Current Audit Project */}
         <div className="mb-10 px-2 mt-4">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 opacity-50">Active Audit Context</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 opacity-50">선택한 프로젝트</p>
           <div
             onClick={() => navigate('/portfolio')}
             className={`p-5 rounded-[22px] border cursor-pointer transition-all duration-300 ${activeProject ? 'bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border-blue-500/30 text-white shadow-xl shadow-blue-950/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
@@ -210,20 +210,20 @@ function Layout() {
               <div className={`p-2 rounded-xl ${activeProject ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-600'}`}>
                 <FileText size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">활성 감사 컨텍스트 (Active)</span>
+              <span className="text-[10px] font-black uppercase tracking-tight opacity-70">현재 감사 프로젝트</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black truncate max-w-[150px] tracking-tight">{activeProject || '전사 통합 감사 (Whole Company)'}</span>
+              <span className="text-[10px] font-black truncate max-w-[150px] tracking-tight">{activeProject || '전체 프로젝트'}</span>
               {activeProject ? (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("현재 활성 감사 컨텍스트를 해제하시겠습니까?")) {
+                    if (window.confirm("선택한 감사 프로젝트를 해제하시겠습니까?")) {
                       setActiveProject(null);
                     }
                   }}
                   className="p-1 rounded-full hover:bg-white/20 transition-colors"
-                  title="컨텍스트 해제"
+                  title="프로젝트 선택 해제"
                 >
                   <X size={14} className="opacity-60 hover:opacity-100 hover:text-rose-400" />
                 </div>
@@ -235,28 +235,28 @@ function Layout() {
           {!activeProject && location.pathname !== '/tasks' && (
             <div className="flex items-center gap-2 mt-3 px-1">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <p className="text-[9px] text-blue-400 font-bold tracking-tight">프로젝트를 선택하여 인사이트를 확인하세요</p>
+              <p className="text-[9px] text-blue-400 font-bold tracking-tight">프로젝트를 선택해 감사 업무를 시작하세요</p>
             </div>
           )}
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Command & Control</p>
-          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="종합 감사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">현황</p>
+          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="감사 대시보드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Intelligent Layer</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">감사 업무</p>
           <NavItem to="/import" icon={<Database size={18} />} label="감사 데이터 업로드" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/workspace" icon={<Layers size={18} />} label="감사 실행 워크스페이스" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/workspace" icon={<Layers size={18} />} label="감사 업무" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
           <NavItem to="/ai" icon={<MessageSquare size={18} />} label="AuditFlow AI 어시스턴트" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
-          <NavItem to="/flux-analysis" icon={<BrainCircuit size={18} />} label="Flux (시계열 변화 분석)" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
+          <NavItem to="/flux-analysis" icon={<BrainCircuit size={18} />} label="기간별 변화 분석" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
 
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">Management</p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-4 mb-2 px-4 opacity-50">프로젝트 관리</p>
           <NavItem to="/portfolio" icon={<FileText size={18} />} label="감사 프로젝트 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
           <NavItem to="/report" icon={<FileText size={18} />} label="감사 결론 및 보고서" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} disabled={!activeProject} />
           <NavItem to="/scenarios" icon={<Activity size={18} />} label="감사 시나리오 관리" currentPath={location.pathname} onClick={() => isMobile && setSidebarOpen(false)} />
 
           <div className="mt-8 pt-4 border-t border-slate-800">
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">System Admin</p>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-4">설정</p>
             <div
               onClick={async () => {
                 const status = await safeInvoke<string>('get_gemini_api_key').catch(() => "미설정");
@@ -275,7 +275,7 @@ function Layout() {
               <div className="w-5 h-5 flex items-center justify-center">
                 <Settings size={18} />
               </div>
-              <span>설정 (AI API Key)</span>
+              <span>AI 연결 설정</span>
             </div>
           </div>
         </nav>
@@ -289,20 +289,20 @@ function Layout() {
             <div style={{ display: "flex", flexDirection: "column" }}>
               <h1 className="text-xl font-bold tracking-tighter text-blue-400">AUDITFLOW <span className="text-xs text-slate-500 ml-2">v4.2</span></h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1.2px" }}>초정밀 진단 엔진 가동 중</span>
+                <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "1.2px" }}>감사 프로젝트와 자료 관리</span>
               </div>
             </div>
             {activeProject && (
               <div className="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-2xl border border-blue-500/20 flex items-center gap-2.5 ml-6 shadow-sm">
                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Active: {activeProject}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">선택한 프로젝트: {activeProject}</span>
               </div>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "28px" }}>
             <div className="flex flex-col items-end">
-              <span style={{ fontSize: "10px", fontWeight: "900", color: "#475569", textTransform: "uppercase", letterSpacing: "2.5px" }}>Powered By</span>
-              <span style={{ fontSize: "12px", fontWeight: "900", color: "#94a3b8", letterSpacing: "-0.3px" }}>Core AI Engine</span>
+              <span style={{ fontSize: "10px", fontWeight: "900", color: "#475569", textTransform: "uppercase", letterSpacing: "2.5px" }}>개발</span>
+              <span style={{ fontSize: "12px", fontWeight: "900", color: "#94a3b8", letterSpacing: "-0.3px" }}>Insightrix</span>
             </div>
             <div style={{ height: "40px", width: "1px", background: "rgba(255,255,255,0.05)" }} />
             <div style={{ width: "64px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "rgba(255,255,255,0.02)", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.05)" }}>
