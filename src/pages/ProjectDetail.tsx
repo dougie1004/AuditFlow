@@ -112,7 +112,7 @@ export default function ProjectDetail() {
                     <div className="space-y-4 text-left">
                         <div className="flex items-center gap-2 text-blue-600">
                             <Briefcase size={16} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">감사 프로젝트 상세 관리 (Project Management)</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">프로젝트 상세</span>
                         </div>
                         <h1 className="text-4xl font-black text-white tracking-tighter leading-none">
                             {project.title}
@@ -204,7 +204,7 @@ export default function ProjectDetail() {
                         {/* Gantt Timeline Simulation */}
                         <div className="bg-white/5 backdrop-blur-2xl rounded-[32px] border border-white/10 p-8 shadow-sm space-y-6">
                             <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                <Calendar className="text-blue-600" size={24} /> 실사업무 수행 일정 (Fieldwork)
+                                <Calendar className="text-blue-600" size={24} /> 감사 일정
                             </h3>
                             <div className="space-y-6">
                                 {['Planning', 'Fieldwork', 'Reporting'].map((phase: string) => {
@@ -245,7 +245,7 @@ export default function ProjectDetail() {
                         {/* Fieldwork Team */}
                         <div className="bg-white/5 backdrop-blur-2xl rounded-[32px] border border-white/10 p-8 shadow-sm space-y-6">
                             <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                <Users className="text-blue-600" size={24} /> 전문 실사 태스크포스(TF)
+                                <Users className="text-blue-600" size={24} /> 감사 담당자
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
@@ -253,8 +253,8 @@ export default function ProjectDetail() {
                                         {project.lead_auditor?.substring(0, 2).toUpperCase() || "AU"}
                                     </div>
                                     <div>
-                                        <p className="font-black text-white leading-none">{project.lead_auditor || "Lead Auditor"}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">담당 조사관 (Investigator)</p>
+                                        <p className="font-black text-white leading-none">{project.lead_auditor || "담당자 미정"}</p>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">담당 감사인</p>
                                     </div>
                                 </div>
                             </div>
@@ -262,15 +262,15 @@ export default function ProjectDetail() {
 
                         {/* [NEW] Entity Context & Budget Management */}
                         <div className="bg-slate-900 border border-white/10 rounded-[32px] p-8 shadow-2xl space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-xl font-black text-white flex items-center gap-2 italic uppercase">
-                                    <TrendingUp className="text-emerald-500" size={24} /> Entity Profile
+                            <div className="flex flex-wrap justify-between items-center gap-3">
+                                <h3 className="text-lg font-black text-white flex items-center gap-2 whitespace-nowrap">
+                                    <TrendingUp className="text-emerald-500" size={24} /> 사업부 정보
                                 </h3>
                                 <button
                                     onClick={() => setIsEditingEntity(!isEditingEntity)}
                                     className="text-emerald-400 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20"
                                 >
-                                    {isEditingEntity ? 'Close' : 'Edit Context'}
+                                    {isEditingEntity ? '닫기' : '정보 수정'}
                                 </button>
                             </div>
 
@@ -278,7 +278,7 @@ export default function ProjectDetail() {
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-left">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Budget Size</p>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">예산 규모</p>
                                             {isEditingEntity ? (
                                                 <input
                                                     type="text"
@@ -291,7 +291,7 @@ export default function ProjectDetail() {
                                             )}
                                         </div>
                                         <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-left">
-                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Headcount</p>
+                                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">인원</p>
                                             {isEditingEntity ? (
                                                 <input
                                                     type="number"
@@ -306,7 +306,7 @@ export default function ProjectDetail() {
                                     </div>
 
                                     <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-left">
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Key Systems</p>
+                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">주요 시스템</p>
                                         {isEditingEntity ? (
                                             <textarea
                                                 defaultValue={linkedEntity.key_systems}
@@ -321,7 +321,7 @@ export default function ProjectDetail() {
                                     <div className="flex items-center gap-3 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl text-left">
                                         <ShieldCheck className="text-emerald-500" size={18} />
                                         <div className="flex-1">
-                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Risk Weight Multiplier</p>
+                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">위험 평가 기준</p>
                                             <p className="text-[11px] font-medium text-slate-400 leading-tight mt-0.5">
                                                 본 사업부의 예산 규모({linkedEntity.budget_size})는 잠재적 재무 익스포저 산정의 기준선으로 활용됩니다.
                                             </p>

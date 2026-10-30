@@ -472,7 +472,7 @@ export default function ScenarioManager() {
                             { id: "all", label: "전체 목록", icon: <History size={14} /> },
                             { id: "new", label: "새 시나리오", icon: <Zap size={14} className="text-blue-500 fill-blue-500" /> },
                             { id: "category", label: "업무 영역별", icon: <Building2 size={14} /> },
-                            { id: "project", label: "진단 프로젝트별", icon: <Calendar size={14} /> }
+                            { id: "project", label: "감사 프로젝트별", icon: <Calendar size={14} /> }
                         ].map(mode => (
                             <button
                                 key={mode.id}

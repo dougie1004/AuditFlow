@@ -420,18 +420,18 @@ export default function AuditTask() {
                                     <div className="grid grid-cols-2 gap-4 py-6 border-y border-white/5">
                                         <div className="space-y-1">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">진행 중인 감사</p>
-                                            <p className="text-xs font-bold text-indigo-400 truncate">{projects.length} Projects</p>
+                                            <p className="text-xs font-bold text-indigo-400 truncate">{projects.length}개 프로젝트</p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">발견 사항</p>
-                                            <p className="text-xs font-bold text-white truncate">{projects.reduce((acc, p) => acc + (p.findings_count || 0), 0)} Issues</p>
+                                            <p className="text-xs font-bold text-white truncate">{projects.reduce((acc, p) => acc + (p.findings_count || 0), 0)}건</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">감사 범위</p>
                                         <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed">
-                                            Aggregated view of all active audit projects, risks, and compliance status across the organization.
+                                            전체 프로젝트의 진행 상태와 발견 사항을 한곳에서 살펴봅니다.
                                         </p>
                                     </div>
 
